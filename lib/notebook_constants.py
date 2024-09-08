@@ -91,6 +91,8 @@ lv_raw_dtypes = {
     'Unnamed: 34': 'float32'
 }
 
+lv_download_page = 'https://www.valuergeneral.nsw.gov.au/land_value_summaries/lv.php'
+ps_download_page = 'https://valuation.property.nsw.gov.au/embed/propertySalesInformation'
 
 mb_2016_nsw = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270055001_mb_2016_nsw_shape.zip&1270.0.55.001&Data%20Cubes&E9FA17AFA7EB9FEBCA257FED0013A5F5&0&July%202016&12.07.2016&Latest'
 mb_2016_vic = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270055001_mb_2016_vic_shape.zip&1270.0.55.001&Data%20Cubes&04F12B9E465AE765CA257FED0013B20F&0&July%202016&12.07.2016&Latest'
