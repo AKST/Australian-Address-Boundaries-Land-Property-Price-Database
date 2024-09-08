@@ -6,6 +6,8 @@ from docker.errors import NotFound, ImageNotFound
 from lib import notebook_constants as nc
 from sqlalchemy import create_engine
 
+from lib.gnaf.discovery import GnafPublicationTarget
+
 
 def pg_url(conf, dbname):
     return f"postgresql+psycopg2://{conf['user']}:{conf['password']}@{conf['host']}:{conf['port']}/{dbname}"
@@ -138,8 +140,12 @@ class GnafDb:
                     raise e
                 time.sleep(interval)
 
-    def init_schema(self):
-        for script in nc.gnaf_all_scripts:
+    def init_schema(self, gnaf_target):
+        for script in [
+            gnaf_target.create_tables_sql,
+            gnaf_target.fk_constraints_sql,
+            *nc.gnaf_all_scripts,
+        ]:
             with self.connect() as conn:
                 cursor = conn.cursor()
                 with open(script, 'r') as sql_file:

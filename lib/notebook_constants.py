@@ -22,11 +22,7 @@ gnaf_db_url_2 = \
 
 gnaf_create_tables_script = 'zip-out/gnaf-2020/G-NAF/Extras/GNAF_TableCreation_Scripts/create_tables_ansi.sql'
 gnaf_constraints_script = 'zip-out/gnaf-2020/G-NAF/Extras/GNAF_TableCreation_Scripts/add_fk_constraints.sql'
-gnaf_all_scripts = [
-    gnaf_create_tables_script,
-    gnaf_constraints_script,
-    'sql/move_gnaf_to_schema.sql',
-]
+gnaf_all_scripts = ['sql/move_gnaf_to_schema.sql']
 
 # https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf
 gnaf_2020 = 'https://data.gov.au/data/dataset/19432f89-dc3a-4ef3-b943-5326ef1dbecc/resource/1c685b96-9297-4b62-888e-c981790d332f/download/g-naf_may24_allstates_gda2020_psv_1015.zip'
