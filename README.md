@@ -22,15 +22,19 @@ modify it as you please, use it to make money for yourself, just don't sue me
 if you misuse and it causes you some kind of harm.
 
 I will have zero claim over any work done with the aid of this project, and
-I won't be entitled to any shout out of thanks for any assistance this project
-offer the user of it in any way.
+I won't be entitled to any shout out or thanks for any assistance this project
+may offer the user in any of their endevours.
 
 Basically I'm sharing this to make increase access to this kind of information,
 as I know I personally found it hard to process half the datasets this database
 consumed.
 
+Why add? Just basic projection from liability.
+
 ## General Structure
 
 - `lib` this is where all reusable code between notebooks are
+- `sql` this may suprise you but this is where I store SQL.
+    - This is mostly loaded in the data ingestion notebook.
 - `web-out` this is where all the content is downloaded too
 - `zip-out` this is where all zips are zipped into.
