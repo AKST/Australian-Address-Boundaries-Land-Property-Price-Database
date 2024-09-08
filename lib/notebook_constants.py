@@ -20,12 +20,7 @@ gnaf_db_url_2 = \
     "postgresql+psycopg2://" \
     f"{gnaf_dbconf_2['user']}:{gnaf_dbconf_2['password']}@{gnaf_dbconf_2['host']}:{gnaf_dbconf_2['port']}/{gnaf_dbname_2}"
 
-gnaf_create_tables_script = 'zip-out/gnaf-2020/G-NAF/Extras/GNAF_TableCreation_Scripts/create_tables_ansi.sql'
-gnaf_constraints_script = 'zip-out/gnaf-2020/G-NAF/Extras/GNAF_TableCreation_Scripts/add_fk_constraints.sql'
 gnaf_all_scripts = ['sql/move_gnaf_to_schema.sql']
-
-# https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf
-gnaf_2020 = 'https://data.gov.au/data/dataset/19432f89-dc3a-4ef3-b943-5326ef1dbecc/resource/1c685b96-9297-4b62-888e-c981790d332f/download/g-naf_may24_allstates_gda2020_psv_1015.zip'
 
 nsw_adminstrative_boundaries = 'https://data.gov.au/data/dataset/8047ddd1-7193-4667-aef9-b75bc3076075/resource/fc587b12-c699-45a2-aa62-22a5c0e82ef3/download/gda2020.zip'
 
@@ -86,9 +81,6 @@ lv_raw_dtypes = {
     },
     'Unnamed: 34': 'float32'
 }
-
-lv_download_page = 'https://www.valuergeneral.nsw.gov.au/land_value_summaries/lv.php'
-ps_download_page = 'https://valuation.property.nsw.gov.au/embed/propertySalesInformation'
 
 mb_2016_nsw = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270055001_mb_2016_nsw_shape.zip&1270.0.55.001&Data%20Cubes&E9FA17AFA7EB9FEBCA257FED0013A5F5&0&July%202016&12.07.2016&Latest'
 mb_2016_vic = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270055001_mb_2016_vic_shape.zip&1270.0.55.001&Data%20Cubes&04F12B9E465AE765CA257FED0013B20F&0&July%202016&12.07.2016&Latest'

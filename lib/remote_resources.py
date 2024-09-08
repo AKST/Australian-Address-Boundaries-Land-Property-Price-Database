@@ -47,7 +47,6 @@ class StaticFileInitialiser:
     @staticmethod
     def create():
         return StaticFileInitialiser([
-            Target(url=nb.gnaf_2020, web_dst='gnaf-2020.zip', zip_dst='gnaf-2020'),
             Target(
                 url=nb.non_abs_structures_shapefiles,
                 web_dst='non_abs_shape.zip',
