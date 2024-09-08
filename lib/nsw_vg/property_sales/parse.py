@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import re
 
-import lib.nsw_vg.types.property_sales as ps
+from lib.nsw_vg.property_sales import types as ps
 
 SYNTAX_1990 = { 'A': 5, 'B': 21, 'Z': 3 }
 SYNTAX_2002 = { 'A': 4, 'B': 24, 'C': 6, 'D': 11, 'Z': 5 }
