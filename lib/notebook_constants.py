@@ -1,6 +1,3 @@
-from shapely.geometry import box
-
-greater_sydney_max_bounds = box(150, -34, 151.3, -33)
 
 gnaf_image = 'gnaf_pg_gis_db'
 gnaf_image_name = 'gnaf_pg_gis_db'
