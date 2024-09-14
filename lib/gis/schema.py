@@ -34,7 +34,7 @@ ADDR_GIS_SCHEMA = GisSchema(
         SchemaField('data', 'propertytype', 2),
         SchemaField('data', 'dissolveparcelcount', 3),
         SchemaField('data', 'superlot', 1),
-        SchemaField('data', 'housenumber', 1),
+        SchemaField('data', 'housenumber', 2),
         SchemaField('data', 'address', 1),
         SchemaField('meta', 'startdate', 1),
         SchemaField('meta', 'enddate', 1),

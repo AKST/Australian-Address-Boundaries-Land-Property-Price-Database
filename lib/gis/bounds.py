@@ -1,5 +1,27 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from collections import namedtuple
 from typing import Tuple
+
+class BoundResolution:
+    def interpolate(self, t: float) -> float:
+        raise NotImplementedError()
+
+@dataclass
+class ExpBoundResolution(BoundResolution):
+    start: float
+    end: float 
+    exp: float = field(default=1.0)
+    
+    def interpolate(self, t):
+        te = t ** self.exp
+        return ((1.0 - te) * self.start) + (te * self.end)
+
+@dataclass
+class ConstantBoundResolution(BoundResolution):
+    value: float
+    
+    def interpolate(self, t):
+        return self.value
 
 @dataclass
 class Bounds:
@@ -7,6 +29,9 @@ class Bounds:
     ymin: float
     ymax: float
     xmax: float
+
+    def area(self):
+        return self.x_range() * self.y_range()
 
     def x_range(self):
         return self.xmax - self.xmin
@@ -18,40 +43,22 @@ SYDNEY_BOUNDS = Bounds(xmin=150.5209, ymin=-34.1183, xmax=151.3430, ymax=-33.578
 NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
 
 class BoundsIterator:
-    def __init__(self, bounds: Bounds, resolution: Tuple[float, float], epsg_crs: int):
+    def __init__(self, 
+                 bounds: Bounds,
+                 resolution: BoundResolution,
+                 epsg_crs: int):
         self._bounds = bounds
         self._resolution = resolution
         self.epsg_crs = epsg_crs
         
-    def _chunks(self):
-        r, _ = self._resolution
-        x_min = self._bounds.xmin
-        y_min = self._bounds.ymin
-        x_range = (self._bounds.xmax - x_min) / r
-        y_range = (self._bounds.ymax - y_min) / r
-
-        for xa in range(0, int(x_range), 1):
-            for ya in range(0, int(y_range), 1):
-                xb, yb = xa + 1, ya + 1
-                yield {
-                    'xmin': x_min + r * xa,
-                    'ymin': y_min + r * ya,
-                    'xmax': x_min + r * xb,
-                    'ymax': y_min + r * yb,
-                    'spatialReference': {'wkid': self.epsg_crs},
-                }
-        
     def chunks(self):
-        ra, rb = self._resolution
         x_min, y_min = self._bounds.xmin, self._bounds.ymin
         x_range = self._bounds.xmax - x_min
         y_range = self._bounds.ymax - y_min
 
         x_offset = 0.0
         while x_offset < x_range:
-            t = x_offset / x_range
-            r = ((1.0 - t) * ra) + (t * rb)
-            
+            r = self._resolution.interpolate(x_offset / x_range)
             x_frame = r * x_range
             y_frame = r * y_range
 
