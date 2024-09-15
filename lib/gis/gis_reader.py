@@ -1,109 +1,101 @@
 from aiohttp import ClientSession
-from asyncio import Semaphore, as_completed, TaskGroup
+import asyncio
 from collections import namedtuple
-from dataclasses import dataclass
 import geopandas as gpd
 import json
 from shapely.geometry import shape
-from typing import Set, Any, Optional, List, Tuple
+from typing import Set, Any, Optional
 
-from lib.gis.bounds import BoundsIterator
-from lib.gis.schema import GisSchema
+from lib.gis.request import GisSchema, GisProjection, GisPredicate
 
-@dataclass
-class GisProjection:
-    schema: GisSchema
-    fields: str | List[str | Tuple[str, str]]
-    epsg_crs: Any
-
-    def get_fields(self):
-        if isinstance(self.fields, str) and self.fields == '*':
-            return (f.name for f in self.schema.fields)
-        
-        elif isinstance(self.fields, str):
-            # if you set `fields` to a str, you should only set it to '*'
-            raise ValueError('invalid projection')
-        
-        requirements = [((r, 3) if isinstance(r, str) else r) for r in self.fields]
-        
-        return (
-            f.name
-            for category, priority in requirements
-            for f in self.schema.fields
-            if f.category == category and f.priority <= priority
-        )
-            
+ProjectionTask = namedtuple('ProjectionChunkTask', ['where_clause', 'offset', 'expected_results'])
 
 class GisReader:
     def __init__(self, 
                  session: ClientSession,
-                 semaphore: Semaphore,
-                 where_clause: List[str]):
+                 semaphore: asyncio.Semaphore):
         self._session = session 
         self._semaphore = semaphore
-        self._where_clause = where_clause
 
     @staticmethod
-    def create(session: ClientSession,
-               max_concurrent: int,
-               where_clause: List[str]):
-        return GisReader(session, Semaphore(max_concurrent), where_clause)
+    def create(session: ClientSession, max_concurrent: int):
+        return GisReader(session, asyncio.Semaphore(max_concurrent))
 
-    async def get_pages(self, bounds_iter: BoundsIterator, projection: GisProjection):
+    async def load_projection(self, projection: GisProjection, predicate: GisPredicate):
+        schema = projection.schema
+        
+        counts = await asyncio.gather(*[
+            self._get_count(schema.url, clause)
+            for clause in predicate.chunk_by_month()
+        ])
+        
+        chunks = [
+            ProjectionTask(clause, offset, (offset % schema.result_limit))
+            for count, clause in counts
+            for offset in range(0, count, schema.result_limit)
+        ]
+        
         factory = _GisDfComponentFactory(projection.schema.id_field)
 
-        async def with_bounds(bounds):
-            async with self._semaphore:
-                offset = 0
-                page_size = 100
-                
-                geometries, attributes = [], []
-                while True:
-                    if self._session.closed:
-                        return
-                        
-                    data = await self._fetch_data(f'{projection.schema.url}/query', {
-                        'where': ' AND '.join([
-                            "enddate >= CURRENT_DATE",
-                            *self._where_clause,
-                        ]),
-                        'geometry': json.dumps(bounds),
-                        'geometryType': 'esriGeometryEnvelope',
-                        'inSR': bounds_iter.epsg_crs,
-                        'outSR': projection.epsg_crs,
-                        'outFields': ','.join(projection.get_fields()),
-                        'spatialRel': 'esriSpatialRelIntersects',
-                        'resultOffset': offset,
-                        'resultRecordCount': page_size,
-                        'f': 'json',
-                    })
-        
-                    features = data.get('features', [])
-                    if features:
-                        offset += len(features)
-                    else:
-                        break
-                        
-                    for f in features:
-                        component = factory.from_feature(f)
-                        if component:
-                            geometries.append(component.geometry)
-                            attributes.append(component.attributes)
-                            
-                if attributes:
-                    return gpd.GeoDataFrame(
-                        attributes,
-                        geometry=geometries,
-                        crs=f"EPSG:{projection.epsg_crs}",
-                    )
+        try:
+            async with asyncio.TaskGroup() as tg:
+                tasks = (self._run_task(projection, t, factory) for t in chunks)
+                tasks = list(map(tg.create_task, tasks))
+                for task in asyncio.as_completed(tasks):
+                    task_desc, gdf = await task
+                    if len(gdf) > 0:
+                        yield task_desc, gdf
+        except GisAbortError:
+            return
 
-        async with TaskGroup() as tg:
-            tasks = [tg.create_task(with_bounds(chunk)) for chunk in bounds_iter.chunks()]
-            for task in as_completed(tasks):
-                result = await task
-                if result is not None:
-                    yield result
+    
+    async def _run_task(self, 
+                        projection: GisProjection,
+                        task: ProjectionTask,
+                        factory):
+        async with self._semaphore:
+            if self._session.closed:
+                raise GisAbortError("http session has been closed")
+                
+            data = await self._fetch_data(f'{projection.schema.url}/query', {
+                'returnGeometry': True,
+                'resultOffset': task.offset,
+                'resultRecordCount': projection.schema.result_limit,
+                'where': task.where_clause,
+                'geometryType': 'esriGeometryEnvelope',
+                'outSR': projection.epsg_crs,
+                'outFields': ','.join(projection.get_fields()),
+                'f': 'json',
+            })
             
+        features = data.get('features', [])
+        if len(features) < task.expected_results:
+            raise GisMissingResults(
+                f'{task.where_clause} OFFSET {task.offset}, '
+                f'got {len(features)} wanted {task.expected_results}')
+            
+        geometries, attributes = [], []
+        for f in features:
+            component = factory.from_feature(f)
+            if component:
+                geometries.append(component.geometry)
+                attributes.append(component.attributes)
+                
+        gdf = gpd.GeoDataFrame(
+            attributes,
+            geometry=geometries,
+            crs=f"EPSG:{projection.epsg_crs}",
+        ) if attributes else gpd.GeoDataFrame()
+        return task, gdf 
+            
+    async def _get_count(self, url: str, where_clause: str) -> (int, str):        
+        params = { 'where': where_clause, 'returnCountOnly': True, 'f': 'json' }
+        async with self._semaphore:
+            if self._session.closed:
+                raise GisAbortError("http session has been closed")
+            count_resp = await self._fetch_data(f'{url}/query', params)
+            return (count_resp['count'], where_clause)
+        
 
     async def _fetch_data(self, url: str, params: Any):
         import urllib.parse
@@ -140,9 +132,14 @@ class _GisDfComponentFactory:
         self._seen.add(obj_id)
         return _GisDfComponents(geom, f['attributes'])
 
+class GisAbortError(Exception):
+    pass
+
+
+class GisMissingResults(Exception):
+    pass
 
 class GisReaderError(Exception):
-    bounds: Any
     offset: Any
     projection: GisProjection
     

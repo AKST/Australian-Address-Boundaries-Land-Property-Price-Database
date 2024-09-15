@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from collections import namedtuple
 from typing import Tuple
 
+from .request import Bounds
+
 class BoundResolution:
     def interpolate(self, t: float) -> float:
         raise NotImplementedError()
@@ -22,25 +24,6 @@ class ConstantBoundResolution(BoundResolution):
     
     def interpolate(self, t):
         return self.value
-
-@dataclass
-class Bounds:
-    xmin: float
-    ymin: float
-    ymax: float
-    xmax: float
-
-    def area(self):
-        return self.x_range() * self.y_range()
-
-    def x_range(self):
-        return self.xmax - self.xmin
-
-    def y_range(self):
-        return self.ymax - self.ymin
-
-SYDNEY_BOUNDS = Bounds(xmin=150.5209, ymin=-34.1183, xmax=151.3430, ymax=-33.5781)
-NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
 
 class BoundsIterator:
     def __init__(self, 
