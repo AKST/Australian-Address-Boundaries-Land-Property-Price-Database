@@ -2,7 +2,7 @@ from collections import namedtuple
 from dataclasses import dataclass, field
 from typing import Set, Any, Optional, List, Tuple
 
-from .where_clause import YearMonth
+from .predicate import YearMonth, PredicateFunction
 
 @dataclass
 class SchemaField:
@@ -16,7 +16,7 @@ class GisSchema:
     id_field: str
     result_limit: int
     fields: List[str]
-    date_filter_column: str
+    shard_scheme: List[PredicateFunction]
     debug_plot_column: str
 
 @dataclass

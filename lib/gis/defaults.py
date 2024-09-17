@@ -1,10 +1,16 @@
+from datetime import datetime
 from .constants import SPATIAL_NSW_HOST, ENVIRONMENT_NSW_HOST
 from .constants import SPATIAL_NSW_LOT_FEATURE_LAYER
 from .constants import SPATIAL_NSW_PROP_FEATURE_LAYER
 from .constants import ENVIRONMENT_NSW_DA_LAYER
 from .constants import ENVIRONMENT_NSW_ZONE_LAYER
+from .predicate import DatePredicateFunction, FloatPredicateFunction
 from .request import SchemaField, GisSchema, GisProjection, Bounds
 from .gis_streamer import HostSemaphoreConfig
+
+_1ST_YEAR = 2000
+_NEXT_YEAR = datetime.now().year + 1
+_AREA_MAX = 1_000_000_000_000_000
 
 SYDNEY_BOUNDS = Bounds(xmin=150.5209, ymin=-34.1183, xmax=151.3430, ymax=-33.5781)
 NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
@@ -21,7 +27,10 @@ HOST_SEMAPHORE_CONFIG = [
 SNSW_PROP_SCHEMA = GisSchema(
     url=SPATIAL_NSW_PROP_FEATURE_LAYER,
     debug_plot_column='Shape__Area',
-    date_filter_column='lastupdate',
+    shard_scheme=[
+        DatePredicateFunction(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
+    ],
     id_field='RID',
     result_limit=100,
     fields=[
@@ -69,7 +78,10 @@ SNSW_PROP_PROJECTION = GisProjection(
 SNSW_LOT_SCHEMA = GisSchema(
     url=SPATIAL_NSW_LOT_FEATURE_LAYER,
     debug_plot_column='Shape__Area',
-    date_filter_column='lastupdate',
+    shard_scheme=[
+        DatePredicateFunction(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
+    ],
     id_field='objectid',
     result_limit=100,
     fields=[
@@ -117,7 +129,9 @@ SNSW_LOT_PROJECTION = GisProjection(
 ENSW_DA_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_DA_LAYER,
     debug_plot_column='STATUS',
-    date_filter_column='SUBMITTED_DATE',
+    shard_scheme=[
+        DatePredicateFunction(field='SUBMITTED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+    ],
     id_field='PLANNING_PORTAL_APP_NUMBER',
     result_limit=100,
     fields=[
@@ -203,7 +217,9 @@ ENSW_DA_PROJECTION = GisProjection(
 ENSW_ZONE_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_ZONE_LAYER,
     debug_plot_column='SYM_CODE',
-    date_filter_column='PUBLISHED_DATE',
+    shard_scheme=[
+        DatePredicateFunction(field='PUBLISHED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+    ],
     id_field='OBJECTID',
     result_limit=100,
     fields=[

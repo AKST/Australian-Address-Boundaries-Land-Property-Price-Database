@@ -9,7 +9,7 @@ import math
 from shapely.geometry import shape
 from typing import Set, Any, Optional, List, Tuple
 
-from lib.gis.where_clause import GisPredicate
+from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
 
 ProjectionTask = namedtuple('ProjectionChunkTask', ['where_clause', 'offset', 'expected_results'])
@@ -67,9 +67,9 @@ class GisStreamer:
             if s.projection == p
         ), None)
 
-    async def consume(self, predicate: GisPredicate):
+    async def consume(self, params: List[PredicateParam]):
         async with asyncio.TaskGroup() as tg:
-            iters = [ss.run_all(tg, predicate) for ss in self._sub_streams]
+            iters = [ss.run_all(tg, params) for ss in self._sub_streams]
             async for result in self._merge_async_iters(iters):
                 yield result
             
@@ -120,19 +120,77 @@ class GisSubStream:
         percent = math.floor(100*(amount/total))
         return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
             
-    async def run_all(self, tg: asyncio.TaskGroup, predicate: GisPredicate):
+    async def run_all(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
         schema = self.projection.schema
         limit = schema.result_limit
         
         try:
-            tasks = await self._chunk_into_tasks(tg, predicate)
-            tasks = [tg.create_task(self._run_task(t)) for t in tasks]
-            for task in asyncio.as_completed(tasks):
+            # producer = lambda: self._chunk_into_tasks(tg, params)
+            # consumer = lambda shard: tg.create_task(self._run_task(shard)) 
+            # async for task, gdf in pipe(producer, consumer):
+            #     if len(gdf) > 0:
+            #         yield self.projection, task_desc, gdf
+                
+            pending = set()
+            async for shard in self._chunk_into_tasks(tg, params):
+                pending.add(tg.create_task(self._run_task(shard)))
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    task_desc, gdf = await task
+                    if len(gdf) > 0:
+                        yield self.projection, task_desc, gdf
+                        
+            for task in asyncio.as_completed(pending):
                 task_desc, gdf = await task
                 if len(gdf) > 0:
                     yield self.projection, task_desc, gdf
         except GisAbortError:
             self._logger("aborting tasks")
+
+    async def _chunk_into_tasks(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
+        limit = self.projection.schema.result_limit
+        self._counts = _ClauseCounts()
+
+        async def shard_count(shard, field):
+            where_clause = shard.apply(field)
+            count = await tg.create_task(self._get_count(where_clause))
+            return count, shard
+
+        async def chunks(where_clause, shard_functions, params):
+            shard_p, *shard_ps = params if params else [None]
+            shard_f, *shard_fs = shard_functions
+            
+            if shard_p == None:
+                shard_p = shard_f.default_param(where_clause)
+
+            shard_count_queue = list(shard_p.shard())
+            requires_extra_param = []
+            
+            while shard_count_queue:
+                counts = [shard_count(s, shard_f.field) for s in shard_count_queue]
+                shard_count_queue = []
+                
+                for count, shard in await asyncio.gather(*counts):
+                    query = shard.apply(shard_f.field)
+                    if count == 0:
+                        continue
+                    elif count <= limit * 150:
+                        self._counts.init_clause(query, count)
+                        for offset in range(0, count, limit):
+                            expected = min(limit, offset % limit)
+                            yield ProjectionTask(query, offset, expected)
+                    elif shard.can_shard():
+                        shard_count_queue.extend(list(shard.shard()))
+                    else:
+                        requires_extra_param.append(shard)
+ 
+            for shard in requires_extra_param:
+                query = shard.apply(shard_f.field)
+                async for p in chunks(query, shard_fs, shard_ps):
+                    yield p
+
+        async for c in chunks(None, self.projection.schema.shard_scheme, params):
+            yield c
     
     async def _run_task(self, task: ProjectionTask):
         p = self.projection
@@ -174,36 +232,60 @@ class GisSubStream:
             crs=f"EPSG:{p.epsg_crs}",
         ) if attributes else gpd.GeoDataFrame()
         return task, gdf 
-
-    async def _chunk_into_tasks(self, tg: asyncio.TaskGroup, predicate: GisPredicate):
-        schema = self.projection.schema
-        limit = schema.result_limit
-        
-        counts = await asyncio.gather(*[
-            tg.create_task(self._get_count(chunk))
-            for chunk in predicate.chunk()
-        ])
-        counts = [(count, clause.to_str(schema.date_filter_column)) for count, clause in counts]
-        
-        self._counts = _ClauseCounts.from_list(counts)
-        return [
-            ProjectionTask(clause, offset, (offset % limit))
-            for count, clause in counts
-            for offset in range(0, count, limit)
-        ]
-        # for count, chunk in counts:
-        #     yield chunk
             
-    async def _get_count(self, chunk: GisPredicate) -> (int, str): 
-        where_clause = chunk.to_str(self.projection.schema.date_filter_column)
-        params = { 'where': where_clause, 'returnCountOnly': True, 'f': 'json' }
+    async def _get_count(self, where_clause: str | None) -> (int, str): 
+        params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }
         count = (await self._get_json(params)).get('count', 0)
         self._logger.debug(f'count for "{where_clause}" is {count}')
-        return (count, chunk)
+        return count
 
     async def _get_json(self, params):
         url = f'{self.projection.schema.url}/query'
         return await self._session.get_json(url, params)
+
+async def pipe(producer, consumer):
+    pending_tasks = set()
+    producer_coroutine = producer()
+    
+    try:
+        while True:
+            # Start tasks as shards become available
+            shard_task = asyncio.create_task(producer_coroutine.__anext__())
+            # Wait for either a shard to become available or a task to complete
+            done, _ = await asyncio.wait(
+                [shard_task] + list(pending_tasks),
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            if shard_task in done:
+                try:
+                    shard = shard_task.result()
+                    # Start processing the shard
+                    task = asyncio.create_task(consumer(shard))
+                    pending_tasks.add(task)
+                except StopAsyncIteration:
+                    # Producer is exhausted
+                    break
+                except Exception as e:
+                    # Handle exceptions from the producer if necessary
+                    continue
+
+            # Process any completed tasks
+            completed_tasks = done - {shard_task}
+            for task in completed_tasks:
+                pending_tasks.remove(task)
+                result = await task
+                if result is not None:
+                    yield result
+
+    except StopAsyncIteration:
+        pass
+
+    # Process remaining pending tasks
+    for task in asyncio.as_completed(pending_tasks):
+        result = await task
+        if result is not None:
+            yield result
 
 class _ClauseCounts:
     def __init__(self, counts=None):
