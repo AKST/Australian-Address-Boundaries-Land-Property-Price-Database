@@ -11,6 +11,8 @@ from lib.data_types import Target
 static_dirs = [
     'web-out', 
     'zip-out', 
+    'cache-out',
+    'state-out',
 ]
 
 CHUNKSIZE_16KB = 16384

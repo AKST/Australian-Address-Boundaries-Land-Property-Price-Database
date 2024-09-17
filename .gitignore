@@ -6,6 +6,8 @@ env
 
 web-out
 zip-out
+cache-out
+state-out
 
 *.apkg
 *.atx

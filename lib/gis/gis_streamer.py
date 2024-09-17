@@ -6,49 +6,15 @@ from itertools import tee
 import json
 from logging import getLogger
 import math
+from random import shuffle
 from shapely.geometry import shape
-from typing import Set, Any, Optional, List, Tuple
+from typing import Set, Any, Optional, List, Tuple, Dict
 
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
+from lib.http.throttled_session import ThrottledSession
 
 ProjectionTask = namedtuple('ProjectionChunkTask', ['where_clause', 'offset', 'expected_results'])
-HostSemaphoreConfig = namedtuple('HostSemaphoreConfig', ['host', 'limit'])
-
-class ThrottledSession:
-    _logger = getLogger(f'{__name__}.ThrottledSession')
-    
-    def __init__(self, session: ClientSession, semaphores):
-        self._semaphores = semaphores
-        self._session = session
-
-    @staticmethod
-    def create(session: ClientSession, host_configs: List[HostSemaphoreConfig]):
-        semaphores = { c.host: asyncio.Semaphore(c.limit) for c in host_configs }
-        return ThrottledSession(session, semaphores)
-    
-    async def get_json(self, url: str, params: Any):
-        from urllib.parse import urlparse, urlencode
-
-        url_with_params = f"{url}?{urlencode(params)}"
-        host = urlparse(url).netloc
-        
-        async with self._semaphores[host]:
-            if self.closed:
-                raise GisAbortError("http session has been closed")
-        
-            async with self._session.get(url_with_params) as response:
-                if response.status != 200:
-                    self._logger.error(f"Crashed at {url_with_params}")
-                    self._logger.error(response)
-                    raise GisNetworkError(response.status, response)
-                r = await response.json()
-                return r
-
-    @property
-    def closed(self):
-        return self._session.closed
-            
 
 class GisStreamer:
     _logger = getLogger(f'{__name__}.GisStreamer')
@@ -157,7 +123,8 @@ class GisSubStream:
 
             shard_count_queue = list(shard_p.shard())
             requires_extra_param = []
-            
+
+            shuffle(shard_count_queue)
             while shard_count_queue:
                 counts = [shard_count(s, shard_f.field) for s in shard_count_queue]
                 shard_count_queue = []
@@ -175,11 +142,15 @@ class GisSubStream:
                         shard_count_queue.extend(list(shard.shard()))
                     else:
                         requires_extra_param.append(shard)
- 
+                shuffle(shard_count_queue)
+
+            shuffle(requires_extra_param)
+            
             for shard in requires_extra_param:
                 query = shard.apply(shard_f.field)
                 async for p in chunks(query, shard_fs, shard_ps):
                     yield p
+                    
 
         async for c in chunks(None, self.projection.schema.shard_scheme, params):
             yield c
