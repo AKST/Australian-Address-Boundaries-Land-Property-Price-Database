@@ -20,7 +20,7 @@ WGS84_CRS = 4326
 _field_priority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
 
 HOST_SEMAPHORE_CONFIG = [
-    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=16),
+    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=4),
     HostSemaphoreConfig(host=ENVIRONMENT_NSW_HOST, limit=12),
 ]
 

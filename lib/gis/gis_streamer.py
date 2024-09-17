@@ -125,29 +125,21 @@ class GisSubStream:
         limit = schema.result_limit
         
         try:
-            # producer = lambda: self._chunk_into_tasks(tg, params)
-            # consumer = lambda shard: tg.create_task(self._run_task(shard)) 
-            # async for task, gdf in pipe(producer, consumer):
-            #     if len(gdf) > 0:
-            #         yield self.projection, task_desc, gdf
-                
-            pending = set()
-            async for shard in self._chunk_into_tasks(tg, params):
-                pending.add(tg.create_task(self._run_task(shard)))
-                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-                for task in done:
-                    task_desc, gdf = await task
-                    if len(gdf) > 0:
-                        yield self.projection, task_desc, gdf
-                        
-            for task in asyncio.as_completed(pending):
-                task_desc, gdf = await task
+            producer = lambda: self._chunk_into_tasks(tg, params)
+            consumer = lambda shard: tg.create_task(self._run_task(shard)) 
+            async for task, gdf in pipe(producer, consumer):
                 if len(gdf) > 0:
-                    yield self.projection, task_desc, gdf
+                    yield self.projection, task, gdf
         except GisAbortError:
             self._logger("aborting tasks")
 
     async def _chunk_into_tasks(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
+        """
+        So some of the GIS servers I've interacted with have a habit of dying
+        when you paginate on a query well beyond 50k records. So one of the
+        goals here is create shards that are no more than 20K (or whatever
+        I configure it too). 
+        """
         limit = self.projection.schema.result_limit
         self._counts = _ClauseCounts()
 
@@ -259,16 +251,13 @@ async def pipe(producer, consumer):
 
             if shard_task in done:
                 try:
-                    shard = shard_task.result()
-                    # Start processing the shard
-                    task = asyncio.create_task(consumer(shard))
+                    task = consumer(await shard_task)
                     pending_tasks.add(task)
                 except StopAsyncIteration:
                     # Producer is exhausted
                     break
                 except Exception as e:
-                    # Handle exceptions from the producer if necessary
-                    continue
+                    raise e
 
             # Process any completed tasks
             completed_tasks = done - {shard_task}
