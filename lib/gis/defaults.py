@@ -20,7 +20,7 @@ WGS84_CRS = 4326
 _field_priority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
 
 HOST_SEMAPHORE_CONFIG = [
-    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=4),
+    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=1),
     HostSemaphoreConfig(host=ENVIRONMENT_NSW_HOST, limit=12),
 ]
 
@@ -28,7 +28,7 @@ SNSW_PROP_SCHEMA = GisSchema(
     url=SPATIAL_NSW_PROP_FEATURE_LAYER,
     debug_plot_column='Shape__Area',
     shard_scheme=[
-        DatePredicateFunction(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
     ],
     id_field='RID',
@@ -79,7 +79,7 @@ SNSW_LOT_SCHEMA = GisSchema(
     url=SPATIAL_NSW_LOT_FEATURE_LAYER,
     debug_plot_column='Shape__Area',
     shard_scheme=[
-        DatePredicateFunction(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
     ],
     id_field='objectid',
@@ -130,7 +130,7 @@ ENSW_DA_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_DA_LAYER,
     debug_plot_column='STATUS',
     shard_scheme=[
-        DatePredicateFunction(field='SUBMITTED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        DatePredicateFunction.create(field='SUBMITTED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
     ],
     id_field='PLANNING_PORTAL_APP_NUMBER',
     result_limit=100,
@@ -218,7 +218,7 @@ ENSW_ZONE_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_ZONE_LAYER,
     debug_plot_column='SYM_CODE',
     shard_scheme=[
-        DatePredicateFunction(field='PUBLISHED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
+        DatePredicateFunction.create(field='PUBLISHED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
     ],
     id_field='OBJECTID',
     result_limit=100,

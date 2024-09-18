@@ -11,9 +11,6 @@ import uuid
 
 from lib.http.util import url_with_params, url_host
 
-class CacheExpire:
-    NEVER = 'never'
-
 class CacheHeader:
     FORMAT = 'X-Cache-Format'
     EXPIRE = 'X-Cache-Expire'
@@ -115,12 +112,16 @@ class CachedGet:
         async with aiofiles.open(self._state.location, 'r') as f:
             return await f.read()
 
-def parse_expire(expire_str: str | None):
-    if not expire_str:
-        return None
-    if expire_str == 'never':
-        return expire_str
-    raise ValueError('Invalid Expire string')
+class CacheExpire:
+    NEVER = 'never'
+
+    @staticmethod
+    def parse_expire(expire_str: str | None):
+        if not expire_str:
+            return None
+        if expire_str == 'never':
+            return expire_str
+        raise ValueError('Invalid Expire string')
 
 @dataclass
 class InstructionHeaders:
@@ -157,7 +158,7 @@ class InstructionHeaders:
         
         return headers, InstructionHeaders(
             format=cache_fmt,
-            expiry=parse_expire(cache_ttl),
+            expiry=CacheExpire.parse_expire(cache_ttl),
             disabled=cache_disabled,
             filename=cache_name,
         )

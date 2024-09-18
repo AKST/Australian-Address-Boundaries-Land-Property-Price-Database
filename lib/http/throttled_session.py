@@ -61,7 +61,7 @@ class ThrottledGetRequest:
     
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._request_context_manager:
-            self._request_context_manager.__aexit__(exc_type, exc_value, traceback)
+            await self._request_context_manager.__aexit__(exc_type, exc_value, traceback)
         return self
 
     async def __aenter__(self):

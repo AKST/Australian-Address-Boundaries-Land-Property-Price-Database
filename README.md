@@ -2,6 +2,12 @@
 
 After starting docker, and installing the dependencies, go to the `data-ingestion` notebook.
 
+## Tests
+
+```
+python -m unittest discover
+```
+
 ## Data used
 
 - [Abs Shapefiles][Abs boundaries]
