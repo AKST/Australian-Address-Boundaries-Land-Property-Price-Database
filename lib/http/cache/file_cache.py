@@ -66,10 +66,10 @@ class FileCacher:
         state = FileCacher.parse_state(self._state, url)
         cache_found = state and fmt in state
         cache_expired = cache_found and state[fmt].has_expired(now)
-        
+
         if cache_found and not cache_expired:
             return state
-        elif cache_found and cache_expired: 
+        elif cache_found and cache_expired:
             # TODO delete state saved to disc
             return None
 
@@ -107,8 +107,8 @@ class FileCacher:
         return False
 
     @staticmethod
-    def create(config_path: str = './state-out/http-cache.json',
-               save_dir: str = './cache-out'):
+    def create(config_path: str = './_out_state/http-cache.json',
+               save_dir: str = './_out_cache'):
         async def read_state():
             if not await _file_exists(config_path):
                 async with aiofiles.open(config_path, 'w') as f:

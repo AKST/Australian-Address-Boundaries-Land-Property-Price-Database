@@ -21,25 +21,25 @@ def _find_subdirectory(directory, subdirectory_name):
 @dataclass
 class GnafPublicationTarget(Target):
     _psv_dir: Optional[str] = field(default=None)
-    
+
     @property
     def fk_constraints_sql(self):
-        return f'./zip-out/{self.zip_dst}/{_sql_dir_path}/add_fk_constraints.sql'
-        
+        return f'./_out_zip/{self.zip_dst}/{_sql_dir_path}/add_fk_constraints.sql'
+
     @property
     def create_tables_sql(self):
-        return f'./zip-out/{self.zip_dst}/{_sql_dir_path}/create_tables_ansi.sql'
+        return f'./_out_zip/{self.zip_dst}/{_sql_dir_path}/create_tables_ansi.sql'
 
     @property
     def psv_dir(self):
         if self._psv_dir is not None:
             return self._psv_dir
-        d = _find_subdirectory(f'./zip-out/{self.zip_dst}', 'Standard')
+        d = _find_subdirectory(f'./_out_zip/{self.zip_dst}', 'Standard')
         if d is None:
             raise Exception('could not find standard dir')
         self._psv_dir = Path(d).parent
         return str(self._psv_dir)
-        
+
 
 class GnafPublicationDiscovery:
     """
@@ -61,7 +61,7 @@ class GnafPublicationDiscovery:
     def get_publication(self):
         if self._publication is not None or self._attempted:
             return self._publication
-        
+
         self._attempted = True
 
         try:
@@ -72,7 +72,7 @@ class GnafPublicationDiscovery:
                 class_='dropdown-item',
                 href=lambda x: x and x.endswith('.zip') and 'gda2020_psv' in x,
             )
-            
+
             if link is not None:
                 name = link['href'].split('/')[-1]
                 self._publication = GnafPublicationTarget(

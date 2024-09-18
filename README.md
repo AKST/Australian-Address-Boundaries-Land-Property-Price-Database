@@ -29,8 +29,13 @@ Please respect the respective terms of use of the different dataset provided.
 - `lib` this is where all reusable code between notebooks are
 - `sql` this may suprise you but this is where I store SQL.
     - This is mostly loaded in the data ingestion notebook.
-- `web-out` this is where all the content is downloaded too
-- `zip-out` this is where all zips are zipped into.
+- `_out_web` this is where all the content is downloaded too
+- `_out_zip` this is where all zips are zipped into.
+- `_out_state` this is application state.
+- `_out_cache` this is similar to `_web_out` in that it
+  mostly exists to avoid repeating API calls. This is just
+  significantly less human readable (files with UUID names).
+  - The main usecase is minimizing API calls to GIS servers
 
 ## Questions
 

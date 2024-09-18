@@ -4,10 +4,10 @@
 __pycache__
 env
 
-web-out
-zip-out
-cache-out
-state-out
+_out_web
+_out_zip
+_out_cache
+_out_state
 
 *.apkg
 *.atx

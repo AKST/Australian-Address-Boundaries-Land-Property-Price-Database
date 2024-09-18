@@ -9,10 +9,10 @@ import lib.notebook_constants as nb
 from lib.data_types import Target
 
 static_dirs = [
-    'web-out', 
-    'zip-out', 
-    'cache-out',
-    'state-out',
+    '_out_web',
+    '_out_zip',
+    '_out_cache',
+    '_out_state',
 ]
 
 CHUNKSIZE_16KB = 16384
@@ -35,7 +35,7 @@ def recursively_unzip_child_zips(directory):
                 os.remove(zip_path)
     else:
         return
-        
+
     recursively_unzip_child_zips(directory)
 
 class StaticFileInitialiser:
@@ -59,31 +59,31 @@ class StaticFileInitialiser:
     def setup_dirs(self):
         for d in self.dirs:
             if not os.path.isdir(d):
-                os.mkdir(d) 
+                os.mkdir(d)
 
     def fetch_remote_resources(self):
         for t in self.targets:
             print(f'Checking {t.web_dst}')
-            w_out = 'web-out/%s' % t.web_dst
-            z_out = t.zip_dst and 'zip-out/%s' % t.zip_dst
-            
+            w_out = '_out_web/%s' % t.web_dst
+            z_out = t.zip_dst and '_out_zip/%s' % t.zip_dst
+
             if not os.path.isfile(w_out):
                 print(f'  - Downloading file {t.url}')
                 request = Request(t.url)
-                
+
                 if t.token:
                     request.add_header('Authorization', f'Basic {t.token}')
-                    
+
                 with urlopen(request) as response, open(w_out, 'wb') as f:
                     while True:
                         chunk = response.read(CHUNKSIZE_16KB)
                         if not chunk:
                             break
                         f.write(chunk)
-                    
+
             if t.zip_dst and not os.path.isdir(z_out):
                 os.mkdir(z_out)
-            
+
             if t.zip_dst and _is_dir_empty(z_out):
                 try:
                     with ZipFile(w_out, 'r') as z:
