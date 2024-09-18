@@ -12,14 +12,20 @@ from typing import Set, Any, Optional, List, Tuple, Dict
 
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
-from lib.http.throttled_session import ThrottledSession
+from lib.http.cached_http import CacheExpire, CacheHeader
+from lib.http.util import url_with_params
 
-ProjectionTask = namedtuple('ProjectionChunkTask', ['where_clause', 'offset', 'expected_results'])
+ProjectionTask = namedtuple('ProjectionChunkTask', [
+    'where_clause',
+    'offset',
+    'expected_results',
+    'use_cache',
+])
 
 class GisStreamer:
     _logger = getLogger(f'{__name__}.GisStreamer')
     
-    def __init__(self, session: ThrottledSession):
+    def __init__(self, session: ClientSession):
         self._session = session
         self._sub_streams = []
 
@@ -68,7 +74,7 @@ class GisSubStream:
     def __init__(self,
                  projection: GisProjection,
                  factory,
-                 session: ThrottledSession):
+                 session: ClientSession):
         self.projection = projection
         self._session = session
         self._factory = factory
@@ -99,7 +105,9 @@ class GisSubStream:
         except GisAbortError:
             self._logger("aborting tasks")
 
-    async def _chunk_into_tasks(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
+    async def _chunk_into_tasks(self,
+                                tg: asyncio.TaskGroup, 
+                                params: List[PredicateParam]):
         """
         So some of the GIS servers I've interacted with have a habit of dying
         when you paginate on a query well beyond 50k records. So one of the
@@ -109,12 +117,13 @@ class GisSubStream:
         limit = self.projection.schema.result_limit
         self._counts = _ClauseCounts()
 
-        async def shard_count(shard, field):
-            where_clause = shard.apply(field)
-            count = await tg.create_task(self._get_count(where_clause))
-            return count, shard
+        async def shard_count(shard_param, field, use_cache):
+            where_clause = shard_param.apply(field)
+            use_cache = use_cache and shard_param.can_cache()
+            task = self._get_count(where_clause, use_cache=use_cache)
+            return await tg.create_task(task), shard_param
 
-        async def chunks(where_clause, shard_functions, params):
+        async def chunks(where_clause, shard_functions, params, use_cache):
             shard_p, *shard_ps = params if params else [None]
             shard_f, *shard_fs = shard_functions
             
@@ -126,39 +135,45 @@ class GisSubStream:
 
             shuffle(shard_count_queue)
             while shard_count_queue:
-                counts = [shard_count(s, shard_f.field) for s in shard_count_queue]
+                counts = [
+                    shard_count(shard_param, shard_f.field, use_cache) 
+                    for shard_param in shard_count_queue
+                ]
+                
                 shard_count_queue = []
                 
                 for count, shard in await asyncio.gather(*counts):
                     query = shard.apply(shard_f.field)
+                    _use_cache = use_cache and shard.can_cache()
                     if count == 0:
                         continue
                     elif count <= limit * 150:
                         self._counts.init_clause(query, count)
                         for offset in range(0, count, limit):
                             expected = min(limit, offset % limit)
-                            yield ProjectionTask(query, offset, expected)
+                            yield ProjectionTask(query, offset, expected, use_cache=_use_cache)
                     elif shard.can_shard():
                         shard_count_queue.extend(list(shard.shard()))
                     else:
                         requires_extra_param.append(shard)
                 shuffle(shard_count_queue)
-
             shuffle(requires_extra_param)
             
             for shard in requires_extra_param:
                 query = shard.apply(shard_f.field)
-                async for p in chunks(query, shard_fs, shard_ps):
+                _use_cache = use_cache and shard.can_cache()
+                async for p in chunks(query, shard_fs, shard_ps, use_cache=_use_cache):
                     yield p
                     
 
-        async for c in chunks(None, self.projection.schema.shard_scheme, params):
+        shard_scheme = self.projection.schema.shard_scheme
+        async for c in chunks(None, shard_scheme, params, use_cache=True):
             yield c
     
     async def _run_task(self, task: ProjectionTask):
         p = self.projection
         try:
-            data = await self._get_json({
+            params = {
                 'returnGeometry': True,
                 'resultOffset': task.offset,
                 'resultRecordCount': p.schema.result_limit,
@@ -167,7 +182,8 @@ class GisSubStream:
                 'outSR': p.epsg_crs,
                 'outFields': ','.join(p.get_fields()),
                 'f': 'json',
-            })
+            }
+            data = await self._get_json(params, use_cache=task.use_cache, cache_name='page')
         except GisNetworkError as e:
             self._logger.error(f'failed on schema {p.schema.url}')
             self._logger.error(f'failed on task {task}')
@@ -196,15 +212,29 @@ class GisSubStream:
         ) if attributes else gpd.GeoDataFrame()
         return task, gdf 
             
-    async def _get_count(self, where_clause: str | None) -> (int, str): 
+    async def _get_count(self, where_clause: str | None, use_cache: bool) -> int:
+
         params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }
-        count = (await self._get_json(params)).get('count', 0)
+        response = await self._get_json(params, use_cache=use_cache, cache_name='count')
+        
+        count = response.get('count', 0)
         self._logger.debug(f'count for "{where_clause}" is {count}')
         return count
 
-    async def _get_json(self, params):
-        url = f'{self.projection.schema.url}/query'
-        return await self._session.get_json(url, params)
+    async def _get_json(self, params, use_cache, cache_name=None):
+        url = url_with_params(f'{self.projection.schema.url}/query', params)
+        async with self._session.get(url, headers={ 
+            CacheHeader.DISABLED: 'False' if use_cache else 'True',
+            CacheHeader.EXPIRE: CacheExpire.NEVER,
+            CacheHeader.FORMAT: 'json',
+            CacheHeader.NAME: cache_name,
+        }) as response:
+            json = await response.json()
+            if response.status != 200:
+                self._logger.error(f"Crashed at {url}")
+                self._logger.error(response)
+                raise GisNetworkError(response.status, response)
+            return json
 
 async def pipe(producer, consumer):
     pending_tasks = set()

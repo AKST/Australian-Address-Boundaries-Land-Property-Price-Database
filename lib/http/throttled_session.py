@@ -1,8 +1,12 @@
 from aiohttp import ClientSession
 import asyncio
 from collections import namedtuple
+from dataclasses import dataclass, field
 from logging import getLogger
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
+
+
+from .util import url_host
 
 HostSemaphoreConfig = namedtuple('HostSemaphoreConfig', ['host', 'limit'])
 
@@ -31,28 +35,40 @@ class ThrottledSession:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if await self._session.__aexit__(exc_type, exc_value, traceback):
-            return True
-        return False
+        return await self._session.__aexit__(exc_type, exc_value, traceback)
     
-    async def get_json(self, url: str, params: Any):
-        from urllib.parse import urlparse, urlencode
+    def get(self, url: str, headers: Optional[Dict[str, str]]=None):
+        host = url_host(url)
+        if host not in self._semaphores:
+            return self._session.get(url)
 
-        url_with_params = f"{url}?{urlencode(params)}"
-        host = urlparse(url).netloc
-        
-        async with self._semaphores[host]:
-            if self.closed:
-                raise GisAbortError("http session has been closed")
-        
-            async with self._session.get(url_with_params) as response:
-                if response.status != 200:
-                    self._logger.error(f"Crashed at {url_with_params}")
-                    self._logger.error(response)
-                    raise GisNetworkError(response.status, response)
-                r = await response.json()
-                return r
+        return ThrottledGetRequest(
+            _config=(url, headers),
+            _semaphore=self._semaphores[host],
+            _session=self._session,
+        )
 
     @property
     def closed(self):
         return self._session.closed
+
+@dataclass
+class ThrottledGetRequest:
+    _config: (str, Optional[Dict[str, str]])
+    _semaphore: Any
+    _session: ClientSession
+    _request_context_manager: Any = field(default=None)
+    
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self._request_context_manager:
+            self._request_context_manager.__aexit__(exc_type, exc_value, traceback)
+        return self
+
+    async def __aenter__(self):
+        async with self._semaphore:
+            if self._session.closed:
+                raise RuntimeError("http session has been closed")
+            url, headers = self._config
+            self._request_context_manager = self._session.get(url, headers=headers)
+            return await self._request_context_manager.__aenter__()
+    

@@ -1,6 +1,6 @@
 import calendar
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import math
 from typing import Any, Tuple
 
@@ -54,6 +54,9 @@ class PredicateParam:
     def shard(self):
         raise NotImplementedError()
 
+    def can_cache(self):
+        raise NotImplementedError()
+
 class FloatRangeParam(PredicateParam):
     start: float
     end: float
@@ -62,6 +65,9 @@ class FloatRangeParam(PredicateParam):
         super().__init__('float', scope=scope)
         self.start = start
         self.end = end
+
+    def can_cache(self):
+        return True
 
     def _scoped(self, start, end):
         return FloatRangeParam(start, end, scope=self.scope)
@@ -101,6 +107,10 @@ class DateRangeParam(PredicateParam):
 
     def _scoped(self, start, end):
         return DateRangeParam(start, end, scope=self.scope)
+
+    def can_cache(self):
+        today = YearMonth.from_date(datetime.now())
+        return today > self.end
         
     def shard(self):
         if self.end > self.start.next_year(n=100):
