@@ -1,6 +1,7 @@
 from aiohttp import ClientSession
 import asyncio
 from collections import namedtuple
+from dataclasses import dataclass
 import geopandas as gpd
 from itertools import tee
 import json
@@ -8,23 +9,23 @@ from logging import getLogger
 import math
 from random import shuffle
 from shapely.geometry import shape
-from typing import Set, Any, Optional, List, Tuple, Dict
+from typing import Set, Any, Optional, List, Tuple, Dict, AsyncIterator, Callable, Coroutine
 
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
-from lib.http.cached_http import CacheExpire, CacheHeader
+from lib.http.cache import CacheHeader
 from lib.http.util import url_with_params
 
-ProjectionTask = namedtuple('ProjectionChunkTask', [
-    'where_clause',
-    'offset',
-    'expected_results',
-    'use_cache',
-])
+@dataclass
+class ProjectionTask:
+    where_clause: str
+    offset: int
+    expected_results: int
+    use_cache: bool
 
 class GisStreamer:
     _logger = getLogger(f'{__name__}.GisStreamer')
-    
+
     def __init__(self, session: ClientSession):
         self._session = session
         self._sub_streams = []
@@ -44,33 +45,38 @@ class GisStreamer:
             iters = [ss.run_all(tg, params) for ss in self._sub_streams]
             async for result in self._merge_async_iters(iters):
                 yield result
-            
+
     async def _merge_async_iters(self, iters):
         # Create an asyncio.Task for each async generator
         tasks = {asyncio.create_task(it.__anext__()): it for it in iters}
-    
+
         while tasks:
             # Wait for any of the tasks to complete
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-    
+
             for task in done:
                 iterator = tasks.pop(task)
-    
+
                 try:
                     # Yield the result from the completed task
                     result = task.result()
                     yield result
-    
+
                     # Schedule the next item from the same iterator
                     tasks[asyncio.create_task(iterator.__anext__())] = iterator
                 except StopAsyncIteration:
                     # When the iterator is exhausted, it is not rescheduled
                     continue
 
+def add_to_tg(tg, task, name):
+    task = tg.create_task(task)
+    task.set_name(name)
+    return task
+
 class GisSubStream:
     _logger = getLogger(f'{__name__}.GisSubStream')
     _counts = None
-    
+
     def __init__(self,
                  projection: GisProjection,
                  factory,
@@ -91,28 +97,41 @@ class GisSubStream:
         amount, total = self._counts.progress(task.where_clause)
         percent = math.floor(100*(amount/total))
         return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
-            
+
     async def run_all(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
         schema = self.projection.schema
         limit = schema.result_limit
-        
+
         try:
             producer = lambda: self._chunk_into_tasks(tg, params)
-            consumer = lambda shard: tg.create_task(self._run_task(shard)) 
-            async for task, gdf in pipe(producer, consumer):
+            consumer = lambda shard: self._run_task(shard)
+            async for task, gdf in pipe(tg, producer, consumer):
                 if len(gdf) > 0:
                     yield self.projection, task, gdf
+            # pending = set()
+            # async for shard in self._chunk_into_tasks(tg, params):
+            #     pending.add(tg.create_task(self._run_task(shard)))
+            #     done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            #     for task in done:
+            #         task_desc, gdf = await task
+            #         if len(gdf) > 0:
+            #             yield self.projection, task_desc, gdf
+
+            # for task in asyncio.as_completed(pending):
+            #     task_desc, gdf = await task
+            #     if len(gdf) > 0:
+            #         yield self.projection, task_desc, gdf
         except GisAbortError:
             self._logger("aborting tasks")
 
     async def _chunk_into_tasks(self,
-                                tg: asyncio.TaskGroup, 
+                                tg: asyncio.TaskGroup,
                                 params: List[PredicateParam]):
         """
         So some of the GIS servers I've interacted with have a habit of dying
         when you paginate on a query well beyond 50k records. So one of the
         goals here is create shards that are no more than 20K (or whatever
-        I configure it too). 
+        I configure it too).
         """
         limit = self.projection.schema.result_limit
         self._counts = _ClauseCounts()
@@ -126,7 +145,7 @@ class GisSubStream:
         async def chunks(where_clause, shard_functions, params, use_cache):
             shard_p, *shard_ps = params if params else [None]
             shard_f, *shard_fs = shard_functions
-            
+
             if shard_p == None:
                 shard_p = shard_f.default_param(where_clause)
 
@@ -136,12 +155,12 @@ class GisSubStream:
             shuffle(shard_count_queue)
             while shard_count_queue:
                 counts = [
-                    shard_count(shard_param, shard_f.field, use_cache) 
+                    shard_count(shard_param, shard_f.field, use_cache)
                     for shard_param in shard_count_queue
                 ]
-                
+
                 shard_count_queue = []
-                
+
                 for count, shard in await asyncio.gather(*counts):
                     query = shard.apply(shard_f.field)
                     _use_cache = use_cache and shard.can_cache()
@@ -158,18 +177,18 @@ class GisSubStream:
                         requires_extra_param.append(shard)
                 shuffle(shard_count_queue)
             shuffle(requires_extra_param)
-            
+
             for shard in requires_extra_param:
                 query = shard.apply(shard_f.field)
                 _use_cache = use_cache and shard.can_cache()
                 async for p in chunks(query, shard_fs, shard_ps, use_cache=_use_cache):
                     yield p
-                    
+
 
         shard_scheme = self.projection.schema.shard_scheme
         async for c in chunks(None, shard_scheme, params, use_cache=True):
             yield c
-    
+
     async def _run_task(self, task: ProjectionTask):
         p = self.projection
         try:
@@ -187,9 +206,9 @@ class GisSubStream:
         except GisNetworkError as e:
             self._logger.error(f'failed on schema {p.schema.url}')
             self._logger.error(f'failed on task {task}')
-            self._logger.error(self.progress_str(task)) 
+            self._logger.error(self.progress_str(task))
             raise GisTaskNetworkError(task, e.http_status, e.response)
-            
+
         features = data.get('features', [])
         if len(features) < task.expected_results:
             self._logger("Potenial data loss has occured")
@@ -204,47 +223,57 @@ class GisSubStream:
             if component:
                 geometries.append(component.geometry)
                 attributes.append(component.attributes)
-                
+
         gdf = gpd.GeoDataFrame(
             attributes,
             geometry=geometries,
             crs=f"EPSG:{p.epsg_crs}",
         ) if attributes else gpd.GeoDataFrame()
-        return task, gdf 
-            
+        return task, gdf
+
     async def _get_count(self, where_clause: str | None, use_cache: bool) -> int:
 
         params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }
         response = await self._get_json(params, use_cache=use_cache, cache_name='count')
-        
-        count = response.get('count', 0)
-        self._logger.debug(f'count for "{where_clause}" is {count}')
-        return count
+        try:
+            count = response.get('count', 0)
+            self._logger.debug(f'count for "{where_clause}" is {count}')
+            return count
+        except Exception as e:
+            url = url_with_params(f'{self.projection.schema.url}/query', params)
+            print(f'failed on {url}', e)
+            raise e
 
     async def _get_json(self, params, use_cache, cache_name=None):
         url = url_with_params(f'{self.projection.schema.url}/query', params)
-        async with self._session.get(url, headers={ 
-            CacheHeader.DISABLED: 'False' if use_cache else 'True',
-            CacheHeader.EXPIRE: CacheExpire.NEVER,
+        async with self._session.get(url, headers={
+            # CacheHeader.DISABLED: 'False' if use_cache else 'True',
+            CacheHeader.EXPIRE: 'never' if use_cache else 'delta:days:1',
             CacheHeader.FORMAT: 'json',
             CacheHeader.NAME: cache_name,
         }) as response:
-            json = await response.json()
             if response.status != 200:
                 self._logger.error(f"Crashed at {url}")
                 self._logger.error(response)
                 raise GisNetworkError(response.status, response)
-            return json
+            data = await response.json()
+            if data is None:
+                print(f"Failure on {url}, json is None")
+                raise GisNetworkNoneJsonError(url, response.status, response)
+            return data
+            
 
-async def pipe(producer, consumer):
-    pending_tasks = set()
-    producer_coroutine = producer()
+async def pipe(tg: asyncio.TaskGroup, producer, consumer):
+    import weakref
     
+    pending_tasks = set()
+    shard_tasks = weakref.WeakSet()
+    producer_coroutine = producer()
+
     try:
+        shard_task = tg.create_task(producer_coroutine.__anext__())
+        shard_tasks.add(shard_task)
         while True:
-            # Start tasks as shards become available
-            shard_task = asyncio.create_task(producer_coroutine.__anext__())
-            # Wait for either a shard to become available or a task to complete
             done, _ = await asyncio.wait(
                 [shard_task] + list(pending_tasks),
                 return_when=asyncio.FIRST_COMPLETED
@@ -252,17 +281,20 @@ async def pipe(producer, consumer):
 
             if shard_task in done:
                 try:
-                    task = consumer(await shard_task)
+                    task = tg.create_task(consumer(await shard_task))
                     pending_tasks.add(task)
+                    shard_task = tg.create_task(producer_coroutine.__anext__())
+                    shard_tasks.add(shard_task)
                 except StopAsyncIteration:
-                    # Producer is exhausted
                     break
                 except Exception as e:
                     raise e
 
-            # Process any completed tasks
             completed_tasks = done - {shard_task}
             for task in completed_tasks:
+                if task in shard_tasks:
+                    continue
+                    
                 pending_tasks.remove(task)
                 result = await task
                 if result is not None:
@@ -271,7 +303,6 @@ async def pipe(producer, consumer):
     except StopAsyncIteration:
         pass
 
-    # Process remaining pending tasks
     for task in asyncio.as_completed(pending_tasks):
         result = await task
         if result is not None:
@@ -283,7 +314,7 @@ class _ClauseCounts:
 
     def init_clause(self, clause, count):
         self._counts[clause] = (0, count)
-        
+
     @staticmethod
     def from_list(ls: List[Tuple[int, str]]):
         counts = { clause: (0, count) for count, clause in ls }
@@ -310,7 +341,7 @@ class _GisDfComponentFactory:
         obj_id = f['attributes'][self._id_field]
         if obj_id in self._seen:
             return
-            
+
         geometry = f['geometry']
         if 'rings' in geometry:
             geom = shape({"type": "Polygon", "coordinates": geometry['rings']})
@@ -318,14 +349,14 @@ class _GisDfComponentFactory:
             geom = shape({"type": "LineString", "coordinates": geometry['paths']})
         else:
             geom = shape(geometry)
-            
+
         self._seen.add(obj_id)
         return _GisDfComponents(geom, f['attributes'])
 
 class GisAbortError(Exception):
     """
     This gets fired if one of the tasks ends up with
-    less results than expected. It's important to 
+    less results than expected. It's important to
     raise expections here to flag data loss.
     """
     pass
@@ -336,7 +367,7 @@ class GisMissingResults(Exception):
 class GisReaderError(Exception):
     offset: Any
     projection: GisProjection
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -344,7 +375,12 @@ class GisNetworkError(GisReaderError):
     def __init__(self, http_status, response, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.http_status = http_status
-        self.response = response    
+        self.response = response
+
+class GisNetworkNoneJsonError(GisReaderError):
+    def __init__(self, url, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.url = url
 
 class GisTaskNetworkError(GisNetworkError):
     def __init__(self, task, http_status, response, *args, **kwargs):

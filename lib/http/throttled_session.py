@@ -35,7 +35,8 @@ class ThrottledSession:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        return await self._session.__aexit__(exc_type, exc_value, traceback)
+        await self._session.__aexit__(exc_type, exc_value, traceback)
+        return False
     
     def get(self, url: str, headers: Optional[Dict[str, str]]=None):
         host = url_host(url)
@@ -62,7 +63,7 @@ class ThrottledGetRequest:
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._request_context_manager:
             await self._request_context_manager.__aexit__(exc_type, exc_value, traceback)
-        return self
+        return False
 
     async def __aenter__(self):
         async with self._semaphore:
