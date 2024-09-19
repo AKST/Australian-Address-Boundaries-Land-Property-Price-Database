@@ -1,12 +1,11 @@
 import aiofiles
-from aiohttp import ClientSession
 import asyncio
 from dataclasses import dataclass, field
 import json
 from logging import getLogger
 from typing import Any, Dict, Optional
 
-from lib.service.http import AbstractClientSession, AbstractGetResponse
+from lib.service.http import ClientSession, AbstractClientSession, AbstractGetResponse
 from lib.service.http.util import url_with_params, url_host
 from .expiry import CacheExpire
 from .file_cache import FileCacher
@@ -61,7 +60,7 @@ class CachedGet(AbstractGetResponse):
     so it can be removed if no necessary. If you have to ask
     why is this so confusing, start there and work backwards.
     """
-    _config: (str, Dict[str, str], Any)
+    _config: (str, Dict[str, str], InstructionHeaders)
     _session: ClientSession
     _cache: Any
     _status: int | None = field(default=None)

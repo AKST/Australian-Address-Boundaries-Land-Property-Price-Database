@@ -5,6 +5,11 @@ from typing import Any, Optional, Dict
 from .base import AbstractClientSession, AbstractGetResponse
 
 class ClientSession(AbstractClientSession):
+    """
+    Why does this exist, well I started with the API of
+    `aiohttp` but I realised maybe I want to divate from
+    their API and lock down the exact API I use.
+    """
     def __init__(self, session: ThirdPartyClientSession):
         self._session = session
 

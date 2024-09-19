@@ -127,7 +127,7 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_meta = InstructionHeaders(format='json',
                                           expiry=Never(),
                                           disabled=False,
-                                          filename='fruitloop')
+                                          request_label='fruitloop')
         request_data = '{"count":2012}'
         request_url = 'breakfast'
         uuid = MockUuidService(values=['u1'])
@@ -149,7 +149,7 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_meta = InstructionHeaders(format='json',
                                           expiry=Never(),
                                           disabled=False,
-                                          filename='fruitloop')
+                                          request_label='fruitloop')
         request_data = '{"count":2012}'
         request_url = 'breakfast'
         uuid = MockUuidService(values=['u1'])

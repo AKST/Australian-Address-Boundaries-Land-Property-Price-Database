@@ -60,7 +60,7 @@ class GnafPublicationDiscovery:
         async with session.get(self._information_page_url, headers={
             CacheHeader.EXPIRE: 'delta:weeks:8',
             CacheHeader.FORMAT: 'text',
-            CacheHeader.NAME: 'gnaf',
+            CacheHeader.LABEL: 'gnaf',
         }) as response:
             html = await response.text()
             soup = BeautifulSoup(html, 'html.parser')

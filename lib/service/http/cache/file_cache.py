@@ -85,7 +85,7 @@ class FileCacher:
         return None
 
     async def write(self, url: str, meta: InstructionHeaders, data: str):
-        fname = f"{meta.filename}-{self._uuid.get_uuid4_hex()}.{meta.ext}"
+        fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"
         fpath = os.path.join(self._save_dir, fname)
         await self._io.f_write(fpath, data)
 

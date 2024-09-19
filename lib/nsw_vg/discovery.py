@@ -48,7 +48,7 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
             async with session.get(self._directory_page, headers={
                 CacheHeader.EXPIRE: self._cache_period,
                 CacheHeader.FORMAT: 'text',
-                CacheHeader.NAME: 'htmlDirectory',
+                CacheHeader.LABEL: 'htmlDirectory',
             }) as response:
                 html = await response.text()
                 soup = BeautifulSoup(html, 'html.parser')

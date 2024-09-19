@@ -205,7 +205,7 @@ class GisStream:
         async with self._session.get(url, headers={
             CacheHeader.EXPIRE: 'never' if use_cache else 'delta:days:2',
             CacheHeader.FORMAT: 'json',
-            CacheHeader.NAME: cache_name,
+            CacheHeader.LABEL: cache_name,
         }) as response:
             if response.status != 200:
                 self._logger.error(f"Crashed at {url}")

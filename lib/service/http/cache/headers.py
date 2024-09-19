@@ -7,14 +7,14 @@ class CacheHeader:
     FORMAT = 'X-Cache-Format'
     EXPIRE = 'X-Cache-Expire'
     DISABLED = 'X-Cache-Disabled'
-    NAME = 'X-Cache-Name'
+    LABEL = 'X-Cache-Label'
 
 @dataclass
 class InstructionHeaders:
     format: str
     expiry: CacheExpire | None
     disabled: bool
-    filename: Optional[str]
+    request_label: Optional[str]
 
     @property
     def ext(self):
@@ -30,8 +30,8 @@ class InstructionHeaders:
         cache_fmt = headers.get(CacheHeader.FORMAT, 'text')
         cache_ttl = headers.get(CacheHeader.EXPIRE, None)
         cache_disabled = headers.get(CacheHeader.DISABLED, 'False') == True
-        cache_name = headers.get(CacheHeader.NAME, None)
-        cache_name = f'{host}-{cache_name if cache_name else "?"}'
+        label = headers.get(CacheHeader.LABEL, None)
+        label = f'{host}-{label if label else "?"}'
 
         if CacheHeader.FORMAT in headers:
             del headers[CacheHeader.FORMAT]
@@ -39,14 +39,14 @@ class InstructionHeaders:
             del headers[CacheHeader.EXPIRE]
         if CacheHeader.DISABLED in headers:
             del headers[CacheHeader.DISABLED]
-        if CacheHeader.NAME in headers:
-            del headers[CacheHeader.NAME]
+        if CacheHeader.LABEL in headers:
+            del headers[CacheHeader.LABEL]
 
         return headers, InstructionHeaders(
             format=cache_fmt,
             expiry=CacheExpire.parse_expire(cache_ttl),
             disabled=cache_disabled,
-            filename=cache_name,
+            request_label=label,
         )
 
 
