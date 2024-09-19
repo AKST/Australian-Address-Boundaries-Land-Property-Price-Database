@@ -5,32 +5,37 @@ from unittest.mock import AsyncMock
 from lib.service.clock.mocks import MockClockService
 from lib.service.uuid.mocks import MockUuidService
 from lib.service.io import IoService
-from lib.service.http.cache import InstructionHeaders
-from lib.service.http.cache.file_cache import RequestCache, FileCacher
+from lib.service.http.cache import InstructionHeaders, CACHE_VERSION
+from lib.service.http.cache.file_cache import RequestCache, FileCacher, RequestCacheFactory
 from lib.service.http.cache.expiry import *
 
 _file_path = 'blah/blah/blah'
 _date_str = '2012-10-15 10:10:10'
 _date_obj = datetime(2012, 10, 15, 10, 10, 10)
+_empty_state_str = '{"version": %s, "files": {}}' % CACHE_VERSION
 
 class RequestCacheTestCase(TestCase):
+    factory = RequestCacheFactory(cache_dir='asdf')
+
     def test_parse_never_expire(self):
-        obj = RequestCache(Never(), _file_path, _date_obj)
+        obj = RequestCache(Never(), _file_path, _date_obj, cache_dir='asdf')
         dct = { 'expire': 'never', 'location': _file_path, 'age': _date_str }
         self.assertEqual(dct, RequestCache.to_json(obj))
-        self.assertEqual(RequestCache.from_json(dct), obj)
+        self.assertEqual(self.factory.from_json(dct), obj)
 
     def test_parse_delta_5_days(self):
-        obj = RequestCache(Delta('days', 5), _file_path, _date_obj)
+        obj = RequestCache(Delta('days', 5), _file_path, _date_obj, cache_dir='asdf')
         dct = { 'expire': 'delta:days:5', 'location': _file_path, 'age': _date_str }
         self.assertEqual(dct, RequestCache.to_json(obj))
-        self.assertEqual(RequestCache.from_json(dct), obj)
+        self.assertEqual(self.factory.from_json(dct), obj)
 
     def test_parse_delta_5_days(self):
-        obj = RequestCache(TillNextDayOfWeek(2), _file_path, _date_obj)
+        obj = RequestCache(TillNextDayOfWeek(2), _file_path, _date_obj, cache_dir='asdf')
         dct = { 'expire': 'till_next_day_of_week:Wednesday', 'location': _file_path, 'age': _date_str }
         self.assertEqual(dct, RequestCache.to_json(obj))
-        self.assertEqual(RequestCache.from_json(dct), obj)
+        self.assertEqual(self.factory.from_json(dct), obj)
+
+cache_dir = 'cache_dir'
 
 class FileCacherTestCase(IsolatedAsyncioTestCase):
     mock_io = None
@@ -46,12 +51,12 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         return state
 
     def _get_instance(self, state, uuid=None, clock=None):
-        cache_dir = 'cache_dir'
         state_path = 'state_path'
         uuid = uuid or MockUuidService(values=['1', '2', '3'])
         clock = clock or MockClockService(dt=_date_obj)
         return FileCacher(cache_dir,
                           state_path,
+                          RequestCacheFactory(cache_dir),
                           self.mock_io,
                           uuid,
                           clock,
@@ -62,21 +67,19 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
 
     async def test_async_context(self):
         instance = self._get_instance(state=None)
-        self.mock_io.f_read.return_value = '{}'
+        self.mock_io.f_read.return_value = _empty_state_str
         self.mock_io.f_write.return_value = None
 
         async with self._get_instance(state=None) as f:
             self.mock_io.f_read.assert_called_once_with('state_path')
             self.assertEqual(f._state, {})
-        self.mock_io.f_write.assert_called_once_with('state_path', '{}')
+        self.mock_io.f_write.assert_called_once_with('state_path', _empty_state_str)
 
     async def test_read_empty(self):
         instance = self._get_instance(state={})
         self.assertEqual(instance.read('a', 'json'), (None, False))
 
-        instance = self._get_instance(state={
-            'a': { 'text': {} }
-        })
+        instance = self._get_instance(state=self._mk_state())
         self.assertEqual(instance.read('a', 'json'), (None, False))
 
     async def test_read_valid(self):
@@ -96,15 +99,15 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
 
         self.assertEqual(
             instance.read('a', 'json'),
-            ({ 'json': RequestCache(Never(), 'file_a', a_date_obj) }, True),
+            ({ 'json': RequestCache(Never(), 'file_a', a_date_obj, cache_dir) }, True),
         )
         self.assertEqual(
             instance.read('b', 'json'),
-            ({ 'json': RequestCache(Delta('days', 5), 'file_b', a_date_obj) }, True),
+            ({ 'json': RequestCache(Delta('days', 5), 'file_b', a_date_obj, cache_dir) }, True),
         )
         self.assertEqual(
             instance.read('c', 'json'),
-            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj) }, True),
+            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj, cache_dir) }, True),
         )
 
     async def test_read_expired(self):
@@ -123,11 +126,11 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
 
         self.assertEqual(
             instance.read('b', 'json'),
-            ({ 'json': RequestCache(Delta('days', 4), 'file_b', a_date_obj) }, False),
+            ({ 'json': RequestCache(Delta('days', 4), 'file_b', a_date_obj, cache_dir) }, False),
         )
         self.assertEqual(
             instance.read('c', 'json'),
-            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj) }, False),
+            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj, cache_dir) }, False),
         )
 
     async def test_write_json_never_expire(self):
@@ -139,8 +142,8 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_url = 'breakfast'
         uuid = MockUuidService(values=['u1'])
         clock = MockClockService(dt=_date_obj)
-        fname = 'cache_dir/fruitloop-u1.json'
-        decoded = RequestCache(Never(), fname, _date_obj)
+        fname = 'fruitloop-u1.json'
+        decoded = RequestCache(Never(), fname, _date_obj, cache_dir=cache_dir)
         encoded = { 'expire': 'never', 'location': fname, 'age': _date_str }
 
         self.mock_io.f_write.return_value = None
@@ -149,7 +152,7 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         cache = await instance.write(request_url, request_meta, request_data)
         self.assertEqual(cache, { 'json': decoded })
         self.assertEqual(instance._state, { 'breakfast': { 'json': encoded } })
-        self.mock_io.f_write.assert_called_once_with(fname, request_data)
+        self.mock_io.f_write.assert_called_once_with(f'cache_dir/{fname}', request_data)
         self.mock_io.f_delete.assert_not_called()
 
     async def test_write_over_cached_resource(self):
@@ -161,8 +164,8 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_url = 'breakfast'
         uuid = MockUuidService(values=['u1'])
         clock = MockClockService(dt=_date_obj)
-        fname = 'cache_dir/fruitloop-u1.json'
-        decoded = RequestCache(Never(), fname, _date_obj)
+        fname = 'fruitloop-u1.json'
+        decoded = RequestCache(Never(), fname, _date_obj, 'cache_dir')
         encoded = { 'expire': 'never', 'location': fname, 'age': _date_str }
 
         self.mock_io.f_write.return_value = None
@@ -175,8 +178,8 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         cache = await instance.write(request_url, request_meta, request_data)
         self.assertEqual(cache, { 'json': decoded })
         self.assertEqual(instance._state, { 'breakfast': { 'json': encoded } })
-        self.mock_io.f_write.assert_called_once_with(fname, request_data)
-        self.mock_io.f_delete.assert_called_once_with('old-file')
+        self.mock_io.f_write.assert_called_once_with(f'cache_dir/{fname}', request_data)
+        self.mock_io.f_delete.assert_called_once_with('cache_dir/old-file')
 
 
 

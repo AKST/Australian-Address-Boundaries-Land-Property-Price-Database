@@ -4,3 +4,4 @@ from .expiry import CacheExpire
 from .expiry import Never as NeverExpire
 from .expiry import Delta as DeltaExpire
 from .expiry import TillNextDayOfWeek as TillNextDayOfWeekExpire
+from .constants import CACHE_VERSION

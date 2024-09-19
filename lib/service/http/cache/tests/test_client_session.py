@@ -39,7 +39,7 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
 
     async def test_async_context_with_no_cache(self):
         meta = _never_instructions
-        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj)}
+        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj, 'cache_dir')}
 
         self.mock_io.f_read.return_value = '{"count":0}'
         self.mock_cache.read.return_value = (None, False)
@@ -64,11 +64,11 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
             self.assertEqual(request.status, 200)
 
             self.assertEqual(await request.json(), { 'count': 0 })
-            self.mock_io.f_read.assert_called_once_with('file_location')
+            self.mock_io.f_read.assert_called_once_with('cache_dir/file_location')
 
     async def test_async_context_with_failed_request_with_no_cache(self):
         meta = _never_instructions
-        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj)}
+        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj, 'cache_dir')}
 
         self.mock_io.f_read.return_value = '{"count":0}'
         self.mock_cache.read.return_value = (None, False)
@@ -93,7 +93,7 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
 
     async def test_async_context_with_failed_request_with_expired_cache(self):
         meta = _never_instructions
-        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj)}
+        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj, 'cache_dir')}
 
         self.mock_io.f_read.return_value = '{"count":0}'
         self.mock_cache.read.return_value = (fmts, False)
@@ -117,11 +117,11 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
             self.assertEqual(request.status, 200)
 
             self.assertEqual(await request.json(), { 'count': 0 })
-            self.mock_io.f_read.assert_called_once_with('file_location')
+            self.mock_io.f_read.assert_called_once_with('cache_dir/file_location')
 
     async def test_async_context_with_cache(self):
         meta = _never_instructions
-        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj)}
+        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj, 'cache_dir')}
 
         self.mock_io.f_read.return_value = '{"count":0}'
         self.mock_cache.read.return_value = (fmts, True)
@@ -141,5 +141,5 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
             self.assertEqual(request.status, 200)
 
             self.assertEqual(await request.json(), { 'count': 0 })
-            self.mock_io.f_read.assert_called_once_with('file_location')
+            self.mock_io.f_read.assert_called_once_with('cache_dir/file_location')
 

@@ -10,35 +10,9 @@ from typing import Any, Dict, Optional
 from lib.service.clock import ClockService
 from lib.service.io import IoService
 from lib.service.uuid import UuidService
+from .constants import STATE_INIT, CACHE_VERSION
 from .expiry import CacheExpire
 from .headers import InstructionHeaders
-
-_date_format = '%Y-%m-%d %H:%M:%S'
-
-@dataclass
-class RequestCache:
-    expire: Any
-    location: str
-    age: datetime
-
-    def has_expired(self, now: datetime):
-        return self.expire.has_expired(self.age, now)
-
-    @staticmethod
-    def from_json(json):
-        return RequestCache(
-            CacheExpire.parse_expire(json['expire']),
-            json['location'],
-            datetime.strptime(json['age'], _date_format),
-        )
-
-    def to_json(self):
-        age = self.age.strftime(_date_format)
-        return {
-            'expire': str(self.expire),
-            'location': self.location,
-            'age': age,
-        }
 
 class FileCacher:
     _logger = getLogger(f'{__name__}.FileCacher')
@@ -46,6 +20,7 @@ class FileCacher:
     _io: IoService
     _uuid: UuidService
     _clock: ClockService
+    _rc_factory: Any
 
     _state: Optional[Dict[str, str]]
     _save_dir: str
@@ -54,6 +29,7 @@ class FileCacher:
     def __init__(self,
                  save_dir: str,
                  config_path: str,
+                 rc_factory: Any,
                  io: IoService,
                  uuid: UuidService,
                  clock: ClockService,
@@ -64,6 +40,7 @@ class FileCacher:
         self._io = io
         self._uuid = uuid
         self._clock = clock
+        self._rc_factory = rc_factory
 
     def read(self, url: str, fmt: str):
         if url not in self._state:
@@ -73,7 +50,7 @@ class FileCacher:
             return None, False
 
         now = self._clock.now()
-        state = FileCacher.parse_state(self._state, url)
+        state = self.parse_state(self._state, url)
         cache_found = state and fmt in state
         cache_expired = cache_found and state[fmt].has_expired(now)
 
@@ -90,39 +67,88 @@ class FileCacher:
         fmts = self._state.get(url, {})
 
         if meta.format in fmts:
-            await self._io.f_delete(fmts[meta.format]['location'])
+            cache = self._rc_factory.from_json(fmts[meta.format])
+            await self._io.f_delete(cache.location)
 
-        fmts[meta.format] = RequestCache(meta.expiry, fpath, self._clock.now()).to_json()
+        request_cache = self._rc_factory.create(meta.expiry, fname, self._clock.now())
+        fmts[meta.format] = request_cache.to_json()
         self._state[url] = fmts
-        return FileCacher.parse_state(self._state, url)
+        return self.parse_state(self._state, url)
 
-    @staticmethod
-    def parse_state(state, key):
+    def parse_state(self, state, key):
         return {
-            fmt: RequestCache.from_json(s)
+            fmt: self._rc_factory.from_json(s)
             for fmt, s in state[key].items()
         }
 
     async def __aenter__(self):
         try:
-            self._state = json.loads(await self._io.f_read(self._config_path))
+            if not await self._io.f_exists(self._config_path):
+                await self._io.f_write(self._config_path, STATE_INIT)
+            state = json.loads(await self._io.f_read(self._config_path))
+            if state['version'] != CACHE_VERSION:
+                raise Exception("cache doesn't match version")
+            self._state = state['files']
         except Exception as e:
             self._logger.error("Failed to save cache state, possibly corrupted")
             raise e
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._io.f_write(self._config_path, json.dumps(self._state))
+        state = { 'version': CACHE_VERSION, 'files': self._state }
+        await self._io.f_write(self._config_path, json.dumps(state, indent=1))
         return False
 
     @staticmethod
     def create(config_path: str | None = None,
-               save_dir: str | None = None):
+               cache_dir: str | None = None):
+        cache_dir = cache_dir or './_out_cache'
         clock = ClockService()
         uuid = UuidService()
         io = IoService()
-        return FileCacher(save_dir or './_out_cache',
+        factory = RequestCacheFactory(cache_dir=cache_dir)
+        return FileCacher(cache_dir,
                           config_path or './_out_state/http-cache.json',
+                          rc_factory=factory,
                           io=IoService(),
                           uuid=UuidService(),
                           clock=ClockService())
+
+_date_format = '%Y-%m-%d %H:%M:%S'
+
+@dataclass
+class RequestCache:
+    expire: Any
+    file_name: str
+    age: datetime
+    cache_dir: str
+
+    @property
+    def location(self):
+        return f'{self.cache_dir}/{self.file_name}'
+
+    def has_expired(self, now: datetime):
+        return self.expire.has_expired(self.age, now)
+
+    def to_json(self):
+        age = self.age.strftime(_date_format)
+        return {
+            'expire': str(self.expire),
+            'location': self.file_name,
+            'age': age,
+        }
+
+@dataclass
+class RequestCacheFactory:
+    cache_dir: str
+
+    def create(self, expire, fname, age):
+        return RequestCache(expire, fname, age, self.cache_dir)
+
+    def from_json(self, json):
+        return RequestCache(
+            CacheExpire.parse_expire(json['expire']),
+            json['location'],
+            datetime.strptime(json['age'], _date_format),
+            cache_dir=self.cache_dir,
+        )

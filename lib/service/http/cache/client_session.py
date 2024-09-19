@@ -5,7 +5,9 @@ from logging import getLogger, Logger
 from typing import Any, Dict, Optional
 
 from lib.service.io import IoService
-from lib.service.http import ClientSession, AbstractClientSession, AbstractGetResponse
+from lib.service.http import ConnectionError
+from lib.service.http import AbstractClientSession, AbstractGetResponse
+from lib.service.http import ClientSession
 from lib.service.http.util import url_with_params, url_host
 from .expiry import CacheExpire
 from .file_cache import FileCacher, RequestCache
@@ -86,19 +88,28 @@ class CachedGet(AbstractGetResponse):
         state, valid = self._cache.read(url, meta.format)
         if state is None or not valid:
             self._response = self._session.get(url, headers=headers)
-            await self._response.__aenter__()
-            self._status = self._response.status
-            if self._status == 200:
-                data = await self._response.text()
-                state = await self._cache.write(url, meta, data)
-            elif state is not None:
-                self._logger.warning(
-                    'request failed, calling back to cache, '
-                    f'status: {self._status}'
-                )
-                self._status = 200
-            else:
-                return self._response
+            try:
+                response = await self._response.__aenter__()
+                self._status = response.status
+                if self._status == 200:
+                    data = await response.text()
+                    state = await self._cache.write(url, meta, data)
+                elif state is not None:
+                    self._logger.warning(
+                        'request failed, calling back to cache, '
+                        f'status: {self._status}'
+                    )
+                    self._status = 200
+                else:
+                    return response
+
+            except ConnectionError as e:
+                if state:
+                    self._status = 200
+                    self._logger.warning('connection error falling back to cache')
+                else:
+                    self._logger.warning('connection error without cache')
+                    raise e
         else:
             self._status = 200
 

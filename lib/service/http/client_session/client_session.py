@@ -1,8 +1,12 @@
 from aiohttp import ClientSession as ThirdPartyClientSession
+from aiohttp.client_exceptions import ClientConnectorError as ThirdPartyClientConnectorError
 from dataclasses import dataclass, field
 from typing import Any, Optional, Dict
 
 from .base import AbstractClientSession, AbstractGetResponse
+
+class ConnectionError(Exception):
+    pass
 
 class ClientSession(AbstractClientSession):
     """
@@ -52,8 +56,14 @@ class GetResponse(AbstractGetResponse):
         return await self._response.text()
 
     async def __aenter__(self):
-        self._response = await self._request_context_manager.__aenter__()
-        return self
+        try:
+            self._response = await self._request_context_manager.__aenter__()
+            return self
+        except ThirdPartyClientConnectorError as e:
+            # Connection manager complains if you call `__aexit__` after
+            # a connection error, so lets just drop it and move on.
+            self._request_context_manager = None
+            raise ConnectionError(e)
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._request_context_manager:
