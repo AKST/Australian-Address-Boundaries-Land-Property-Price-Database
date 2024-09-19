@@ -7,6 +7,7 @@ from typing import Optional
 import os
 
 from lib.data_types import Target
+from lib.http.cache import CacheHeader
 from lib.gnaf.constants import data_gov_au_gnaf_information_page
 
 _sql_dir_path = 'G-NAF/Extras/GNAF_TableCreation_Scripts'
@@ -46,39 +47,34 @@ class GnafPublicationDiscovery:
     Fetches the latest GNAF publication from the data.gov.au
     information page.
     """
-    _attempted: bool
-    _publication: Optional[GnafPublicationTarget]
+    publication: Optional[GnafPublicationTarget] = None
 
     def __init__(self, information_page_url):
         self._information_page_url = information_page_url
-        self._publication = None
-        self._attempted = False
 
     @staticmethod
     def create():
         return GnafPublicationDiscovery(data_gov_au_gnaf_information_page)
 
-    def get_publication(self):
-        if self._publication is not None or self._attempted:
-            return self._publication
+    async def load_publication(self, session):
+        async with session.get(self._information_page_url, headers={
+            CacheHeader.EXPIRE: 'delta:weeks:8',
+            CacheHeader.FORMAT: 'text',
+            CacheHeader.NAME: 'gnaf',
+        }) as response:
+            html = await response.text()
+            soup = BeautifulSoup(html, 'html.parser')
+            
+        link = soup.find(
+            'a',
+            class_='dropdown-item',
+            href=lambda x: x and x.endswith('.zip') and 'gda2020_psv' in x,
+        )
 
-        self._attempted = True
-
-        try:
-            response = urlopen(self._information_page_url)
-            soup = BeautifulSoup(response.read(), 'html.parser')
-            link = soup.find(
-                'a',
-                class_='dropdown-item',
-                href=lambda x: x and x.endswith('.zip') and 'gda2020_psv' in x,
+        if link is not None:
+            name = link['href'].split('/')[-1]
+            self.publication = GnafPublicationTarget(
+                url=link['href'],
+                web_dst=name,
+                zip_dst=name.split('.')[0],
             )
-
-            if link is not None:
-                name = link['href'].split('/')[-1]
-                self._publication = GnafPublicationTarget(
-                    url=link['href'],
-                    web_dst=name,
-                    zip_dst=name.split('.')[0],
-                )
-        finally:
-            return self.get_publication()

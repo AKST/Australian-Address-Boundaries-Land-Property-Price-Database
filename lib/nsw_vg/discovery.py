@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from lib.data_types import Target
+from lib.http.cache import CacheHeader
 from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
 ListItem = namedtuple('ListItem', ['Name', 'Link'])
@@ -13,7 +14,7 @@ ListItem = namedtuple('ListItem', ['Name', 'Link'])
 @dataclass
 class NswVgTarget(Target):
     datetime: datetime = field(default=None)
-    
+
 
 class NswValuerGeneralBulkSalesScrapeAttempt:
     """
@@ -24,36 +25,39 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
     """
     _bulk_data_directory_page: str
     _css_class_path: List[Tuple[str, str]]
-    _attempted = False
     _prefix: str
-    _links: Optional[List[Target]] = None
+    _cache_period: str
     _date_fmt: str
     
+    links: Optional[List[Target]] = None
+
     def __init__(self,
                  prefix: str,
                  directory_page: str,
                  css_class_path: List[Tuple[str, str]],
+                 cache_period: str,
                  date_fmt: str):
         self._prefix = prefix
         self._directory_page = directory_page
         self._css_class_path = css_class_path
+        self._cache_period = cache_period
         self._date_fmt = date_fmt
 
-    def get_links(self):
-        if self._links is not None or self._attempted:
-            return self._links
-
-        self._attempted = True
-
+    async def load_links(self, session):
         try:
-            response = urlopen(self._directory_page)
-            soup = BeautifulSoup(response.read(), 'html.parser')
+            async with session.get(self._directory_page, headers={
+                CacheHeader.EXPIRE: self._cache_period,
+                CacheHeader.FORMAT: 'text',
+                CacheHeader.NAME: 'htmlDirectory',
+            }) as response:
+                html = await response.text()
+                soup = BeautifulSoup(html, 'html.parser')
 
             parent = soup
             for tag, css_class in self._css_class_path[0:-1]:
                 parent = parent.find_all(tag, css_class)[-1]
 
-            self._links = [
+            self.links = [
                 NswVgTarget(
                     url=url,
                     datetime=datetime.strptime(date, self._date_fmt),
@@ -66,19 +70,19 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
                     for l in parent.find_all(tag, css_class)
                 )
             ]
-        finally:
-            pass
-        
-        return self.get_links()
+        except Exception as e:
+            raise e
 
-    def get_latest(self):
-        return self.get_links()[-1]
+    @property
+    def latest(self):
+        return self.links[-1] if self.links else None
 
 class LandValueDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
     def __init__(self):
         super().__init__(prefix='nswvg_lv',
                          directory_page=lv_download_page,
                          css_class_path=[('a', 'btn-lv-data')],
+                         cache_period='till_next_day_of_week:Tuesday',
                          date_fmt='%d %b %Y')
 
 class WeeklySalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
@@ -87,6 +91,7 @@ class WeeklySalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
                          directory_page=ps_download_page,
                          css_class_path=[('div', 'weekly'),
                                          ('a', 'btn-sales-data')],
+                         cache_period='till_next_day_of_week:Tuesday',
                          date_fmt='%d %b %Y')
 
 class AnnualSalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
@@ -95,4 +100,5 @@ class AnnualSalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
                          directory_page=ps_download_page,
                          css_class_path=[('div', 'annual'),
                                          ('a', 'btn-sales-data')],
+                         cache_period='delta:weeks:4',
                          date_fmt='%Y')

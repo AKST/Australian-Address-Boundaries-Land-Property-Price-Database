@@ -20,7 +20,8 @@ class CachedClientSession:
         self._create_get_request = create_get_request
 
     @staticmethod
-    def create(session: ClientSession, cacher: Any = None):
+    def create(session: ClientSession = None, cacher: Any = None):
+        session = session or ClientSession()
         cache = cacher or FileCacher.create()
         create_get_request = lambda url, headers, meta: CachedGet(
             _config=(url, headers, meta),
@@ -30,6 +31,8 @@ class CachedClientSession:
         return CachedClientSession(session, cache, create_get_request)
 
     def get(self, url, headers=None):
+        if not isinstance(url, str):
+            raise TypeError(f'URL should be string, got {url}')
         host = url_host(url)
         headers, meta = InstructionHeaders.from_headers(headers, host)
         if meta.disabled:
@@ -97,16 +100,14 @@ class CachedGet:
         if 'json' not in self._state:
             raise ValueError('Incorrect cache hint')
 
-        cache = self._state['json']
-        async with aiofiles.open(cache.location, 'r') as f:
+        async with aiofiles.open(self._state['json'].location, 'r') as f:
             t = await f.read()
             return json.loads(t)
 
     async def text(self):
         if 'text' not in self._state:
             raise ValueError('Incorrect cache hint')
-        cache = self._state['text']
-
-        async with aiofiles.open(self._state.location, 'r') as f:
+            
+        async with aiofiles.open(self._state['text'].location, 'r') as f:
             return await f.read()
 
