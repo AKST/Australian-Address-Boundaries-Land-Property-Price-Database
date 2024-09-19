@@ -6,12 +6,13 @@ import json
 from logging import getLogger
 from typing import Any, Dict, Optional
 
+from lib.service.http import AbstractClientSession, AbstractGetResponse
 from lib.service.http.util import url_with_params, url_host
 from .expiry import CacheExpire
 from .file_cache import FileCacher
 from .headers import InstructionHeaders, CacheHeader
 
-class CachedClientSession:
+class CachedClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.CachedClientSession')
 
     def __init__(self, session: ClientSession, cacher, create_get_request):
@@ -21,7 +22,7 @@ class CachedClientSession:
 
     @staticmethod
     def create(session: ClientSession = None, cacher: Any = None):
-        session = session or ClientSession()
+        session = session or ClientSession.create()
         cache = cacher or FileCacher.create()
         create_get_request = lambda url, headers, meta: CachedGet(
             _config=(url, headers, meta),
@@ -49,8 +50,12 @@ class CachedClientSession:
         await self._cache.__aexit__(exc_type, exc_value, traceback)
         return False
 
+    @property
+    def closed(self):
+        return self._session.closed
+
 @dataclass
-class CachedGet:
+class CachedGet(AbstractGetResponse):
     """
     This only exists to mimic the interface of `ClientSessions`
     so it can be removed if no necessary. If you have to ask
@@ -62,7 +67,6 @@ class CachedGet:
     _status: int | None = field(default=None)
     _state: Any = field(default=None)
     _response: Any = field(default=None)
-    _request_context_manager: Any = field(default=None)
 
     @property
     def status(self):
@@ -75,8 +79,8 @@ class CachedGet:
 
         state = self._cache.read(url, meta.format)
         if state is None:
-            self._request_context_manager = self._session.get(url, headers=headers)
-            self._response = await self._request_context_manager.__aenter__()
+            self._response = self._session.get(url, headers=headers)
+            await self._response.__aenter__()
             self._status = self._response.status
             if self._status == 200:
                 data = await self._response.text()
@@ -90,8 +94,6 @@ class CachedGet:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if self._request_context_manager:
-            await self._request_context_manager.__aexit__(exc_type, exc_value, traceback)
         if self._response:
             await self._response.__aexit__(exc_type, exc_value, traceback)
         return False
