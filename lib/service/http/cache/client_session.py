@@ -1,14 +1,14 @@
-import aiofiles
 import asyncio
 from dataclasses import dataclass, field
 import json
-from logging import getLogger
+from logging import getLogger, Logger
 from typing import Any, Dict, Optional
 
+from lib.service.io import IoService
 from lib.service.http import ClientSession, AbstractClientSession, AbstractGetResponse
 from lib.service.http.util import url_with_params, url_host
 from .expiry import CacheExpire
-from .file_cache import FileCacher
+from .file_cache import FileCacher, RequestCache
 from .headers import InstructionHeaders, CacheHeader
 
 class CachedClientSession(AbstractClientSession):
@@ -20,14 +20,19 @@ class CachedClientSession(AbstractClientSession):
         self._create_get_request = create_get_request
 
     @staticmethod
-    def create(session: ClientSession = None, cacher: Any = None):
+    def create(session: ClientSession = None):
+        cache = FileCacher.create()
         session = session or ClientSession.create()
-        cache = cacher or FileCacher.create()
+        logger = getLogger(f'{__name__}.CachedGet')
+
         create_get_request = lambda url, headers, meta: CachedGet(
+            _io=IoService(),
             _config=(url, headers, meta),
+            _logger=logger,
             _session=session,
             _cache=cache,
         )
+
         return CachedClientSession(session, cache, create_get_request)
 
     def get(self, url, headers=None):
@@ -60,9 +65,11 @@ class CachedGet(AbstractGetResponse):
     so it can be removed if no necessary. If you have to ask
     why is this so confusing, start there and work backwards.
     """
+    _io: IoService
     _config: (str, Dict[str, str], InstructionHeaders)
     _session: ClientSession
-    _cache: Any
+    _cache: Dict[str, RequestCache]
+    _logger: Logger
     _status: int | None = field(default=None)
     _state: Any = field(default=None)
     _response: Any = field(default=None)
@@ -76,14 +83,20 @@ class CachedGet(AbstractGetResponse):
     async def __aenter__(self):
         url, headers, meta = self._config
 
-        state = self._cache.read(url, meta.format)
-        if state is None:
+        state, valid = self._cache.read(url, meta.format)
+        if state is None or not valid:
             self._response = self._session.get(url, headers=headers)
             await self._response.__aenter__()
             self._status = self._response.status
             if self._status == 200:
                 data = await self._response.text()
                 state = await self._cache.write(url, meta, data)
+            elif state is not None:
+                self._logger.warning(
+                    'request failed, calling back to cache, '
+                    f'status: {self._status}'
+                )
+                self._status = 200
             else:
                 return self._response
         else:
@@ -101,14 +114,11 @@ class CachedGet(AbstractGetResponse):
         if 'json' not in self._state:
             raise ValueError('Incorrect cache hint')
 
-        async with aiofiles.open(self._state['json'].location, 'r') as f:
-            t = await f.read()
-            return json.loads(t)
+        return json.loads(await self._io.f_read(self._state['json'].location))
 
     async def text(self):
         if 'text' not in self._state:
             raise ValueError('Incorrect cache hint')
 
-        async with aiofiles.open(self._state['text'].location, 'r') as f:
-            return await f.read()
+        return await self._io.f_read(self._state['text'].location)
 

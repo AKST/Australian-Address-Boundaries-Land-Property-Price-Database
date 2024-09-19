@@ -67,22 +67,20 @@ class FileCacher:
 
     def read(self, url: str, fmt: str):
         if url not in self._state:
-            return None
+            return None, False
 
         if fmt not in self._state[url]:
-            return None
+            return None, False
 
         now = self._clock.now()
         state = FileCacher.parse_state(self._state, url)
         cache_found = state and fmt in state
         cache_expired = cache_found and state[fmt].has_expired(now)
 
-        if cache_found and not cache_expired:
-            return state
-        elif cache_found and cache_expired:
-            return None
+        if cache_found:
+            return state, not cache_expired
 
-        return None
+        return None, False
 
     async def write(self, url: str, meta: InstructionHeaders, data: str):
         fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"

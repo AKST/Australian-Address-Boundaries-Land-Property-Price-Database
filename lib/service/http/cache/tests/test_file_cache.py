@@ -72,12 +72,12 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
 
     async def test_read_empty(self):
         instance = self._get_instance(state={})
-        self.assertEqual(instance.read('a', 'json'), None)
+        self.assertEqual(instance.read('a', 'json'), (None, False))
 
         instance = self._get_instance(state={
             'a': { 'text': {} }
         })
-        self.assertEqual(instance.read('a', 'json'), None)
+        self.assertEqual(instance.read('a', 'json'), (None, False))
 
     async def test_read_valid(self):
         # 2012-12-12 = Wednesday, 2012-12-15 = Saturday
@@ -96,15 +96,15 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
 
         self.assertEqual(
             instance.read('a', 'json'),
-            { 'json': RequestCache(Never(), 'file_a', a_date_obj) },
+            ({ 'json': RequestCache(Never(), 'file_a', a_date_obj) }, True),
         )
         self.assertEqual(
             instance.read('b', 'json'),
-            { 'json': RequestCache(Delta('days', 5), 'file_b', a_date_obj) },
+            ({ 'json': RequestCache(Delta('days', 5), 'file_b', a_date_obj) }, True),
         )
         self.assertEqual(
             instance.read('c', 'json'),
-            { 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj) },
+            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj) }, True),
         )
 
     async def test_read_expired(self):
@@ -120,8 +120,15 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         )
 
         instance = self._get_instance(state=state, clock=clock)
-        self.assertEqual(instance.read('b', 'json'), None)
-        self.assertEqual(instance.read('c', 'json'), None)
+
+        self.assertEqual(
+            instance.read('b', 'json'),
+            ({ 'json': RequestCache(Delta('days', 4), 'file_b', a_date_obj) }, False),
+        )
+        self.assertEqual(
+            instance.read('c', 'json'),
+            ({ 'json': RequestCache(TillNextDayOfWeek(6), 'file_c', a_date_obj) }, False),
+        )
 
     async def test_write_json_never_expire(self):
         request_meta = InstructionHeaders(format='json',
