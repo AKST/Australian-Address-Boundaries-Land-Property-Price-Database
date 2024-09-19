@@ -10,8 +10,8 @@ from typing import Any, Optional, List
 from lib.async_util import pipe, merge_async_iters
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
-from lib.http.cache import CacheHeader
-from lib.http.util import url_with_params
+from lib.service.http.cache import CacheHeader
+from lib.service.http.util import url_with_params
 
 from .counts import ClauseCounts
 from .component_factory import ComponentFactory

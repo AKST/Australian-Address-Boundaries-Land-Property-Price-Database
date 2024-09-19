@@ -6,7 +6,7 @@ import json
 from logging import getLogger
 from typing import Any, Dict, Optional
 
-from lib.http.util import url_with_params, url_host
+from lib.service.http.util import url_with_params, url_host
 from .expiry import CacheExpire
 from .file_cache import FileCacher
 from .headers import InstructionHeaders, CacheHeader
@@ -73,7 +73,7 @@ class CachedGet:
     async def __aenter__(self):
         url, headers, meta = self._config
 
-        state = await self._cache.read(url, meta.format)
+        state = self._cache.read(url, meta.format)
         if state is None:
             self._request_context_manager = self._session.get(url, headers=headers)
             self._response = await self._request_context_manager.__aenter__()
@@ -107,7 +107,7 @@ class CachedGet:
     async def text(self):
         if 'text' not in self._state:
             raise ValueError('Incorrect cache hint')
-            
+
         async with aiofiles.open(self._state['text'].location, 'r') as f:
             return await f.read()
 

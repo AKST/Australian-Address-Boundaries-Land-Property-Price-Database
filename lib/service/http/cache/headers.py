@@ -12,7 +12,7 @@ class CacheHeader:
 @dataclass
 class InstructionHeaders:
     format: str
-    expiry: Any | None
+    expiry: CacheExpire | None
     disabled: bool
     filename: Optional[str]
 

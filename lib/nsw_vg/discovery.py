@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from lib.data_types import Target
-from lib.http.cache import CacheHeader
+from lib.service.http.cache import CacheHeader
 from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
 ListItem = namedtuple('ListItem', ['Name', 'Link'])
@@ -28,7 +28,7 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
     _prefix: str
     _cache_period: str
     _date_fmt: str
-    
+
     links: Optional[List[Target]] = None
 
     def __init__(self,

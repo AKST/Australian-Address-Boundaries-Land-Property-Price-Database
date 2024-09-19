@@ -3,8 +3,28 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+class CacheExpire:
+    @classmethod
+    def parse_expire(cls, expire_str: str | None):
+        if not expire_str:
+            return None
+        if expire_str == 'never':
+            return Never()
+
+        slice_idx = expire_str.find(':')
+        if slice_idx < 0:
+            raise ValueError('Invalid Expire string')
+
+        kind = expire_str[:slice_idx]
+        if kind == 'delta':
+            return Delta.parse(expire_str[slice_idx+1:])
+        elif kind == 'till_next_day_of_week':
+            return TillNextDayOfWeek.parse(expire_str[slice_idx+1:])
+        else:
+            raise ValueError(f'Invalid Expire string, {expire_str}')
+
 @dataclass
-class Never:
+class Never(CacheExpire):
     def __str__(self):
         return 'never'
 
@@ -12,7 +32,7 @@ class Never:
         return False
 
 @dataclass
-class Delta:
+class Delta(CacheExpire):
     unit: str
     amount: int
 
@@ -29,7 +49,7 @@ class Delta:
         return f'delta:{self.unit}:{self.amount}'
 
 @dataclass
-class TillNextDayOfWeek:
+class TillNextDayOfWeek(CacheExpire):
     day_of_week: int
 
     @classmethod
@@ -50,22 +70,4 @@ class TillNextDayOfWeek:
         days_ahead = 7 if days_ahead == 0 else days_ahead
         return saved + timedelta(days=days_ahead) < now
 
-class CacheExpire:
-    @classmethod
-    def parse_expire(cls, expire_str: str | None):
-        if not expire_str:
-            return None
-        if expire_str == 'never':
-            return Never()
 
-        slice_idx = expire_str.find(':')
-        if slice_idx < 0:
-            raise ValueError('Invalid Expire string')
-
-        kind = expire_str[:slice_idx]
-        if kind == 'delta':
-            return Delta.parse(expire_str[slice_idx+1:])
-        elif kind == 'till_next_day_of_week':
-            return TillNextDayOfWeek.parse(expire_str[slice_idx+1:])
-        else:
-            raise ValueError(f'Invalid Expire string, {expire_str}')
