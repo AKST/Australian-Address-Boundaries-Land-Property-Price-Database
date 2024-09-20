@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Any, List, Dict, Optional
 
-from lib.service.http import ClientSession, AbstractClientSession
+from lib.service.http import ClientSession
+from lib.service.http.client_session import AbstractClientSession, AbstractGetResponse
 from .util import url_host
 
 HostSemaphoreConfig = namedtuple('HostSemaphoreConfig', ['host', 'limit'])
@@ -42,33 +43,55 @@ class ThrottledSession(AbstractClientSession):
         if host not in self._semaphores:
             return self._session.get(url)
 
-        return ThrottledGetResponse(
-            _config=(url, headers),
-            _semaphore=self._semaphores[host],
-            _session=self._session,
-        )
+        return ThrottledGetResponse(url=url,
+                                    headers=headers,
+                                    semaphore=self._semaphores[host],
+                                    session=self._session)
 
     @property
     def closed(self):
         return self._session.closed
 
-@dataclass
-class ThrottledGetResponse:
-    _config: (str, Optional[Dict[str, str]])
+class ThrottledGetResponse(AbstractGetResponse):
+    url: str
+    headers: Dict[str, str] | None
+
     _semaphore: Any
     _session: ClientSession
-    _request: Any = field(default=None)
+    _response: AbstractGetResponse = None
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if self._request:
-            await self._request.__aexit__(exc_type, exc_value, traceback)
-        return False
+    def __init__(self, url, headers, semaphore, session):
+        self.url = url
+        self.headers = headers
+        self._session = session
+        self._semaphore = semaphore
+
+    @property
+    def status(self):
+        return self._response.status
+
+    async def text(self):
+        return await self._response.text()
+
+    async def json(self):
+        return await self._response.json()
 
     async def __aenter__(self):
-        async with self._semaphore:
-            if self._session.closed:
-                raise RuntimeError("http session has been closed")
-            url, headers = self._config
-            self._request = self._session.get(url, headers=headers)
-            return await self._request.__aenter__()
+        await self._semaphore.__aenter__()
+
+        if self._session.closed:
+            raise RuntimeError("http session has been closed")
+
+        self._response = self._session.get(self.url, headers=self.headers)
+        await self._response.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self._semaphore.__aexit__(exc_type, exc_value, traceback)
+
+        if self._response:
+            await self._response.__aexit__(exc_type, exc_value, traceback)
+
+        return False
+
 

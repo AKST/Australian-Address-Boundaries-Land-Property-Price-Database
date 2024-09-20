@@ -78,8 +78,6 @@ class CachedGet(AbstractGetResponse):
 
     @property
     def status(self):
-        if not self._status:
-            raise ValueError('status not yet read')
         return self._status
 
     async def __aenter__(self):

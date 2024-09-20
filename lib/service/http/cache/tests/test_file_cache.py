@@ -12,7 +12,7 @@ from lib.service.http.cache.expiry import *
 _file_path = 'blah/blah/blah'
 _date_str = '2012-10-15 10:10:10'
 _date_obj = datetime(2012, 10, 15, 10, 10, 10)
-_empty_state_str = '{"version": %s, "files": {}}' % CACHE_VERSION
+_empty_state_str = '{\n "version": %s,\n "files": {}\n}' % CACHE_VERSION
 
 class RequestCacheTestCase(TestCase):
     factory = RequestCacheFactory(cache_dir='asdf')
@@ -61,6 +61,9 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
                           uuid,
                           clock,
                           state)
+
+    def assertEqualIgnoringWhitespace(self, l, r):
+        self.assertEqual(' '.join(l.split()), ' '.join(r.split()))
 
     async def asyncSetUp(self):
         self.mock_io = AsyncMock(spec=IoService)

@@ -4,7 +4,7 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
 from lib.service.io import IoService
-from lib.service.http import ClientSession, GetResponse
+from lib.service.http import ClientSession, GetResponse, ConnectionError
 from lib.service.http.cache import *
 from lib.service.http.cache.file_cache import FileCacher, RequestCache
 from lib.service.http.cache.client_session import CachedGet
@@ -25,6 +25,8 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
     mock_session = None
     mock_response = None
     mock_logger = None
+
+
 
     async def asyncSetUp(self):
         self.mock_io = AsyncMock(spec=IoService)
@@ -142,4 +144,33 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
 
             self.assertEqual(await request.json(), { 'count': 0 })
             self.mock_io.f_read.assert_called_once_with('cache_dir/file_location')
+
+    async def test_async_context_connection_error_with_cache(self):
+        meta = _never_instructions
+        fmts = {'json': RequestCache(meta.expiry, 'file_location', _date_obj, 'cache_dir')}
+
+        self.mock_cache.read.return_value = (fmts, False)
+        self.mock_response.__aenter__.side_effect = ConnectionError()
+        self.mock_io.f_read.return_value = '{"count":0}'
+
+        instance = CachedGet(
+            _config=('my_url', {}, meta),
+            _io=self.mock_io,
+            _cache=self.mock_cache,
+            _logger=self.mock_logger,
+            _session=self.mock_session,
+        )
+
+        async with instance as request:
+            self.mock_cache.read.assert_called_once_with('my_url', meta.format)
+            self.mock_session.get.assert_called_once_with('my_url', headers={})
+            self.mock_response.__aenter__.assert_called_once()
+
+            # thrown before this call
+            self.mock_response.text.assert_not_called()
+
+            # Ensure recovery behaviour is fine
+            self.assertEqual(request, instance)
+            self.assertEqual(request.status, 200)
+            self.assertEqual(await request.json(), { 'count': 0 })
 
