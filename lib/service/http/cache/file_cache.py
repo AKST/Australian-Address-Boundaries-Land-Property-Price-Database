@@ -73,6 +73,8 @@ class FileCacher:
         request_cache = self._rc_factory.create(meta.expiry, fname, self._clock.now())
         fmts[meta.format] = request_cache.to_json()
         self._state[url] = fmts
+
+        await self._save_cache_state()
         return self.parse_state(self._state, url)
 
     def parse_state(self, state, key):
@@ -95,9 +97,12 @@ class FileCacher:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
+        await self._save_cache_state()
+        return False
+
+    async def _save_cache_state(self):
         state = { 'version': CACHE_VERSION, 'files': self._state }
         await self._io.f_write(self._config_path, json.dumps(state, indent=1))
-        return False
 
     @staticmethod
     def create(config_path: str | None = None,

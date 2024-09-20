@@ -27,7 +27,6 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
     mock_logger = None
 
 
-
     async def asyncSetUp(self):
         self.mock_io = AsyncMock(spec=IoService)
         self.mock_cache = AsyncMock(spec=FileCacher)
