@@ -140,7 +140,6 @@ class GisStream:
                 async for p in chunks(query, shard_fs, shard_ps, use_cache=_use_cache):
                     yield p
 
-
         shard_scheme = self.projection.schema.shard_scheme
         async for c in chunks(None, shard_scheme, params, use_cache=True):
             yield c
