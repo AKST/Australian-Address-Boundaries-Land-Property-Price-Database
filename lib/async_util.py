@@ -7,7 +7,7 @@ U = TypeVar('U')
 
 async def pipe(producer: Callable[[], AsyncIterator[T]],
                consumer: Callable[[T], Awaitable[U]],
-               tg: TaskGroup) -> AsyncIterator[U]:
+               tg: TaskGroup | None = None) -> AsyncIterator[U]:
     """
     This function creates an async generator with a
     producer and a consumer (there is an optional
@@ -37,6 +37,8 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
     then it makes sense to want to run as many simulanenously
     as possible.
     """
+    tg_create_task = tg.create_task if tg is not None else asyncio.create_task
+
     pending_tasks: Set[Any] = set()
     producer_coroutine = producer()
 
@@ -50,7 +52,7 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
 
             if shard_task in done:
                 try:
-                    task: Awaitable[U] = tg.create_task(consumer(await shard_task)) # type: ignore
+                    task: Awaitable[U] = tg_create_task(consumer(await shard_task)) # type: ignore
                     pending_tasks.add(task)
                     shard_task = asyncio.create_task(producer_coroutine.__anext__()) # type: ignore
                 except StopAsyncIteration:
