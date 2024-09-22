@@ -14,6 +14,25 @@ from .constants import STATE_INIT, CACHE_VERSION
 from .expiry import CacheExpire
 from .headers import InstructionHeaders
 
+# Explaination of keys and their values
+#
+#  1. Key One. The value of this key will be a file path
+#     and the value of this key will be a dictorary of
+#     file formats. It's more than likely just one file
+#     format.
+#  2. Key Two. This is going to be a file format, the
+#     value assocatied with it will be state.
+#  3. Key Three. Each key at this level represents a
+#     property name and the value associated with it
+#     will be the value of the property in an unparsed
+#     state.
+#
+# Key 1 -------------------------┐
+# Key 2 ---------------┐         |
+# Key 3 -----┐         |         |
+#            ↓         ↓         ↓
+State = Dict[str, Dict[str, Dict[str, str]]]
+
 class FileCacher:
     _logger = getLogger(f'{__name__}.FileCacher')
 
@@ -22,7 +41,7 @@ class FileCacher:
     _clock: ClockService
     _rc_factory: Any
 
-    _state: Optional[Dict[str, str]]
+    _state: State | None
     _save_dir: str
     _config_path: str
 
@@ -33,7 +52,7 @@ class FileCacher:
                  io: IoService,
                  uuid: UuidService,
                  clock: ClockService,
-                 state: Optional[Dict[str, str]] = None):
+                 state: State | None = None):
         self._save_dir = save_dir
         self._config_path = config_path
         self._state = state
@@ -43,6 +62,9 @@ class FileCacher:
         self._rc_factory = rc_factory
 
     def read(self, url: str, fmt: str):
+        if not self._state:
+            raise ValueError('write occured while state was not initialised')
+
         if url not in self._state:
             return None, False
 
@@ -60,6 +82,9 @@ class FileCacher:
         return None, False
 
     async def write(self, url: str, meta: InstructionHeaders, data: str):
+        if not self._state:
+            raise ValueError('write occured while state was not initialised')
+
         fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"
         fpath = os.path.join(self._save_dir, fname)
         await self._io.f_write(fpath, data)

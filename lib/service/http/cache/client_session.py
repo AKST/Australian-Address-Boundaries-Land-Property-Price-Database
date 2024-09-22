@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 import json
 from logging import getLogger, Logger
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from lib.service.io import IoService
 from lib.service.http import ConnectionError
@@ -22,7 +22,7 @@ class CachedClientSession(AbstractClientSession):
         self._create_get_request = create_get_request
 
     @staticmethod
-    def create(session: ClientSession = None):
+    def create(session: Optional[ClientSession] = None):
         cache = FileCacher.create()
         session = session or ClientSession.create()
         logger = getLogger(f'{__name__}.CachedGet')
@@ -68,7 +68,7 @@ class CachedGet(AbstractGetResponse):
     why is this so confusing, start there and work backwards.
     """
     _io: IoService
-    _config: (str, Dict[str, str], InstructionHeaders)
+    _config: Tuple[str, Dict[str, str], InstructionHeaders]
     _session: ClientSession
     _cache: Dict[str, RequestCache]
     _logger: Logger

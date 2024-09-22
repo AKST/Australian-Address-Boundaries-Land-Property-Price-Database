@@ -1,3 +1,6 @@
+types-aiofiles=24.1.0
+
+aiofiles=22.1.0
 aiopg==1.4.0
 aiohttp==3.10.5
 asyncpg==0.29.0
@@ -11,7 +14,7 @@ GeoAlchemy2==0.15.2
 geopandas==1.0.1
 Levenshtein==0.25.1
 matplotlib==3.9.1
-numpy==2.0.0
+numpy==1.26.4
 openpyxl==3.1.5
 OWSLib==0.31.0
 pandas==2.2.2

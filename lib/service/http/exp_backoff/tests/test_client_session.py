@@ -30,28 +30,6 @@ class GetResponseTestCase(IsolatedAsyncioTestCase):
             assert self.mock_session.get.call_count == 2
             self.mock_session.get.assert_called_with('my_url', headers=None)
 
-class GetResponseTestCase(IsolatedAsyncioTestCase):
-    mock_clock = None
-    mock_session = None
-    mock_response = None
-
-    async def asyncSetUp(self):
-        self.mock_response = AsyncMock(spec=AbstractGetResponse)
-        self.mock_session = AsyncMock(spec=AbstractClientSession)
-        self.mock_session.get.return_value = self.mock_response
-        self.mock_clock = AsyncMock(spec=ClockService)
-
-    def instance(self, conf, url, headers=None):
-        return ExpBackoffGetResponse(url, headers, conf, self.mock_session, self.mock_clock)
-
-    async def test_connection_error(self):
-        self.mock_response.status = 200
-        self.mock_response.__aenter__.side_effect = [ConnectionError(), self.mock_response]
-        config = RetryPreference(allowed=2)
-        async with self.instance(config, 'my_url') as response:
-            assert self.mock_session.get.call_count == 2
-            self.mock_session.get.assert_called_with('my_url', headers=None)
-
 class ResponseFactoryTestCase(IsolatedAsyncioTestCase):
     mock_session = None
     mock_clock = None

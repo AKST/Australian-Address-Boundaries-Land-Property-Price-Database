@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from unittest import TestCase, IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call, ANY
 
 from lib.service.clock.mocks import MockClockService
 from lib.service.uuid.mocks import MockUuidService
@@ -29,7 +29,7 @@ class RequestCacheTestCase(TestCase):
         self.assertEqual(dct, RequestCache.to_json(obj))
         self.assertEqual(self.factory.from_json(dct), obj)
 
-    def test_parse_delta_5_days(self):
+    def test_parse_till_next_wednesday(self):
         obj = RequestCache(TillNextDayOfWeek(2), _file_path, _date_obj, cache_dir='asdf')
         dct = { 'expire': 'till_next_day_of_week:Wednesday', 'location': _file_path, 'age': _date_str }
         self.assertEqual(dct, RequestCache.to_json(obj))
@@ -155,7 +155,10 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         cache = await instance.write(request_url, request_meta, request_data)
         self.assertEqual(cache, { 'json': decoded })
         self.assertEqual(instance._state, { 'breakfast': { 'json': encoded } })
-        self.mock_io.f_write.assert_called_once_with(f'cache_dir/{fname}', request_data)
+        self.assertEqual(self.mock_io.f_write.mock_calls, [
+            call(f'cache_dir/{fname}', request_data),
+            call(f'state_path', ANY)
+        ])
         self.mock_io.f_delete.assert_not_called()
 
     async def test_write_over_cached_resource(self):
@@ -181,7 +184,10 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         cache = await instance.write(request_url, request_meta, request_data)
         self.assertEqual(cache, { 'json': decoded })
         self.assertEqual(instance._state, { 'breakfast': { 'json': encoded } })
-        self.mock_io.f_write.assert_called_once_with(f'cache_dir/{fname}', request_data)
+        self.assertEqual(self.mock_io.f_write.mock_calls, [
+            call(f'cache_dir/{fname}', request_data),
+            call(f'state_path', ANY)
+        ])
         self.mock_io.f_delete.assert_called_once_with('cache_dir/old-file')
 
 

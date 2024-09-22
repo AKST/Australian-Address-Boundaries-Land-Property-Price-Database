@@ -2,7 +2,7 @@ import asyncio
 from collections import namedtuple
 from dataclasses import dataclass, field
 from logging import getLogger
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict
 
 from lib.service.http import ClientSession
 from lib.service.http.client_session import AbstractClientSession, AbstractGetResponse
@@ -25,7 +25,7 @@ class ThrottledSession(AbstractClientSession):
 
     @staticmethod
     def create(host_configs: List[HostSemaphoreConfig],
-               session: ClientSession = None):
+               session: ClientSession | None = None):
         semaphores = { c.host: asyncio.Semaphore(c.limit) for c in host_configs }
         session = session or ClientSession.create()
         return ThrottledSession(session, semaphores)
@@ -38,7 +38,7 @@ class ThrottledSession(AbstractClientSession):
         await self._session.__aexit__(exc_type, exc_value, traceback)
         return False
 
-    def get(self, url: str, headers: Optional[Dict[str, str]]=None):
+    def get(self, url: str, headers: Dict[str, str] | None =None):
         host = url_host(url)
         if host not in self._semaphores:
             return self._session.get(url)
@@ -58,7 +58,7 @@ class ThrottledGetResponse(AbstractGetResponse):
 
     _semaphore: Any
     _session: ClientSession
-    _response: AbstractGetResponse = None
+    _response: AbstractGetResponse | None = None
 
     def __init__(self, url, headers, semaphore, session):
         self.url = url

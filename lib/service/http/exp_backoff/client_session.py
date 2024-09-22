@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from logging import getLogger, Logger
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Self
 
 from lib.service.clock import ClockService
 from lib.service.http.util import url_host
@@ -12,14 +12,15 @@ from .config import BackoffConfig, RetryPreference
 class ExpBackoffClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.ExpBackoffSession')
     _factory: Any
-    _session: ClientSession
+    _session: AbstractClientSession
 
     def __init__(self, session: AbstractClientSession, factory: Any):
         self._session = session
         self._factory = factory
 
     @staticmethod
-    def create(config: BackoffConfig = None, session: AbstractClientSession = None):
+    def create(config: BackoffConfig,
+               session: AbstractClientSession | None = None):
         clock = ClockService()
         session = session or ClientSession.create()
         factory = ResponseFactory(session=session, clock=clock, config=config)
@@ -41,7 +42,7 @@ class ExpBackoffClientSession(AbstractClientSession):
         return self._session.closed
 
 class ExpBackoffGetResponse(AbstractGetResponse):
-    _logger: Logger = getLogger(f'{__name__}.ExpBackoffGetResponse'),
+    _logger: Logger = getLogger(f'{__name__}.ExpBackoffGetResponse')
 
     url: str
     headers: Dict[str, str]
@@ -97,7 +98,7 @@ class ExpBackoffGetResponse(AbstractGetResponse):
 class ResponseFactory:
     config: BackoffConfig
     clock: ClockService
-    session: ClientSession
+    session: AbstractClientSession
 
     def create(self, url, headers):
         config = self.config.with_host(url_host(url))
