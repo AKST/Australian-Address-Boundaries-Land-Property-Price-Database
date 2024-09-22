@@ -1,9 +1,11 @@
 types-aiofiles=24.1.0
+types-beautifulsoup-4=4.12.0
 
 aiofiles=22.1.0
 aiopg==1.4.0
 aiohttp==3.10.5
 asyncpg==0.29.0
+beautifulsoup4=4.0.3
 dask==2024.7.0
 dask-expr==1.1.7
 dask-geopandas==0.4.1

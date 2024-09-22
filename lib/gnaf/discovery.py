@@ -1,4 +1,4 @@
-from urllib.request import urlopen, urljoin
+from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from dataclasses import dataclass, field
 from datetime import datetime
