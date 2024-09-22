@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
-from lib.async_util import pipe, merge_async_iters
+from lib.utility.async_util import pipe, merge_async_iters
 
 class PipeTestCase(IsolatedAsyncioTestCase):
     async def test_simple(self):

@@ -1,5 +1,5 @@
 import asyncio
-from asyncio import TaskGroup, wait
+from asyncio import Task, TaskGroup, wait
 from typing import Dict, List, Set, Any, AsyncIterator, Callable, Awaitable, TypeVar
 
 T = TypeVar('T')
@@ -80,11 +80,14 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
         if result is not None:
             yield result
 
-async def merge_async_iters(iters: List[AsyncIterator[Any]]):
-    tasks: Dict[Any, Any] = {
-        asyncio.create_task(it.__anext__()): it # type: ignore
-        for it in iters
-    }
+async def merge_async_iters(iters: List[AsyncIterator[T]]) -> AsyncIterator[T]:
+    def create_task(it: AsyncIterator[T]) -> Task[T]:
+            return asyncio.create_task(it.__anext__()) # type: ignore
+    """
+    This takes multiple async iterators and combines them in
+    to the same async iterator stream.
+    """
+    tasks = { create_task(it): it for it in iters }
 
     while tasks:
         done, _ = await wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -93,7 +96,7 @@ async def merge_async_iters(iters: List[AsyncIterator[Any]]):
             iterator = tasks.pop(task)
             try:
                 yield task.result()
-                tasks[asyncio.create_task(iterator.__anext__())] = iterator
+                tasks[create_task(iterator)] = iterator
             except StopAsyncIteration:
                 continue
 

@@ -6,12 +6,12 @@ import math
 from random import shuffle
 from typing import Any, AsyncIterator, List, Tuple
 
-from lib.async_util import pipe, merge_async_iters
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
 from lib.service.http import AbstractClientSession
 from lib.service.http.cache import CacheHeader
 from lib.service.http.util import url_with_params
+from lib.utility.async_util import pipe, merge_async_iters
 
 from .counts import ClauseCounts
 from .component_factory import ComponentFactory
@@ -73,6 +73,7 @@ class GisStream:
 
     def progress_str(self, task: ProjectionTask) -> str:
         amount, total = self._counts.progress(task.where_clause)
+        amount = task.offset + task.expected_results
         percent = math.floor(100*(amount/total))
         return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
 
