@@ -23,7 +23,7 @@ class IPythonUi:
         self.producer = None
 
     def on_loop(self, proj, task, page):
-        import IPython.display
+        import IPython.display # type: ignore
         import matplotlib.pyplot as plt
 
         IPython.display.clear_output(wait=True)
