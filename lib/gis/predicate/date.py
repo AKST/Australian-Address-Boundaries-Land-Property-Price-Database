@@ -7,10 +7,11 @@ from lib.service.clock import ClockService
 from .base import PredicateFunction, PredicateParam
 
 
+@dataclass
 class DateRangeParamFactory:
-    _clock: ClockService
+    clock: ClockService
     def create(self, start, end, scope):
-        return DateRangeParam(start, end, scope=scope, clock=self._clock)
+        return DateRangeParam(start, end, scope=scope, clock=self.clock)
 
 @dataclass
 class DatePredicateFunction(PredicateFunction):
@@ -27,7 +28,7 @@ class DatePredicateFunction(PredicateFunction):
 
     @staticmethod
     def create(field: str, default_range: Tuple[int, int]):
-        factory = DateRangeParamFactory()
+        factory = DateRangeParamFactory(clock=ClockService())
         return DatePredicateFunction(field, default_range, factory)
 
     def default_param(self, scope):

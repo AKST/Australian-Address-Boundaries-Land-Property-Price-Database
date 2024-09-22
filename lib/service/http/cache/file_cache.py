@@ -130,17 +130,17 @@ class FileCacher:
         await self._io.f_write(self._config_path, json.dumps(state, indent=1))
 
     @staticmethod
-    def create(config_path: str | None = None,
+    def create(io: IoService | None,
+               config_path: str | None = None,
                cache_dir: str | None = None):
         cache_dir = cache_dir or './_out_cache'
         clock = ClockService()
         uuid = UuidService()
-        io = IoService()
         factory = RequestCacheFactory(cache_dir=cache_dir)
         return FileCacher(cache_dir,
                           config_path or './_out_state/http-cache.json',
                           rc_factory=factory,
-                          io=IoService(),
+                          io=io or IoService.create(None),
                           uuid=UuidService(),
                           clock=ClockService())
 

@@ -15,20 +15,23 @@ from .headers import InstructionHeaders, CacheHeader
 
 class CachedClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.CachedClientSession')
+    _session: AbstractClientSession
 
-    def __init__(self, session: ClientSession, cacher, create_get_request):
+    def __init__(self, session, cacher, create_get_request):
         self._session = session
         self._cache = cacher
         self._create_get_request = create_get_request
 
     @staticmethod
-    def create(session: Optional[ClientSession] = None):
-        cache = FileCacher.create()
+    def create(session: AbstractClientSession | None = None,
+               file_cache: FileCacher | None = None,
+               io_service: IoService | None = None):
+        cache = file_cache or FileCacher.create(None)
         session = session or ClientSession.create()
         logger = getLogger(f'{__name__}.CachedGet')
 
         create_get_request = lambda url, headers, meta: CachedGet(
-            _io=IoService(),
+            _io=io_service or IoService.create(None),
             _config=(url, headers, meta),
             _logger=logger,
             _session=session,
@@ -69,8 +72,8 @@ class CachedGet(AbstractGetResponse):
     """
     _io: IoService
     _config: Tuple[str, Dict[str, str], InstructionHeaders]
-    _session: ClientSession
-    _cache: Dict[str, RequestCache]
+    _session: AbstractClientSession
+    _cache: FileCacher
     _logger: Logger
     _status: int | None = field(default=None)
     _state: Any = field(default=None)
