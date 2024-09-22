@@ -56,7 +56,7 @@ class ThrottledGetResponse(AbstractGetResponse):
     url: str
     headers: Dict[str, str] | None
 
-    _semaphore: Any
+    _semaphore: asyncio.Semaphore
     _session: ClientSession
     _response: AbstractGetResponse | None = None
 

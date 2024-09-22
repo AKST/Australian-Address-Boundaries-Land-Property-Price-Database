@@ -10,18 +10,18 @@ from .base import PredicateFunction, PredicateParam
 @dataclass
 class DateRangeParamFactory:
     clock: ClockService
-    def create(self, start, end, scope):
+    def create(self, start: 'YearMonth', end: 'YearMonth', scope: str) -> 'DateRangeParam':
         return DateRangeParam(start, end, scope=scope, clock=self.clock)
 
 @dataclass
 class DatePredicateFunction(PredicateFunction):
     default_range: Tuple[int, int]
-    _factory: 'DateRangeParamFactory'
+    _factory: DateRangeParamFactory
 
     def __init__(self,
                  field: str,
                  default_range: Tuple[int, int],
-                 factory: 'DateRangeParamFactory'):
+                 factory: DateRangeParamFactory):
         super().__init__(field, 'date')
         self.default_range = default_range
         self._factory = factory
@@ -31,10 +31,11 @@ class DatePredicateFunction(PredicateFunction):
         factory = DateRangeParamFactory(clock=ClockService())
         return DatePredicateFunction(field, default_range, factory)
 
-    def default_param(self, scope):
+    def default_param(self, scope: str):
         start, end = self.default_range
-        start, end = YearMonth(start, 1), YearMonth(end, 1)
-        return self._factory.create(start, end, scope=scope)
+        return self._factory.create(YearMonth(start, 1),
+                                    YearMonth(end, 1),
+                                    scope=scope)
 
 class DateRangeParam(PredicateParam):
     start: 'YearMonth'
@@ -50,10 +51,10 @@ class DateRangeParam(PredicateParam):
     def __repr__(self):
         return f'DateRangeParam({self.start}, {self.end}, {self.scope})'
 
-    def _scoped(self, start, end):
+    def _scoped(self, start: 'YearMonth', end: 'YearMonth'):
         return DateRangeParam(start, end, scope=self.scope, clock=self._clock)
 
-    def can_cache(self):
+    def can_cache(self) -> bool:
         today = YearMonth.from_date(self._clock.now())
         return today > self.end
 
@@ -77,7 +78,7 @@ class DateRangeParam(PredicateParam):
         for this_d in iterator:
             yield self._scoped(this_d, next_date(this_d))
 
-    def apply(self, field: str):
+    def apply(self, field: str) -> str:
         lower_b = f"{field} >= DATE '{str(self.start)}'"
         upper_b = f"{field} < DATE '{str(self.end)}'"
         query = ' AND '.join([lower_b, upper_b])

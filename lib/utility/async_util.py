@@ -1,13 +1,10 @@
 import asyncio
 from asyncio import Task, TaskGroup, wait
-from typing import Dict, List, Set, Any, AsyncIterator, Callable, Awaitable, TypeVar
+from typing import Dict, List, Set, Any, AsyncIterator, Callable, Awaitable
 
-T = TypeVar('T')
-U = TypeVar('U')
-
-async def pipe(producer: Callable[[], AsyncIterator[T]],
-               consumer: Callable[[T], Awaitable[U]],
-               tg: TaskGroup | None = None) -> AsyncIterator[U]:
+async def pipe[T, U](producer: Callable[[], AsyncIterator[T]],
+                     consumer: Callable[[T], Awaitable[U]],
+                     tg: TaskGroup | None = None) -> AsyncIterator[U]:
     """
     This function creates an async generator with a
     producer and a consumer (there is an optional
@@ -80,7 +77,7 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
         if result is not None:
             yield result
 
-async def merge_async_iters(iters: List[AsyncIterator[T]]) -> AsyncIterator[T]:
+async def merge_async_iters[T](iters: List[AsyncIterator[T]]) -> AsyncIterator[T]:
     def create_task(it: AsyncIterator[T]) -> Task[T]:
             return asyncio.create_task(it.__anext__()) # type: ignore
     """
