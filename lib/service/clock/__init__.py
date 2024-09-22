@@ -9,6 +9,6 @@ class ClockService:
     def now(self):
         return datetime.now()
 
-    async def sleep(self, ms):
-        await asyncio.wait(ms)
+    async def sleep(self, ms: int):
+        await asyncio.sleep(ms)
 

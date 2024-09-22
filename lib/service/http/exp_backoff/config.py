@@ -17,7 +17,7 @@ class RetryPreference:
     retry_on_server_error: bool = field(default=True)
 
     def backoff_duration(self, attempt):
-        return 1000 * (self.factor ** attempt)
+        return 1 * (self.factor ** attempt)
 
     def can_retry_on_connection_error(self, time):
         return self.retry_on_connection_error and time < self.allowed

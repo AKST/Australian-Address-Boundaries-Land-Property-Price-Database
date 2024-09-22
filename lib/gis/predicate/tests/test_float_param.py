@@ -52,7 +52,10 @@ class FloatParamTestCase(unittest.TestCase):
             FloatRangeParam(1.8, 2.0),
         ])
 
-    def test_shard_1p5_to_2p5(self):
+    def test_shard_1p55555_to_2p55555(self):
+        """
+        The goal of this test is to see if the range gets respected.
+        """
         param = FloatRangeParam(1.55555, 2.55555)
         self.assertEqual(list(param.shard()), [
             FloatRangeParam(1.55555, 1.6),
