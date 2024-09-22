@@ -1,4 +1,5 @@
-from urllib.request import urlopen, urljoin
+from urllib.request import urlopen
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from collections import namedtuple
 from dataclasses import dataclass, field
@@ -6,6 +7,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from lib.data_types import Target
+from lib.service.http import AbstractClientSession
 from lib.service.http.cache import CacheHeader
 from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
@@ -13,8 +15,7 @@ ListItem = namedtuple('ListItem', ['Name', 'Link'])
 
 @dataclass
 class NswVgTarget(Target):
-    datetime: datetime = field(default=None)
-
+    datetime: datetime | None = field(default=None)
 
 class NswValuerGeneralBulkSalesScrapeAttempt:
     """
@@ -43,7 +44,7 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
         self._cache_period = cache_period
         self._date_fmt = date_fmt
 
-    async def load_links(self, session):
+    async def load_links(self, session: AbstractClientSession):
         try:
             async with session.get(self._directory_page, headers={
                 CacheHeader.EXPIRE: self._cache_period,

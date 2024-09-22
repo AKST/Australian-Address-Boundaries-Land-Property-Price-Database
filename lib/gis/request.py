@@ -1,8 +1,10 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Set, Any, Optional, List, Tuple
+from typing import Set, Any, Iterator, List, Tuple
 
 from .predicate import YearMonth, PredicateFunction
+
+FieldPriority = str | List[str | Tuple[str, int]]
 
 @dataclass
 class SchemaField:
@@ -15,26 +17,26 @@ class GisSchema:
     url: str
     id_field: str
     result_limit: int
-    fields: List[str]
+    fields: List[SchemaField]
     shard_scheme: List[PredicateFunction]
     debug_plot_column: str
 
 @dataclass
 class GisProjection:
     schema: GisSchema
-    fields: str | List[str | Tuple[str, str]]
-    epsg_crs: Any
+    fields: FieldPriority
+    epsg_crs: int
 
-    def get_fields(self):
+    def get_fields(self) -> Iterator[str]:
         if isinstance(self.fields, str) and self.fields == '*':
             return (f.name for f in self.schema.fields)
-        
+
         elif isinstance(self.fields, str):
             # if you set `fields` to a str, you should only set it to '*'
             raise ValueError('invalid projection')
-        
+
         requirements = [((r, 3) if isinstance(r, str) else r) for r in self.fields]
-        
+
         return (
             f.name
             for category, priority in requirements
@@ -57,4 +59,4 @@ class Bounds:
 
     def y_range(self):
         return self.ymax - self.ymin
-    
+

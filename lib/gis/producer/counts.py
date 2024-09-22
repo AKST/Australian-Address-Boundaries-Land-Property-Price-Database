@@ -17,7 +17,7 @@ class ClauseCounts:
         self._counts[clause] = (0, count)
 
     @staticmethod
-    def from_list(ls: List[Tuple[int, str]]) -> Self:
+    def from_list(ls: List[Tuple[int, str]]):
         counts = { clause: (0, count) for count, clause in ls }
         return ClauseCounts(counts)
 
@@ -25,5 +25,5 @@ class ClauseCounts:
         progress, total = self._counts[clause]
         self._counts[clause] = (progress + amount, total)
 
-    def progress(self, clause: str) -> int:
+    def progress(self, clause: str) -> Tuple[int, int]:
         return self._counts[clause]

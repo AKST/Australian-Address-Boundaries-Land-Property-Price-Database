@@ -1,15 +1,15 @@
-from aiohttp import ClientSession
 import asyncio
 from dataclasses import dataclass
 import geopandas as gpd
 from logging import getLogger
 import math
 from random import shuffle
-from typing import Any, Optional, List
+from typing import Any, AsyncIterator, List, Tuple
 
 from lib.async_util import pipe, merge_async_iters
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
+from lib.service.http import AbstractClientSession
 from lib.service.http.cache import CacheHeader
 from lib.service.http.util import url_with_params
 
@@ -24,11 +24,15 @@ class ProjectionTask:
     expected_results: int
     use_cache: bool
 
+
+StreamItem = Tuple[GisProjection, ProjectionTask, Any]
+
+
 class GisProducer:
     _logger = getLogger(f'{__name__}.GisProducer')
-    _streams: List[Any]
+    _streams: List['GisStream']
 
-    def __init__(self, session: ClientSession):
+    def __init__(self, session: AbstractClientSession):
         self._session = session
         self._streams = []
 
@@ -39,23 +43,25 @@ class GisProducer:
         it = (s.progress_str(task) for s in self._streams if s.projection == p)
         return next(it, None)
 
-    async def produce(self, params: List[PredicateParam]):
+    async def produce(self, params: List[PredicateParam]) -> AsyncIterator[StreamItem]:
         async with asyncio.TaskGroup() as tg:
             iters = [ss.run_all(tg, params) for ss in self._streams]
             async for result in merge_async_iters(iters, tg):
                 yield result
 
+
 class GisStream:
     _logger = getLogger(f'{__name__}.GisStream')
-    _counts: Optional[ClauseCounts] = None
+    _counts: ClauseCounts
 
     def __init__(self,
                  projection: GisProjection,
                  factory: ComponentFactory,
-                 session: ClientSession):
+                 session: AbstractClientSession):
         self.projection = projection
         self._session = session
         self._factory = factory
+        self._counts = ClauseCounts()
 
     @staticmethod
     def create(session, projection: GisProjection):
@@ -65,12 +71,14 @@ class GisStream:
             session,
         )
 
-    def progress_str(self, task: ProjectionTask):
+    def progress_str(self, task: ProjectionTask) -> str:
         amount, total = self._counts.progress(task.where_clause)
         percent = math.floor(100*(amount/total))
         return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
 
-    async def run_all(self, tg: asyncio.TaskGroup, params: List[PredicateParam]):
+    async def run_all(self,
+                      tg: asyncio.TaskGroup,
+                      params: List[PredicateParam]) -> AsyncIterator[StreamItem]:
         schema = self.projection.schema
         limit = schema.result_limit
 
@@ -90,7 +98,6 @@ class GisStream:
         I configure it too).
         """
         limit = self.projection.schema.result_limit
-        self._counts = ClauseCounts()
 
         async def shard_count(shard_param, field, use_cache):
             where_clause = shard_param.apply(field)
@@ -144,7 +151,7 @@ class GisStream:
         async for c in chunks(None, shard_scheme, params, use_cache=True):
             yield c
 
-    async def _run_task(self, task: ProjectionTask):
+    async def _run_task(self, task: ProjectionTask) -> Tuple[ProjectionTask, Any]:
         p = self.projection
         try:
             params = {
@@ -166,7 +173,7 @@ class GisStream:
 
         features = data.get('features', [])
         if len(features) < task.expected_results:
-            self._logger("Potenial data loss has occured")
+            self._logger.error("Potenial data loss has occured")
             raise MissingResultsError(
                 f'{task.where_clause} OFFSET {task.offset}, '
                 f'got {len(features)} wanted {task.expected_results}')
@@ -187,7 +194,6 @@ class GisStream:
         return task, gdf
 
     async def _get_count(self, where_clause: str | None, use_cache: bool) -> int:
-
         params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }
         response = await self._get_json(params, use_cache=use_cache, cache_name='count')
         try:

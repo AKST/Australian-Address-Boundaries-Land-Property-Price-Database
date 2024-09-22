@@ -8,14 +8,14 @@ from lib.nsw_vg.property_description import types as t
 class IdPattern:
     re: Any
     Const: Any
-    
+
 @dataclass
 class NamePattern:
     re: Any
     id_names: List[str]
     Const: Any
-    bool_names: List[bool] = field(default_factory=lambda: [])
-    
+    bool_names: List[str] = field(default_factory=lambda: [])
+
 @dataclass
 class FlagPattern:
     re: Any
@@ -25,11 +25,11 @@ id_patterns = [
     IdPattern(re=re.compile(r'Wind Farm\s+(\w+)'), Const=t.WindFarm),
     IdPattern(re=re.compile(r"Consolidated Mining Lease\s+(\w+)"), Const=t.ConsolidatedMiningLease),
 
-    
+
     IdPattern(re=re.compile(r'Public Reserve\s+(\w+)'), Const=t.PublicReserve),
     IdPattern(re=re.compile(r'Perpetual Lease\s+(\w+)'), Const=t.PerpetualLease),
-    
-    
+
+
     # there doesn't appear to be such a thing as a mining permit
     #
     # https://ablis.business.gov.au/search/customsearch
@@ -47,13 +47,13 @@ id_patterns = [
     IdPattern(re=re.compile(r'Housing PRN\s+(\w+)'), Const=t.HousingPRN),
     IdPattern(re=re.compile(r'Licence\s+(\w+)'), Const=t.CrownLandLicense),
     IdPattern(re=re.compile(r'BUS DEPOT LEASE\s+(\w+)'), Const=t.BusDepotLease),
-    
+
     # IdPattern(re=re.compile(r'STATE HERITAGE REGISTRAR\s+(\w+)', re.IGNORECASE), Const=StateHeritageRegister),
     IdPattern(re=re.compile(r'State Heritage Listing No\s+(\w+)', re.IGNORECASE), Const=t.StateHeritageRegister),
     IdPattern(re=re.compile(r'Permissive Occupancy\s+(\w+)'), Const=t.PermissiveOccupancy),
     IdPattern(re=re.compile(r'RAILCORP\. FILE:\s+(\w+)', re.IGNORECASE), Const=t.RailcorpFile),
     IdPattern(re=re.compile(r'Domestic Waterfront Occupancy\s+(\w+)'), Const=t.DomesticWaterfrontOccupation),
-    
+
     # I am guessing these are the same things
     IdPattern(re=re.compile(r'Occupation Permit PB\s+(\w+)'), Const=t.OccupancyPermit),
     IdPattern(re=re.compile(r'Occupation Permit\s+(\w+)'), Const=t.OccupancyPermit),
@@ -90,25 +90,25 @@ named_group_patterns = [
     # Mining Lease — You will need a mining lease to extract minerals for the PURPOSE of commercial mining
     # via: https://ablis.business.gov.au/service/nsw/mining-lease/16580
     NamePattern(
-        re=re.compile(r'Mining (Purpose )?Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE), 
+        re=re.compile(r'Mining (Purpose )?Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE),
         id_names=['id'],
         bool_names=['part'],
         Const=t.MiningLease,
     ),
     NamePattern(
-        re=re.compile(r"Consolidated Coal Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?", re.IGNORECASE), 
+        re=re.compile(r"Consolidated Coal Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?", re.IGNORECASE),
         id_names=['id'],
         bool_names=['part'],
         Const=t.ConsolidatedCoalLease,
     ),
     NamePattern(
-        re=re.compile(r'Coal Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE), 
+        re=re.compile(r'Coal Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE),
         id_names=['id'],
         bool_names=['part'],
         Const=t.CoalLease,
     ),
     NamePattern(
-        re=re.compile(r'Mineral Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE), 
+        re=re.compile(r'Mineral Lease\s+(?P<id>\w+)(?P<part>\s+\(Part\))?', re.IGNORECASE),
         id_names=['id'],
         bool_names=['part'],
         Const=t.MineralLease,
@@ -157,16 +157,16 @@ ignore_post_patterns = [
     re.compile(r'SUBSURFACE ONLY', re.IGNORECASE),
     re.compile(r'LOT \w+ DP \w+ MINERAL ONLY', re.IGNORECASE),
     re.compile(r'COAL ONLY PLAN - \w+', re.IGNORECASE),
-    
+
     # only appears on 3 different properties
     re.compile(r'Share Use', re.IGNORECASE),
-    re.compile(r'Shared Use', re.IGNORECASE), 
+    re.compile(r'Shared Use', re.IGNORECASE),
     re.compile(r'EXCLUDING SURFACE LAND VALUED ON OCCUPATION', re.IGNORECASE),
 
     # I saw this stand alone after a parcel number with zero context.
-    re.compile(r'(Unleased )?floor space area'), 
-    
+    re.compile(r'(Unleased )?floor space area'),
+
     # idk what's going with this...
     # it's often trailing after licenses of permits
-    # re.compile(r'(PART)'), 
+    # re.compile(r'(PART)'),
 ]

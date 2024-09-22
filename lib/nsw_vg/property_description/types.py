@@ -2,8 +2,11 @@ from dataclasses import dataclass, field
 from collections import namedtuple
 from typing import List, Union, Any, Optional
 
+class ParseItem:
+    pass
+
 @dataclass
-class LandParcel:
+class LandParcel(ParseItem):
     id: str
     part: bool = field(default=False)
 
@@ -14,7 +17,7 @@ TelstraSite = namedtuple("TelstraSite", ['id'])
 SydneyPortsCorporationPlan = namedtuple('SydneyPortsCorporationPlan', ['site', 'plan'])
 
 @dataclass
-class CoalLease:
+class CoalLease(ParseItem):
     """
     For anything matching the grammar "Coal Lease \w+"
     """
@@ -22,7 +25,7 @@ class CoalLease:
     part: Optional[bool] = field(default=False)
 
 @dataclass
-class ConsolidatedCoalLease:
+class ConsolidatedCoalLease(ParseItem):
     """
     For anything matching the grammar "Consolidated Coal Lease \w+"
     """
@@ -30,7 +33,7 @@ class ConsolidatedCoalLease:
     part: bool
 
 @dataclass
-class ConsolidatedMiningLease:
+class ConsolidatedMiningLease(ParseItem):
     """
     For anythign matching the grammar "Consolidated Mining Lease \w+"
     """
@@ -38,7 +41,7 @@ class ConsolidatedMiningLease:
 
 # https://ablis.business.gov.au/service/nsw/mining-lease/16580
 @dataclass
-class MiningLease:
+class MiningLease(ParseItem):
     """
     For anything matching the grammar "Mining Lease \w+"
     """
@@ -47,31 +50,31 @@ class MiningLease:
 
 # https://ablis.business.gov.au/service/nsw/mining-lease/16580
 @dataclass
-class MiningPurposeLease:
+class MiningPurposeLease(ParseItem):
     """
     For anything matching the grammar "Mining Purpose Lease \w+"
     """
     id: str
-    
-@dataclass
-class MineralClaim:
-    id: str  
 
 @dataclass
-class MineralLease:
-    id: str  
+class MineralClaim(ParseItem):
+    id: str
+
+@dataclass
+class MineralLease(ParseItem):
+    id: str
     part: Optional[bool] = field(default=False)
 
 @dataclass
-class WesternLandLease:
-    id: str
-    
-@dataclass
-class RailwayLandLease:
+class WesternLandLease(ParseItem):
     id: str
 
 @dataclass
-class RailcorpFile:
+class RailwayLandLease(ParseItem):
+    id: str
+
+@dataclass
+class RailcorpFile(ParseItem):
     """
     For anything matching the grammar "RAILCORP. FILE: \w+"
     """
@@ -79,25 +82,25 @@ class RailcorpFile:
 
 # https://www.lls.nsw.gov.au/help-and-advice/travelling-stock-reserves/stock-watering-place-leases
 @dataclass
-class StockWaterPlaceLease:
+class StockWaterPlaceLease(ParseItem):
     id: str
 
 @dataclass
-class PermissiveOccupancy:
+class PermissiveOccupancy(ParseItem):
     """
     For parising anything with the grammar "Permissive Occupancy \w+"
     """
     id: str
 
 @dataclass
-class OccupancyPermit:
+class OccupancyPermit(ParseItem):
     """
     For parsing the grammar "Occupancy Permit \w+"
     """
     id: str
 
 @dataclass
-class LeaseNumber:
+class LeaseNumber(ParseItem):
     """
     For parsing anything that has the grammar "Lease Number \w+( - \w+)"
     """
@@ -105,34 +108,34 @@ class LeaseNumber:
     id_b: Optional[str]
 
 @dataclass
-class PerpetualLease:
+class PerpetualLease(ParseItem):
     """
     For parsing anything that has the grammar "Perpetual Lease \w+"
     """
     id: str
 
 @dataclass
-class ForestPermit:
-    id: str
-    
-@dataclass
-class EnclosurePermit:
+class ForestPermit(ParseItem):
     id: str
 
 @dataclass
-class DomesticWaterfrontOccupation:
+class EnclosurePermit(ParseItem):
     id: str
 
 @dataclass
-class NonIrrigablePurchase:
+class DomesticWaterfrontOccupation(ParseItem):
     id: str
 
 @dataclass
-class StateHeritageRegister:
+class NonIrrigablePurchase(ParseItem):
     id: str
 
 @dataclass
-class HousingPRN:
+class StateHeritageRegister(ParseItem):
+    id: str
+
+@dataclass
+class HousingPRN(ParseItem):
     """
     This is for the grammar "Housing PRN \w+"
 
@@ -141,7 +144,7 @@ class HousingPRN:
     id: str
 
 @dataclass
-class CrownLandLicense:
+class CrownLandLicense(ParseItem):
     """
     This is presumably a license to use crown land, the grammar is "Licence \w+"
 
@@ -152,14 +155,14 @@ class CrownLandLicense:
     id: str
 
 @dataclass
-class CrownReserve:
+class CrownReserve(ParseItem):
     """
     For parsing the grammar "Crown Reserve \w+"
     """
     id: str
 
 @dataclass
-class CrownPlan:
+class CrownPlan(ParseItem):
     """
     For parsing the grammar "Crown Reserve \w+"
     """
@@ -169,7 +172,7 @@ class CrownPlan:
 
 # https://www.jstor.org/stable/26875607
 @dataclass
-class SpecialLease:
+class SpecialLease(ParseItem):
     """
     For parsing the grammar of "Special Lease \w+"
     """
@@ -177,21 +180,10 @@ class SpecialLease:
 
 # https://www.transport.nsw.gov.au/operations/roads-and-waterways/waterways/property-planning/maritime-development/maritime
 @dataclass
-class NswMaritime:
+class NswMaritime(ParseItem):
     id: str
 
 @dataclass
-class IsDrainageReserve:
+class IsDrainageReserve(ParseItem):
     pass
 
-ParsedItem = Union[
-    LandParcel,
-    WindFarm,
-    MineralClaim,
-    MineralLease,
-    WesternLandLease,
-    RailwayLandLease,
-    ForestPermit,
-    EnclosurePermit,
-    IsDrainageReserve,
-]

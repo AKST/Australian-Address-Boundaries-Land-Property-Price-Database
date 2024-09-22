@@ -62,7 +62,7 @@ class FileCacher:
         self._rc_factory = rc_factory
 
     def read(self, url: str, fmt: str):
-        if not self._state:
+        if self._state is None:
             raise ValueError('write occured while state was not initialised')
 
         if url not in self._state:
@@ -82,7 +82,7 @@ class FileCacher:
         return None, False
 
     async def write(self, url: str, meta: InstructionHeaders, data: str):
-        if not self._state:
+        if self._state is None:
             raise ValueError('write occured while state was not initialised')
 
         fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"

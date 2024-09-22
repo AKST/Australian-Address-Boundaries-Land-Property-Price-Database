@@ -1,7 +1,6 @@
 import asyncio
 from asyncio import TaskGroup, wait
-from typing import List, Any, AsyncIterator, Callable, Awaitable, TypeVar
-from weakref import WeakSet
+from typing import Dict, List, Set, Any, AsyncIterator, Callable, Awaitable, TypeVar
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -38,12 +37,11 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
     then it makes sense to want to run as many simulanenously
     as possible.
     """
-    pending_tasks = set()
-    shard_tasks = WeakSet()
+    pending_tasks: Set[Any] = set()
     producer_coroutine = producer()
 
     try:
-        shard_task = tg.create_task(producer_coroutine.__anext__())
+        shard_task: Awaitable[T] = tg.create_task(producer_coroutine.__anext__()) # type: ignore
         while True:
             done, _ = await wait(
                 [shard_task] + list(pending_tasks),
@@ -52,9 +50,9 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
 
             if shard_task in done:
                 try:
-                    task = tg.create_task(consumer(await shard_task))
+                    task: Awaitable[U] = tg.create_task(consumer(await shard_task)) # type: ignore
                     pending_tasks.add(task)
-                    shard_task = tg.create_task(producer_coroutine.__anext__())
+                    shard_task = tg.create_task(producer_coroutine.__anext__()) # type: ignore
                 except StopAsyncIteration:
                     break
                 except Exception as e:
@@ -78,8 +76,12 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
         if result is not None:
             yield result
 
-async def merge_async_iters(iters: List[AsyncIterator[Any]], tg: TaskGroup):
-    tasks = {tg.create_task(it.__anext__()): it for it in iters}
+async def merge_async_iters(iters: List[AsyncIterator[Any]],
+                            tg: TaskGroup):
+    tasks: Dict[Any, Any] = {
+        tg.create_task(it.__anext__()): it # type: ignore
+        for it in iters
+    }
 
     while tasks:
         done, _ = await wait(tasks, return_when=asyncio.FIRST_COMPLETED)

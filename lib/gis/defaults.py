@@ -5,7 +5,7 @@ from .constants import SPATIAL_NSW_PROP_FEATURE_LAYER
 from .constants import ENVIRONMENT_NSW_DA_LAYER
 from .constants import ENVIRONMENT_NSW_ZONE_LAYER
 from .predicate import DatePredicateFunction, FloatPredicateFunction
-from .request import SchemaField, GisSchema, GisProjection, Bounds
+from .request import SchemaField, GisSchema, GisProjection, Bounds, FieldPriority
 from lib.service.http.throttled_session import HostSemaphoreConfig
 
 _1ST_YEAR = 2000
@@ -17,7 +17,7 @@ NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
 
 WGS84_CRS = 4326
 
-_field_priority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
+_field_priority: FieldPriority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
 
 HOST_SEMAPHORE_CONFIG = [
     HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=8),
