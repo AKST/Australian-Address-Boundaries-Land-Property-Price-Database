@@ -39,7 +39,7 @@ class FileCacher:
     _io: IoService
     _uuid: UuidService
     _clock: ClockService
-    _rc_factory: Any
+    _rc_factory: 'RequestCacheFactory'
 
     _state: State | None
     _save_dir: str
@@ -48,7 +48,7 @@ class FileCacher:
     def __init__(self,
                  save_dir: str,
                  config_path: str,
-                 rc_factory: Any,
+                 rc_factory: 'RequestCacheFactory',
                  io: IoService,
                  uuid: UuidService,
                  clock: ClockService,
@@ -137,8 +137,8 @@ class FileCacher:
         clock = ClockService()
         uuid = UuidService()
         factory = RequestCacheFactory(cache_dir=cache_dir)
-        return FileCacher(cache_dir,
-                          config_path or './_out_state/http-cache.json',
+        return FileCacher(save_dir=cache_dir,
+                          config_path=config_path or './_out_state/http-cache.json',
                           rc_factory=factory,
                           io=io or IoService.create(None),
                           uuid=UuidService(),

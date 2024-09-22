@@ -41,7 +41,7 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
     producer_coroutine = producer()
 
     try:
-        shard_task: Awaitable[T] = tg.create_task(producer_coroutine.__anext__()) # type: ignore
+        shard_task: Awaitable[T] = asyncio.create_task(producer_coroutine.__anext__()) # type: ignore
         while True:
             done, _ = await wait(
                 [shard_task] + list(pending_tasks),
@@ -52,11 +52,9 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
                 try:
                     task: Awaitable[U] = tg.create_task(consumer(await shard_task)) # type: ignore
                     pending_tasks.add(task)
-                    shard_task = tg.create_task(producer_coroutine.__anext__()) # type: ignore
+                    shard_task = asyncio.create_task(producer_coroutine.__anext__()) # type: ignore
                 except StopAsyncIteration:
                     break
-                except Exception as e:
-                    raise e
 
             completed_tasks = done - {shard_task}
             for task in completed_tasks:
@@ -72,14 +70,17 @@ async def pipe(producer: Callable[[], AsyncIterator[T]],
         pass
 
     for task in asyncio.as_completed(pending_tasks):
-        result = await task
+        try:
+            result = await task
+        except StopAsyncIteration:
+            continue
+
         if result is not None:
             yield result
 
-async def merge_async_iters(iters: List[AsyncIterator[Any]],
-                            tg: TaskGroup):
+async def merge_async_iters(iters: List[AsyncIterator[Any]]):
     tasks: Dict[Any, Any] = {
-        tg.create_task(it.__anext__()): it # type: ignore
+        asyncio.create_task(it.__anext__()): it # type: ignore
         for it in iters
     }
 
@@ -90,7 +91,7 @@ async def merge_async_iters(iters: List[AsyncIterator[Any]],
             iterator = tasks.pop(task)
             try:
                 yield task.result()
-                tasks[tg.create_task(iterator.__anext__())] = iterator
+                tasks[asyncio.create_task(iterator.__anext__())] = iterator
             except StopAsyncIteration:
                 continue
 

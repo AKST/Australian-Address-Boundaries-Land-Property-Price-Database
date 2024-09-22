@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import math
-from typing import Tuple
+from itertools import chain
+from typing import Tuple, Iterator, List
 
 from .base import PredicateFunction, PredicateParam
 
@@ -16,6 +17,7 @@ class FloatPredicateFunction(PredicateFunction):
         start, end = self.default_range
         return FloatRangeParam(start, end, scope=scope)
 
+@dataclass
 class FloatRangeParam(PredicateParam):
     start: float
     end: float
@@ -28,10 +30,10 @@ class FloatRangeParam(PredicateParam):
     def can_cache(self):
         return True
 
-    def _scoped(self, start, end):
+    def _scoped(self, start: float, end: float) -> 'FloatRangeParam':
         return FloatRangeParam(start, end, scope=self.scope)
 
-    def apply(self, field: str):
+    def apply(self, field: str) -> str:
         lower_b = f"{field} >= {self.start}"
         upper_b = f"{field} < {self.end}"
         query = ' AND '.join([lower_b, upper_b])
@@ -40,13 +42,45 @@ class FloatRangeParam(PredicateParam):
     def can_shard(self):
         return True
 
-    def shard(self):
-        n, r = 12, self.end - self.start
+    def shard(self) -> Iterator['FloatRangeParam']:
+        n = 12
         ls = math.log10(self.start) if self.start > 0 else 0.0
         le = math.log10(self.end)
         step = (le - ls) / (n - 1)
-        points = [(10**(ls + i * step)) for i in range(n)]
-        points = [self.start, *points[1:-1], self.end]
-        yield from (self._scoped(points[i], points[i+1]) for i in range(0, len(points)-1))
+
+        points = round_items(
+            chain(
+                [self.start],
+                ((10**(ls + i * step)) for i in range(1, n - 1)),
+                [self.end],
+            )
+        )
+
+        last = next(points)
+        for item in points:
+            yield self._scoped(last, item)
+            last = item
+
+def round_items(ls: Iterator[float]) -> Iterator[float]:
+    def minimal_rounding(item, last):
+        n = 0
+        while True:
+            factor = 10 ** n
+            attempt = math.floor(item * factor) / factor
+            if attempt > last:
+                return attempt
+            n = n + 1
+
+    last = next(ls)
+    last_raw = last
+    for item in ls:
+        yield last
+
+        if item - last > 1:
+            item_mod = float(math.floor(item))
+        else:
+            item_mod = minimal_rounding(item, last)
+        last_raw, last = item, item_mod
+    yield last_raw
 
 

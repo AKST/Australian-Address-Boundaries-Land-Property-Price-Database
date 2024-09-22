@@ -46,7 +46,7 @@ class GisProducer:
     async def produce(self, params: List[PredicateParam]) -> AsyncIterator[StreamItem]:
         async with asyncio.TaskGroup() as tg:
             iters = [ss.run_all(tg, params) for ss in self._streams]
-            async for result in merge_async_iters(iters, tg):
+            async for result in merge_async_iters(iters):
                 yield result
 
 
