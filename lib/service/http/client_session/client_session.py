@@ -1,7 +1,7 @@
 from aiohttp import ClientSession as ThirdPartyClientSession
 from aiohttp.client_exceptions import ClientConnectorError as ThirdPartyClientConnectorError
 from dataclasses import dataclass, field
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, AsyncIterator, AsyncGenerator
 
 from .base import AbstractClientSession, AbstractGetResponse
 
@@ -54,6 +54,11 @@ class GetResponse(AbstractGetResponse):
 
     async def text(self):
         return await self._response.text()
+
+    async def stream(self, chunk_size: int) -> AsyncGenerator[str, None]:
+        async for chunk in self._response.content.iter_chunked(chunk_size):
+            if chunk:
+                yield str(chunk)
 
     async def __aenter__(self):
         try:

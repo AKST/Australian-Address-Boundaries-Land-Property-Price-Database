@@ -7,8 +7,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from lib.data_types import Target
-from lib.service.http import AbstractClientSession
-from lib.service.http.cache import CacheHeader
+from lib.service.http import AbstractClientSession, CacheHeader
 from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
 ListItem = namedtuple('ListItem', ['Name', 'Link'])

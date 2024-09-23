@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, call, ANY
 from lib.service.clock.mocks import MockClockService
 from lib.service.uuid.mocks import MockUuidService
 from lib.service.io import IoService
-from lib.service.http.cache import InstructionHeaders, CACHE_VERSION
-from lib.service.http.cache.file_cache import RequestCache, FileCacher, RequestCacheFactory
-from lib.service.http.cache.expiry import *
+from lib.service.http.middleware.cache import InstructionHeaders, CACHE_VERSION
+from lib.service.http.middleware.cache.file_cache import RequestCache, FileCacher, RequestCacheFactory
+from lib.service.http.middleware.cache.expiry import *
 
 _file_path = 'blah/blah/blah'
 _date_str = '2012-10-15 10:10:10'

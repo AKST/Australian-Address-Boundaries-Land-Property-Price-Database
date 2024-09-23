@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, AsyncIterator, AsyncGenerator
 
 class AbstractClientSession(ABC):
     @abstractmethod
@@ -27,6 +27,10 @@ class AbstractGetResponse(ABC):
 
     @abstractmethod
     async def json(self):
+        pass
+
+    @abstractmethod
+    def stream(self, chunk_size: int) -> AsyncGenerator[str, None]:
         pass
 
     @abstractmethod

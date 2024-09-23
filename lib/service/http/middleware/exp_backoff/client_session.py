@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from logging import getLogger, Logger
-from typing import Any, Dict, Self
+from typing import Any, Dict, Self, AsyncIterator
 
 from lib.service.clock import ClockService
 from lib.service.http.util import url_host
-from lib.service.http.client_session import ClientSession, ConnectionError
-from lib.service.http.client_session import AbstractClientSession, AbstractGetResponse
+from lib.service.http.client_session import *
 
 from .config import BackoffConfig, RetryPreference
 from .host_state import HostStateDiscovery, HostState
@@ -108,10 +107,21 @@ class ExpBackoffGetResponse(AbstractGetResponse):
             await self._response.__aexit__(exc_type, exc_value, traceback)
         return False
 
-    async def text(self):
+    async def stream(self, chunk_size: int):
+        if not self._response:
+            raise ValueError('outside of context')
+
+        async for chunk in self._response.stream(chunk_size):
+            yield chunk
+
+    async def text(self) -> str:
+        if not self._response:
+            raise ValueError('outside of context')
         return await self._response.text()
 
     async def json(self):
+        if not self._response:
+            raise ValueError('outside of context')
         return await self._response.json()
 
 @dataclass

@@ -7,8 +7,7 @@ from .constants import ENVIRONMENT_NSW_ZONE_LAYER
 from .predicate import DatePredicateFunction, FloatPredicateFunction
 from .request import SchemaField, GisSchema, GisProjection, Bounds, FieldPriority
 
-from lib.service.http.throttled_session import HostSemaphoreConfig
-from lib.service.http.exp_backoff import BackoffConfig, RetryPreference, HostOverride
+from lib.service.http import HostSemaphoreConfig, BackoffConfig, RetryPreference, HostOverride
 
 _1ST_YEAR = 2000
 _NEXT_YEAR = datetime.now().year + 1

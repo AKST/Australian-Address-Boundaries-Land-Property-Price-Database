@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from lib.service.http.exp_backoff.config import *
+from lib.service.http.middleware.exp_backoff.config import *
 
 class RetryPreferenceTestCase(TestCase):
     def test_apply_override_preserves_unspecified(self):

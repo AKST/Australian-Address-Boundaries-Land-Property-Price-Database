@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 import json
 from logging import getLogger, Logger
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, AsyncIterator, AsyncGenerator
 
 from lib.service.io import IoService
 from lib.service.http import ConnectionError
@@ -30,7 +30,7 @@ class CachedClientSession(AbstractClientSession):
         session = session or ClientSession.create()
         logger = getLogger(f'{__name__}.CachedGet')
 
-        create_get_request = lambda url, headers, meta: CachedGet(
+        create_get_request = lambda url, headers, meta: CachedGetResponse(
             _io=io_service or IoService.create(None),
             _config=(url, headers, meta),
             _logger=logger,
@@ -64,7 +64,7 @@ class CachedClientSession(AbstractClientSession):
         return self._session.closed
 
 @dataclass
-class CachedGet(AbstractGetResponse):
+class CachedGetResponse(AbstractGetResponse):
     """
     This only exists to mimic the interface of `ClientSessions`
     so it can be removed if no necessary. If you have to ask
@@ -127,6 +127,12 @@ class CachedGet(AbstractGetResponse):
             raise ValueError('Incorrect cache hint')
 
         return json.loads(await self._io.f_read(self._state['json'].location))
+
+    async def stream(self, chunk_size: int):
+        _, _, instructions = self._config
+        f_loc = self._state['json'].location[instructions.format]
+        async for chunk in self._io.f_read_chunks(f_loc, chunk_size):
+            yield chunk
 
     async def text(self):
         if 'text' not in self._state:

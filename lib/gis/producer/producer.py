@@ -8,8 +8,7 @@ from typing import Any, AsyncIterator, List, Tuple
 
 from lib.gis.predicate import PredicateParam
 from lib.gis.request import GisSchema, GisProjection
-from lib.service.http import AbstractClientSession
-from lib.service.http.cache import CacheHeader
+from lib.service.http import AbstractClientSession, CacheHeader
 from lib.service.http.util import url_with_params
 from lib.utility.async_util import pipe, merge_async_iters
 

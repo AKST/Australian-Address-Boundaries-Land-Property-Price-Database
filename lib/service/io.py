@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from typing import AsyncIterator, AsyncGenerator
 
 from lib.utility.async_util import NullableSemaphore
 
@@ -28,6 +29,18 @@ class IoService:
             async with aiofiles.open(file_path, 'r') as f:
                 data = await f.read()
         return data
+
+    async def f_read_chunks(self,
+                            file_path: str,
+                            chunk_size=1024) -> AsyncGenerator[str, None]:
+        async with self._semaphore:
+            async with aiofiles.open(file_path, 'r') as f:
+                while True:
+                    chunk = await f.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+
 
     async def f_write(self, file_path: str, data: str):
         async with self._semaphore:

@@ -15,9 +15,9 @@ from lib.gis.producer import GisProducer
 from lib.gis.predicate.date import YearMonth, DateRangeParam
 from lib.service.io import IoService
 from lib.service.clock import ClockService
-from lib.service.http import CachedClientSession, ThrottledSession, ExpBackoffClientSession
-from lib.service.http.cache import FileCacher
-from lib.service.http.exp_backoff import BackoffConfig, RetryPreference
+from lib.service.http import CachedClientSession, ThrottledClientSession, ExpBackoffClientSession
+from lib.service.http.middleware.cache import FileCacher
+from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
 
 backoff_config = BackoffConfig(RetryPreference(allowed=8))
 
@@ -57,7 +57,7 @@ def initialise_session(open_file_limit):
 
     return CachedClientSession.create(
         session=ExpBackoffClientSession.create(
-            session=ThrottledSession.create(HOST_SEMAPHORE_CONFIG),
+            session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
             config=BACKOFF_CONFIG,
         ),
         file_cache=FileCacher.create(io=io_service),

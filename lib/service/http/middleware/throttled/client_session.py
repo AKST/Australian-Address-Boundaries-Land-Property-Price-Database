@@ -1,16 +1,15 @@
 import asyncio
-from collections import namedtuple
 from dataclasses import dataclass, field
 from logging import getLogger
-from typing import Any, List, Dict
+from typing import Any, List, Dict, AsyncGenerator
 
 from lib.service.http import ClientSession
+from lib.service.http.util import url_host
 from lib.service.http.client_session import AbstractClientSession, AbstractGetResponse
-from .util import url_host
 
-HostSemaphoreConfig = namedtuple('HostSemaphoreConfig', ['host', 'limit'])
+from .config import HostSemaphoreConfig
 
-class ThrottledSession(AbstractClientSession):
+class ThrottledClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.ThrottledSession')
     """
     We want to throttle on a host basis to avoid getting rate
@@ -28,7 +27,7 @@ class ThrottledSession(AbstractClientSession):
                session: ClientSession | None = None):
         semaphores = { c.host: asyncio.Semaphore(c.limit) for c in host_configs }
         session = session or ClientSession.create()
-        return ThrottledSession(session, semaphores)
+        return ThrottledClientSession(session, semaphores)
 
     async def __aenter__(self):
         await self._session.__aenter__()
@@ -71,10 +70,21 @@ class ThrottledGetResponse(AbstractGetResponse):
         return self._response.status
 
     async def text(self):
+        if not self._response:
+            raise ValueError('outside of context')
         return await self._response.text()
 
     async def json(self):
+        if not self._response:
+            raise ValueError('outside of context')
         return await self._response.json()
+
+    async def stream(self, chunk_size: int):
+        if not self._response:
+            raise ValueError('outside of context')
+
+        async for chunk in self._response.stream(chunk_size):
+            yield chunk
 
     async def __aenter__(self):
         await self._semaphore.__aenter__()

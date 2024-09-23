@@ -5,9 +5,10 @@ from unittest.mock import AsyncMock
 
 from lib.service.io import IoService
 from lib.service.http import ClientSession, GetResponse, ConnectionError
-from lib.service.http.cache import *
-from lib.service.http.cache.file_cache import FileCacher, RequestCache
-from lib.service.http.cache.client_session import CachedGet
+from .. import *
+from ..expiry import *
+from ..file_cache import FileCacher, RequestCache
+from ..client_session import CachedGetResponse as CachedGet
 
 _date_str = '2012-10-15 10:10:10'
 _date_obj = datetime(2012, 10, 15, 10, 10, 10)

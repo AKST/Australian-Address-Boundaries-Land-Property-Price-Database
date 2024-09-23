@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import unittest
 
-from lib.service.http.cache.expiry import *
+from ..expiry import *
 
 class CacheExpireTestCase(unittest.TestCase):
     def test_parse_never(self):

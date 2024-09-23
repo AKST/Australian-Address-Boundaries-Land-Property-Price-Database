@@ -7,15 +7,16 @@ from typing import Any
 from lib.service.clock import ClockService
 from lib.service.http import ConnectionError
 from lib.service.http import AbstractClientSession, AbstractGetResponse
-from lib.service.http.exp_backoff.config import *
-from lib.service.http.exp_backoff.host_state import *
-from lib.service.http.exp_backoff.client_session import ExpBackoffGetResponse, ResponseFactory
+from lib.service.http.middleware.exp_backoff import *
+from lib.service.http.middleware.exp_backoff.host_state import *
+from lib.service.http.middleware.exp_backoff.client_session import ExpBackoffGetResponse, ResponseFactory
 from lib.utility.async_util import NullableSemaphore
 
 my_url = 'http://server.com/api'
 
 async def flush_event_loop():
     await asyncio.sleep(0.05)
+
 
 class GetResponseTestCase(IsolatedAsyncioTestCase):
     mock_state: AsyncMock
