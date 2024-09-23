@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from lib.utility.async_util import NullableSemaphore
+
 class IoService:
     """
     This exists for the purpose of making io straight
@@ -16,14 +18,16 @@ class IoService:
         self._semaphore = semaphore
 
     @staticmethod
-    def create(file_limit: int | None):
+    def create(file_limit: int | None) -> 'IoService':
         semaphore = asyncio.Semaphore(file_limit) if file_limit else None
-        return IoService(NullableSemaphore(semaphore))
+        return IoService(NullableSemaphore(semaphore, disabled=False))
 
     async def f_read(self, file_path: str) -> str:
+        data = ''
         async with self._semaphore:
             async with aiofiles.open(file_path, 'r') as f:
-                return await f.read()
+                data = await f.read()
+        return data
 
     async def f_write(self, file_path: str, data: str):
         async with self._semaphore:
@@ -36,17 +40,4 @@ class IoService:
     async def f_exists(self, file_path: str) -> bool:
         return await asyncio.to_thread(Path(file_path).exists)
 
-@dataclass
-class NullableSemaphore:
-    semaphore: asyncio.Semaphore | None
-
-    async def __aenter__(self):
-        if self.semaphore:
-            return await self.semaphore.__aenter__()
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if self.semaphore:
-            return await self.semaphore.__aexit__(exc_type, exc_value, traceback)
-        return False
 

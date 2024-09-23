@@ -88,7 +88,8 @@ class DateRangeParam(PredicateParam):
         return self.start.next_day() != self.end
 
     def __eq__(self, other):
-        return self.start == other.start \
+        return isinstance(other, DateRangeParam) \
+           and self.start == other.start \
            and self.end == other.end \
            and self.scope == other.scope
 

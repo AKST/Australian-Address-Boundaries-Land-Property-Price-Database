@@ -6,7 +6,9 @@ from .constants import ENVIRONMENT_NSW_DA_LAYER
 from .constants import ENVIRONMENT_NSW_ZONE_LAYER
 from .predicate import DatePredicateFunction, FloatPredicateFunction
 from .request import SchemaField, GisSchema, GisProjection, Bounds, FieldPriority
+
 from lib.service.http.throttled_session import HostSemaphoreConfig
+from lib.service.http.exp_backoff import BackoffConfig, RetryPreference, HostOverride
 
 _1ST_YEAR = 2000
 _NEXT_YEAR = datetime.now().year + 1
@@ -18,6 +20,14 @@ NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
 WGS84_CRS = 4326
 
 _field_priority: FieldPriority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
+
+BACKOFF_CONFIG = BackoffConfig(
+    RetryPreference(allowed=16),
+    hosts={
+        SPATIAL_NSW_HOST: HostOverride(pause_other_requests_while_retrying=True),
+        ENVIRONMENT_NSW_HOST: HostOverride(pause_other_requests_while_retrying=True),
+    },
+)
 
 HOST_SEMAPHORE_CONFIG = [
     HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=8),

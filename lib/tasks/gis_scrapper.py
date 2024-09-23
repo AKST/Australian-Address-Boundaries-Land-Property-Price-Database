@@ -5,14 +5,16 @@ import math
 import time
 
 from lib.debug import NotebookTimer
-from lib.gis.defaults import HOST_SEMAPHORE_CONFIG as t_conf
+from lib.gis.defaults import HOST_SEMAPHORE_CONFIG, BACKOFF_CONFIG
 from lib.gis.defaults import ENSW_DA_PROJECTION
 from lib.gis.defaults import SNSW_LOT_PROJECTION
 from lib.gis.defaults import SNSW_PROP_PROJECTION
 from lib.gis.defaults import ENSW_ZONE_PROJECTION
 
 from lib.gis.producer import GisProducer
+from lib.gis.predicate.date import YearMonth, DateRangeParam
 from lib.service.io import IoService
+from lib.service.clock import ClockService
 from lib.service.http import CachedClientSession, ThrottledSession, ExpBackoffClientSession
 from lib.service.http.cache import FileCacher
 from lib.service.http.exp_backoff import BackoffConfig, RetryPreference
@@ -55,8 +57,8 @@ def initialise_session(open_file_limit):
 
     return CachedClientSession.create(
         session=ExpBackoffClientSession.create(
-            session=ThrottledSession.create(t_conf),
-            config=backoff_config,
+            session=ThrottledSession.create(HOST_SEMAPHORE_CONFIG),
+            config=BACKOFF_CONFIG,
         ),
         file_cache=FileCacher.create(io=io_service),
         io_service=io_service,
@@ -78,6 +80,10 @@ async def run(Factory, open_file_limit):
         active requests to one host at a time. The max
         active requests is set on a host basis.
     """
+    clock = ClockService()
+    # param = [DateRangeParam(YearMonth(2023, 1), YearMonth(2023, 2), clock)]
+
+    param = []
     try:
         timer_state = { 'count': 0, 'items': 0 }
         timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
@@ -90,7 +96,7 @@ async def run(Factory, open_file_limit):
             # reader.queue(ENSW_DA_PROJECTION)
 
             ui = Factory(timer, producer)
-            async for proj, task, page in producer.produce([]):
+            async for proj, task, page in producer.produce(param):
                 ui.on_loop(proj, task, page)
 
             print(f"finished loading GIS'")

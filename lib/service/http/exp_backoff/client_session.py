@@ -8,13 +8,17 @@ from lib.service.http.client_session import ClientSession, ConnectionError
 from lib.service.http.client_session import AbstractClientSession, AbstractGetResponse
 
 from .config import BackoffConfig, RetryPreference
+from .host_state import HostStateDiscovery, HostState
 
 class ExpBackoffClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.ExpBackoffSession')
-    _factory: Any
+    _state: HostStateDiscovery
+    _factory: 'ResponseFactory'
     _session: AbstractClientSession
 
-    def __init__(self, session: AbstractClientSession, factory: Any):
+    def __init__(self,
+                 session: AbstractClientSession,
+                 factory: 'ResponseFactory'):
         self._session = session
         self._factory = factory
 
@@ -23,7 +27,11 @@ class ExpBackoffClientSession(AbstractClientSession):
                session: AbstractClientSession | None = None):
         clock = ClockService()
         session = session or ClientSession.create()
-        factory = ResponseFactory(session=session, clock=clock, config=config)
+        state_discovery = HostStateDiscovery()
+        factory = ResponseFactory(session=session,
+                                  state_discovery=state_discovery,
+                                  clock=clock,
+                                  config=config)
         return ExpBackoffClientSession(session, factory)
 
     def get(self, url, headers=None):
@@ -52,36 +60,48 @@ class ExpBackoffGetResponse(AbstractGetResponse):
     _response: AbstractGetResponse | None = None
     _session: AbstractClientSession
     _clock: ClockService
+    _state: HostState
 
-    def __init__(self, url, headers, config, session, clock):
+    def __init__(self, url, headers, config, state, session, clock) -> None:
         self.url = url
         self.headers = headers
         self._config = config
+        self._state = state
 
         self._session = session
         self._clock = clock
 
     async def __aenter__(self):
         attempt, connected = 0, False
+        blocking = None
 
-        while not connected:
-            response = self._session.get(self.url, headers=self.headers)
+        try:
+            while not connected:
+                await self._state.wait_if_necessary(blocking)
+                response = self._session.get(self.url, headers=self.headers)
 
-            try:
-                await response.__aenter__()
-                if not self._config.should_retry(response.status, attempt):
-                    break
-            except ConnectionError as e:
-                if not self._config.can_retry_on_connection_error(attempt):
-                    raise e
+                try:
+                    value = await response.__aenter__()
+                    # probalby not obvious but this also unblocks on '200'
+                    if not self._config.should_retry(response.status, attempt):
+                        break
+                except ConnectionError as e:
+                    if not self._config.can_retry_on_connection_error(attempt):
+                        raise e
 
-            await response.__aexit__(None, None, None)
-            await self._clock.sleep(self._config.backoff_duration(attempt))
-            attempt += 1
+                await response.__aexit__(None, None, None)
+                await self._clock.sleep(self._config.backoff_duration(attempt))
+                attempt += 1
 
-        self.status = response.status
-        self._response = response
-        return self
+                if not blocking:
+                    blocking = await self._state.block_other_requests_to_host()
+
+            self.status = response.status
+            self._response = response
+            return self
+        finally:
+            if blocking:
+                self._state.release(blocking)
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._response:
@@ -99,13 +119,17 @@ class ResponseFactory:
     config: BackoffConfig
     clock: ClockService
     session: AbstractClientSession
+    state_discovery: HostStateDiscovery
 
     def create(self, url, headers):
-        config = self.config.with_host(url_host(url))
+        host = url_host(url)
+        config = self.config.with_host(host)
+        state = self.state_discovery.find(host, config)
         headers = headers or {}
         return ExpBackoffGetResponse(url,
                                      headers,
                                      config,
+                                     state,
                                      self.session,
                                      self.clock)
 
