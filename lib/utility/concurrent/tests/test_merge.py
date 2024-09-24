@@ -1,19 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
-from lib.utility.async_util import pipe, merge_async_iters
-
-class PipeTestCase(IsolatedAsyncioTestCase):
-    async def test_simple(self):
-        async def consumer(x):
-            return x * 2
-
-        async def producer():
-            for x in [1, 2, 3]:
-                yield x
-
-        result = [y async for y in pipe(producer, consumer)]
-        self.assertEqual(result, [2, 4, 6])
+from lib.utility.concurrent import merge_async_iters
 
 class MergeAsyncIter(IsolatedAsyncioTestCase):
     async def test_merge(self):

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import AsyncIterator, AsyncGenerator, Tuple, List
 from zipfile import ZipFile
 
-from lib.utility.async_util import NullableSemaphore
+from lib.utility.concurrent import NullableSemaphore, iterator_thread
 
 WalkItem = Tuple[str, List[str], List[str]]
 
@@ -33,17 +33,10 @@ class IoService:
     async def mk_dir(self, dir_name: str):
         await asyncio.to_thread(os.mkdir, dir_name)
 
-    async def walk_dir(self, dir_name) -> AsyncGenerator[WalkItem, None]:
+    async def walk_dir(self, dir_name: str) -> AsyncGenerator[WalkItem, None]:
         async with self._semaphore:
-            queue = asyncio.Queue[WalkItem | None]()
-            walk_thread = asyncio.to_thread(_sync_os_walk, dir_name, queue)
-            walk_task = asyncio.create_task(walk_thread)
-            while True:
-                result = await queue.get()
-                if result is None:
-                    break
-                yield result
-            await walk_task
+            async for item in iterator_thread(os.walk, dir_name):
+                yield item
 
     async def f_read(self, file_path: str) -> str:
         async with self._semaphore:

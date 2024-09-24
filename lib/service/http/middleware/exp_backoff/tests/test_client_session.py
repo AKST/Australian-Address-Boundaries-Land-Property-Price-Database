@@ -10,7 +10,6 @@ from lib.service.http import AbstractClientSession, AbstractGetResponse
 from lib.service.http.middleware.exp_backoff import *
 from lib.service.http.middleware.exp_backoff.host_state import *
 from lib.service.http.middleware.exp_backoff.client_session import ExpBackoffGetResponse, ResponseFactory
-from lib.utility.async_util import NullableSemaphore
 
 my_url = 'http://server.com/api'
 
