@@ -4,7 +4,7 @@ from typing import Optional
 
 def parse_datetime(date_str):
     return datetime.strptime(date_str, "%Y%m%d %H:%M")
-    
+
 def parse_date(date_str):
     return datetime.strptime(date_str, "%Y%m%d")
 
@@ -70,7 +70,7 @@ class SaleRecordFile1990:
 @dataclass
 class SalePropertyDetails:
     parent: SaleRecordFile
-    
+
     district: int
     property_id: str
     sale_counter: str
@@ -86,7 +86,7 @@ class SalePropertyDetails:
     contract_date: datetime
     settlement_date: datetime
     """
-    From 2002 onwards always defined. 
+    From 2002 onwards always defined.
     """
     purchase_price: float
     zoning: Optional[str]
@@ -130,7 +130,7 @@ class SalePropertyDetails:
 @dataclass
 class SalePropertyDetails1990:
     parent: SaleRecordFile1990
-    
+
     district: int
     source: Optional[str]
     valuation_num: str
@@ -175,7 +175,7 @@ class SalePropertyDetails1990:
 @dataclass
 class SalePropertyLegalDescription:
     parent: SalePropertyDetails
-    
+
     district: int
     property_id: str
     sale_counter: str

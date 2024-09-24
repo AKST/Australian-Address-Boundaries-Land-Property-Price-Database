@@ -1,19 +1,15 @@
 import asyncio
 from dataclasses import dataclass
 from lib.service.http import AbstractClientSession, ClientSession, CachedClientSession, ExpBackoffClientSession, ThrottledClientSession
-from lib.service.http import BackoffConfig, RetryPreference, HostSemaphoreConfig
+from lib.service.http import BackoffConfig, RetryPreference
 from lib.service.http.middleware.cache import FileCacher
 
 from lib.service.io import IoService
 from lib.gnaf.discovery import GnafPublicationDiscovery
+from lib.nsw_vg.defaults import THROTTLE_CONFIG
 from lib.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
 from lib.service.static_environment import StaticEnvironmentInitialiser
 from lib.service.static_environment.defaults import get_static_dirs, get_static_assets
-
-THROTTLE_CONFIG = [
-    HostSemaphoreConfig('www.valuergeneral.nsw.gov.au', 8),
-    HostSemaphoreConfig('valuation.property.nsw.gov.au', 8),
-]
 
 BACKOFF_CONFIG = BackoffConfig(
     RetryPreference(allowed=16, pause_other_requests_while_retrying=True),

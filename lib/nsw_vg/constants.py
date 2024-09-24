@@ -1,3 +1,6 @@
 
-lv_download_page = 'https://www.valuergeneral.nsw.gov.au/land_value_summaries/lv.php'
-ps_download_page = 'https://valuation.property.nsw.gov.au/embed/propertySalesInformation'
+VG_LV_HOST = 'www.valuergeneral.nsw.gov.au'
+VG_PS_HOST = 'valuation.property.nsw.gov.au'
+
+lv_download_page = f'https://{VG_LV_HOST}/land_value_summaries/lv.php'
+ps_download_page = f'https://{VG_PS_HOST}/embed/propertySalesInformation'
