@@ -29,7 +29,7 @@ class InstructionHeaders:
         headers = headers or {}
         cache_fmt = headers.get(CacheHeader.FORMAT, 'text')
         cache_ttl = headers.get(CacheHeader.EXPIRE, None)
-        cache_disabled = headers.get(CacheHeader.DISABLED, 'False') == True
+        cache_disabled = headers.get(CacheHeader.DISABLED, 'False') == 'True'
         label = headers.get(CacheHeader.LABEL, None)
         label = f'{host}-{label if label else "?"}'
 

@@ -26,8 +26,8 @@ class CachedClientSession(AbstractClientSession):
     def create(session: AbstractClientSession | None = None,
                file_cache: FileCacher | None = None,
                io_service: IoService | None = None):
-        cache = file_cache or FileCacher.create(None)
         session = session or ClientSession.create()
+        cache = file_cache or FileCacher.create(None)
         logger = getLogger(f'{__name__}.CachedGet')
 
         create_get_request = lambda url, headers, meta: CachedGetResponse(

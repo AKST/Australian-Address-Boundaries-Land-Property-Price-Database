@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from lib.data_types import Target
+from lib.data_types import Target, Optional
 from lib.service.http import AbstractClientSession, CacheHeader
 from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
@@ -14,7 +14,7 @@ ListItem = namedtuple('ListItem', ['Name', 'Link'])
 
 @dataclass
 class NswVgTarget(Target):
-    datetime: datetime | None = field(default=None)
+    datetime: Optional[datetime] = field(default=None)
 
 class NswValuerGeneralBulkSalesScrapeAttempt:
     """
@@ -29,7 +29,7 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
     _cache_period: str
     _date_fmt: str
 
-    links: Optional[List[Target]] = None
+    links: List[Target]
 
     def __init__(self,
                  prefix: str,
@@ -42,6 +42,8 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
         self._css_class_path = css_class_path
         self._cache_period = cache_period
         self._date_fmt = date_fmt
+
+        self.links = []
 
     async def load_links(self, session: AbstractClientSession):
         try:

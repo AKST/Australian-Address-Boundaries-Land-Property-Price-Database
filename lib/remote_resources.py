@@ -92,3 +92,5 @@ class StaticFileInitialiser:
                 except BadZipFile as e:
                     print(f'failed to unzip, {t.web_dst} to {t.zip_dst} {e}')
                     os.remove(w_out)
+                    raise e
+

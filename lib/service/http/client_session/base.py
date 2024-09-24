@@ -30,7 +30,7 @@ class AbstractGetResponse(ABC):
         pass
 
     @abstractmethod
-    def stream(self, chunk_size: int) -> AsyncGenerator[str, None]:
+    def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
         pass
 
     @abstractmethod

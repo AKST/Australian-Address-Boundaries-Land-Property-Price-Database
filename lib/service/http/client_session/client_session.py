@@ -55,10 +55,10 @@ class GetResponse(AbstractGetResponse):
     async def text(self):
         return await self._response.text()
 
-    async def stream(self, chunk_size: int) -> AsyncGenerator[str, None]:
+    async def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
         async for chunk in self._response.content.iter_chunked(chunk_size):
             if chunk:
-                yield str(chunk)
+                yield chunk
 
     async def __aenter__(self):
         try:
