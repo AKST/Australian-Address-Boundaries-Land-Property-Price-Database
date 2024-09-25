@@ -1,10 +1,10 @@
-from aiohttp import ClientSession
 from datetime import datetime
 import geopandas as gpd
+from logging import getLogger
 import math
 import time
+from typing import Self
 
-from lib.debug import NotebookTimer
 from lib.gis.defaults import HOST_SEMAPHORE_CONFIG, BACKOFF_CONFIG
 from lib.gis.defaults import ENSW_DA_PROJECTION
 from lib.gis.defaults import SNSW_LOT_PROJECTION
@@ -21,18 +21,37 @@ from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreferen
 
 backoff_config = BackoffConfig(RetryPreference(allowed=8))
 
+class NotebookTimer:
+    def __init__(self, message, state):
+        self._message = message
+        self._start = time.time()
+        self._state = state
+
+    def add(self, state):
+        for k, v in state.items():
+            self._state[k] += v
+
+    def get_message(self):
+        time_of_day = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        t = int(time.time() - self._start)
+        th, tm, ts = t // 3600, t // 60 % 60, t % 60
+        msg = self._message % self._state
+        return f'{time_of_day} {msg} @ {th}h {tm}m {ts}s'
+
 class IPythonUi:
-    def __init__(self, timer, producer):
+    timer: NotebookTimer
+
+    def __init__(self: Self, timer, producer):
         self.timer = timer
         self.producer = producer
 
-    def on_loop(self, proj, task, page):
-        import IPython.display # type: ignore
+    def on_loop(self: Self, proj, task, page):
+        from IPython.display import clear_output, display # type: ignore
         import matplotlib.pyplot as plt
 
-        IPython.display.clear_output(wait=True)
+        clear_output(wait=True)
         self.timer.add({ 'items': len(page), 'count': 1 })
-        self.timer.log()
+        print(self.timer.get_message())
         print(proj.schema.url)
         print(self.producer.progress(proj, task))
         if len(page) > 0:
@@ -41,16 +60,25 @@ class IPythonUi:
             plt.show()
             display(page.iloc[:1])
 
+    def log(self: Self, m: str):
+        print(m)
+
 class ConsoleUi:
-    def __init__(self, timer, producer):
+    timer: NotebookTimer
+    _logger = getLogger(f'{__name__}.ConsoleUi')
+
+    def __init__(self: Self, timer, producer):
         self.timer = timer
         self.producer = producer
 
-    def on_loop(self, proj, task, page):
+    def on_loop(self: Self, proj, task, page):
         self.timer.add({ 'items': len(page), 'count': 1 })
-        self.timer.log()
-        print(proj.schema.url)
-        print(self.producer.progress(proj, task))
+        self._logger.info(self.timer.get_message())
+        self._logger.info(proj.schema.url)
+        self._logger.info(self.producer.progress(proj, task))
+
+    def log(self: Self, m: str):
+        self._logger.info(m)
 
 def initialise_session(open_file_limit):
     io_service = IoService.create(open_file_limit)
@@ -64,7 +92,7 @@ def initialise_session(open_file_limit):
         io_service=io_service,
     )
 
-async def run(Factory, open_file_limit):
+async def run(UiFactory, open_file_limit):
     """
     The http client composes a cache layer and a throttling
     layer. Some GIS serves, such as the ones below may end
@@ -95,11 +123,10 @@ async def run(Factory, open_file_limit):
             # reader.queue(ENSW_ZONE_PROJECTION)
             # reader.queue(ENSW_DA_PROJECTION)
 
-            ui = Factory(timer, producer)
+            ui = UiFactory(timer, producer)
             async for proj, task, page in producer.produce(param):
                 ui.on_loop(proj, task, page)
-
-            print(f"finished loading GIS'")
+            ui.log('finished loading GIS')
     except Exception as e:
         raise e
 
@@ -108,10 +135,16 @@ async def run_in_notebook():
 
 if __name__ == '__main__':
     import resource
+    import logging
     import asyncio
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(slim * 0.8)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 
     try:
         asyncio.run(run(ConsoleUi, file_limit))

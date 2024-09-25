@@ -75,7 +75,6 @@ class PropertySaleProducer:
             await worker_task
 
     async def get_tasks(self, g: TaskGroup, ts: List[NswVgTarget]) -> AsyncIterator[PropertySaleIngestionTask]:
-
         async def with_target(target):
             zip_path =  f'{self._parent_dir}/{target.zip_dst}'
             async for dat_path in self._io.grep_dir(zip_path, '*.DAT'):
