@@ -19,45 +19,39 @@ SYNTAX_2021: Syntax = { 'A': 5, 'B': 24, 'C': 6, 'D': 12, 'Z': 5 }
 
 class PropertySalesRowParserFactory:
     _io: IoService
-    _semaphore: asyncio.Semaphore
 
-    def __init__(self, io: IoService, semaphore: asyncio.Semaphore):
+    def __init__(self, io: IoService):
         self._io = io
-        self._semaphore = semaphore
 
     def create_parser(self, task: PropertySaleIngestionTask) -> 'PropertySalesParser':
-        return PropertySalesParser(task, self._io, self._semaphore)
+        return PropertySalesParser(task, self._io)
 
 class PropertySalesParser:
     task: PropertySaleIngestionTask
 
     _logger = getLogger(f'{__name__}.PropertySalesParser')
     _io: IoService
-    _semaphore: asyncio.Semaphore
 
     def __init__(self,
                  task: PropertySaleIngestionTask,
-                 io: IoService,
-                 semaphore: asyncio.Semaphore) -> None:
+                 io: IoService) -> None:
         self.task = task
         self._io = io
-        self._semaphore = semaphore
 
     async def get_data_from_file(self: Self):
         reader = None
 
         try:
-            parse_kind = get_columns_and_syntax(self.task.download_date, self.task.target_year)
+            date, year = self.task.download_date, self.task.target_year
+            parse_kind = get_columns_and_syntax(date, year)
             if parse_kind is None:
                 return
 
             columns, syntax = parse_kind
-            async with self._semaphore:
-                buffer = await self._io.f_read(self.task.dat_path)
-                reader = PropertySalesRowReader(buffer, syntax)
-
-                for row in get_data_from_file(self.task, reader, columns):
-                    yield row
+            buffer = await self._io.f_read(self.task.dat_path)
+            reader = PropertySalesRowReader(buffer, syntax)
+            for row in get_data_from_file(self.task, reader, columns):
+                yield row
         except Exception as e:
             self._logger.error(self.task.dat_path, reader and reader.debug_info())
             raise e

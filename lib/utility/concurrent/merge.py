@@ -4,7 +4,7 @@ from typing import Dict, List, Set, Any, AsyncIterator, Callable, Awaitable
 
 async def merge_async_iters[T](iters: List[AsyncIterator[T]]) -> AsyncIterator[T]:
     def create_task(it: AsyncIterator[T]) -> Task[T]:
-            return asyncio.create_task(it.__anext__()) # type: ignore
+        return asyncio.create_task(it.__anext__()) # type: ignore
     """
     This takes multiple async iterators and combines them in
     to the same async iterator stream.

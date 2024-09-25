@@ -79,6 +79,9 @@ class IoService:
     async def f_exists(self, file_path: str) -> bool:
         return await asyncio.to_thread(Path(file_path).exists)
 
+    async def f_size(self, file_path: str) -> int:
+        return await asyncio.to_thread(os.path.getsize, file_path)
+
     async def is_dir(self, dir_name: str) -> bool:
         return await asyncio.to_thread(os.path.isdir, dir_name)
 

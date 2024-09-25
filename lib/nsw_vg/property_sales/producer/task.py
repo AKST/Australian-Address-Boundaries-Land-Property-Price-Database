@@ -8,6 +8,7 @@ class PropertySaleIngestionTask:
     target: NswVgTarget
     dat_path: str
     download_date: Optional[datetime]
+    size: int
 
     @property
     def target_year(self) -> int:

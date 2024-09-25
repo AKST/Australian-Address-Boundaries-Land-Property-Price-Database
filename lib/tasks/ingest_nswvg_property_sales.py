@@ -11,38 +11,31 @@ from lib.service.io import IoService
 from .fetch_static_files import Environment
 
 ZIP_DIR = './_out_zip'
+LIMIT = 256 * 4
 
 class State:
     _logger = getLogger(f'{__name__}.State')
-    this_year = -1
-    last_year = -1
     records = 0
 
-    def increment(self, n: int):
-        self.records += n
+    def acknowledge(self, year: int, amount: int):
+        self.records += amount
+        self._logger.info(f'Parsed {amount} for {year} (total {self.records})')
 
-    def acknowledge_year(self, this_year: int):
-        self.this_year, self.last_year = this_year, self.this_year
+async def ingest(environment: Environment,
+                 io: IoService,
+                 limit: int) -> None:
+    producer = PropertySaleProducer.create(ZIP_DIR, io, limit)
 
-    def log_status(self):
-        if self.this_year != self.last_year and self.last_year != -1:
-            self._logger.info(f'Parsed {self.last_year}, parsed {self.records} records so far')
-
-async def ingest(environment: Environment, io: IoService) -> None:
-    producer = PropertySaleProducer.create(ZIP_DIR, io, concurrent_limit=8)
     try:
-        item = None
+        task, item = None, None
         state = State()
 
         for d in [environment.sale_price_annual, environment.sale_price_weekly]:
             async for task, item in producer.get_rows(d.links):
                 if hasattr(item, 'total_records'):
-                    state.acknowledge_year(item.parent.year)
-                    state.increment(item.total_records)
-                    state.log_status()
-        state.log_status()
+                    state.acknowledge(item.parent.year, item.total_records)
     except Exception as e:
-        print(item)
+        print(task, item)
         raise e
 
 if __name__ == '__main__':
@@ -60,7 +53,7 @@ if __name__ == '__main__':
         io_service = IoService.create(file_limit)
         async with get_session(io_service) as session:
             environment = await initialise(io_service, session)
-        await ingest(environment, io_service)
+        await ingest(environment, io_service, file_limit)
 
     asyncio.run(main())
 
