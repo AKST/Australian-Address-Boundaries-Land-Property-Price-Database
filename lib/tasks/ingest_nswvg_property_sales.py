@@ -6,9 +6,11 @@ from pathlib import Path
 from pprint import pprint
 import os
 
-from lib.nsw_vg.property_sales import SaleDataFileSummary, get_data_from_targets
+from lib.nsw_vg.property_sales import PropertySaleProducer
 from lib.service.io import IoService
 from .fetch_static_files import Environment
+
+ZIP_DIR = './_out_zip'
 
 class State:
     _logger = getLogger(f'{__name__}.State')
@@ -27,12 +29,13 @@ class State:
             self._logger.info(f'Parsed {self.last_year}, parsed {self.records} records so far')
 
 async def ingest(environment: Environment, io: IoService) -> None:
+    producer = PropertySaleProducer.create(ZIP_DIR, io, concurrent_limit=8)
     try:
         item = None
         state = State()
 
         for d in [environment.sale_price_annual, environment.sale_price_weekly]:
-            for item in get_data_from_targets('./_out_zip', d.links):
+            async for task, item in producer.get_rows(d.links):
                 if hasattr(item, 'total_records'):
                     state.acknowledge_year(item.parent.year)
                     state.increment(item.total_records)

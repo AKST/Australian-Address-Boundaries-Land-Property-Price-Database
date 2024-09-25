@@ -29,7 +29,7 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
     _cache_period: str
     _date_fmt: str
 
-    links: List[Target]
+    links: List[NswVgTarget]
 
     def __init__(self,
                  prefix: str,

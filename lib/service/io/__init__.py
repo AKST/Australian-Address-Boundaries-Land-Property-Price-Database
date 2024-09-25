@@ -33,10 +33,10 @@ class IoService:
     async def mk_dir(self, dir_name: str):
         await asyncio.to_thread(os.mkdir, dir_name)
 
-    async def grep_dir(self, dir_name: str, pattern: str) -> AsyncGenerator[Path, None]:
+    async def grep_dir(self, dir_name: str, pattern: str) -> AsyncGenerator[str, None]:
         directory = Path(dir_name)
         async for item in iterator_thread(directory.rglob, pattern):
-            yield item
+            yield str(item)
 
     async def walk_dir(self, dir_name: str) -> AsyncGenerator[WalkItem, None]:
         async with self._semaphore:
