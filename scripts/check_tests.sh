@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m unittest discover
+python -m pytest lib

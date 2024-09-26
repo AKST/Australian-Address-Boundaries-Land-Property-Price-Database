@@ -8,6 +8,7 @@ def get_static_dirs():
         '_out_zip',
         '_out_cache',
         '_out_state',
+        '_out_debug',
     ]
 
 def get_static_assets():

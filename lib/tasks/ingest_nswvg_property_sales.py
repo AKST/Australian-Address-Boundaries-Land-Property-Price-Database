@@ -9,7 +9,7 @@ import os
 
 from lib.nsw_vg.property_sales import PropertySaleProducer
 from lib.service.io import IoService
-from .fetch_static_files import Environment
+from lib.tasks.fetch_static_files import Environment
 
 ZIP_DIR = './_out_zip'
 LIMIT = 256 * 4
@@ -57,6 +57,7 @@ async def ingest(env: Environment,
 if __name__ == '__main__':
     import resource
     import logging
+    import cProfile
 
     from .fetch_static_files import get_session, initialise
 
@@ -74,5 +75,9 @@ if __name__ == '__main__':
             environment = await initialise(io_service, session)
         await ingest(environment, io_service, file_limit)
 
+    profiler = cProfile.Profile()
+    profiler.enable()
     asyncio.run(main())
+    profiler.disable()
+    profiler.dump_stats("_out_debug/ingest_nswvg_property_sales.prof")
 
