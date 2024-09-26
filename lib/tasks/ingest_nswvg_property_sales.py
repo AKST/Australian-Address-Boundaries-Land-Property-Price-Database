@@ -50,8 +50,6 @@ async def ingest(env: Environment,
             if hasattr(item, 'total_records'):
                 state.acknowledge(item.parent.year, item.total_records)
     except Exception as e:
-        logger.error(f'failed on {task}')
-        logger.error(f'last item {item}')
         raise e
 
 if __name__ == '__main__':
@@ -75,9 +73,9 @@ if __name__ == '__main__':
             environment = await initialise(io_service, session)
         await ingest(environment, io_service, file_limit)
 
-    profiler = cProfile.Profile()
-    profiler.enable()
+    # profiler = cProfile.Profile()
+    # profiler.enable()
     asyncio.run(main())
-    profiler.disable()
-    profiler.dump_stats("_out_debug/ingest_nswvg_property_sales.prof")
+    # profiler.disable()
+    # profiler.dump_stats("_out_debug/ingest_nswvg_property_sales.prof")
 

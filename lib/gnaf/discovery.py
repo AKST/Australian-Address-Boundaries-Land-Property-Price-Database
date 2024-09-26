@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Self
 import os
 
 from lib.service.http import CacheHeader
@@ -56,7 +56,7 @@ class GnafPublicationDiscovery:
     def create():
         return GnafPublicationDiscovery(data_gov_au_gnaf_information_page)
 
-    async def load_publication(self, session):
+    async def load_publication(self: Self, session):
         async with session.get(self._information_page_url, headers={
             CacheHeader.EXPIRE: 'delta:weeks:8',
             CacheHeader.FORMAT: 'text',
@@ -72,9 +72,10 @@ class GnafPublicationDiscovery:
         )
 
         if link is not None:
-            name = link['href'].split('/')[-1]
+            name = link['href'].split('/')[-1] # type: ignore
             self.publication = GnafPublicationTarget(
-                url=link['href'],
+                url=link['href'], # type: ignore
                 web_dst=name,
                 zip_dst=name.split('.')[0],
+                token=None,
             )

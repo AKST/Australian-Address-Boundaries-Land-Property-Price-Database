@@ -1,7 +1,7 @@
 from datetime import datetime
 import pytest
 
-from ..parse import *
+from lib.nsw_vg.property_sales.file_format.syntax import *
 
 def test_special_2021_syntax():
     """

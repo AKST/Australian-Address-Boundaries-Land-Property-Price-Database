@@ -14,7 +14,7 @@ ListItem = namedtuple('ListItem', ['Name', 'Link'])
 
 @dataclass
 class NswVgTarget(Target):
-    datetime: Optional[datetime] = field(default=None)
+    datetime: datetime
 
 class NswValuerGeneralBulkSalesScrapeAttempt:
     """
@@ -62,11 +62,12 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
             self.links = [
                 NswVgTarget(
                     url=url,
-                    datetime=datetime.strptime(date, self._date_fmt),
-                    web_dst=f"{self._prefix}_{date.replace(' ', '_')}.zip",
-                    zip_dst=f"{self._prefix}_{date.replace(' ', '_')}",
+                    token=None,
+                    datetime=datetime.strptime(date_str, self._date_fmt),
+                    web_dst=f"{self._prefix}_{date_str.replace(' ', '_')}.zip",
+                    zip_dst=f"{self._prefix}_{date_str.replace(' ', '_')}",
                 )
-                for date, url in (
+                for date_str, url in (
                     (l.get_text().strip(), urljoin(self._directory_page, l['href']))
                     for tag, css_class in self._css_class_path[-1:]
                     for l in parent.find_all(tag, css_class)
