@@ -34,12 +34,10 @@ class State:
                   f'({self.elapsed()})'
         self._logger.info(message)
 
-async def ingest(env: Environment,
-                 io: IoService,
-                 limit: int) -> None:
+async def ingest(env: Environment, io: IoService) -> None:
     logger = getLogger(f'{__name__}.ingest')
 
-    producer = PropertySaleProducer.create(ZIP_DIR, io, limit * 2)
+    producer = PropertySaleProducer.create(ZIP_DIR, io)
 
     try:
         task, item = None, None
@@ -71,7 +69,7 @@ if __name__ == '__main__':
         io_service = IoService.create(file_limit)
         async with get_session(io_service) as session:
             environment = await initialise(io_service, session)
-        await ingest(environment, io_service, file_limit)
+        await ingest(environment, io_service)
 
     # profiler = cProfile.Profile()
     # profiler.enable()

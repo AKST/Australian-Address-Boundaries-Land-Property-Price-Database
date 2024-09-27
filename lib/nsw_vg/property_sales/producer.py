@@ -18,40 +18,33 @@ ProducerPair = Tuple[PropertySaleDatFileMetaData, Any]
 class PropertySaleProducer:
     _logger = getLogger(f'{__name__}.PropertySaleProducer')
     _factory: PropertySalesRowParserFactory
-    _semaphore: Semaphore
     _parent_dir: str
     _io: IoService
 
     def __init__(self: Self,
                  parent_dir: str,
                  io: IoService,
-                 factory: PropertySalesRowParserFactory,
-                 semaphore: Semaphore) -> None:
-        self._semaphore = semaphore
+                 factory: PropertySalesRowParserFactory) -> None:
         self._parent_dir = parent_dir
         self._io = io
         self._factory = factory
 
     @staticmethod
-    def create(parent_dir: str,
-               io: IoService,
-               concurrent_limit: int) -> 'PropertySaleProducer':
-        semaphore = Semaphore(concurrent_limit)
+    def create(parent_dir: str, io: IoService) -> 'PropertySaleProducer':
         factory = PropertySalesRowParserFactory(io, BufferedFileReaderTextSource)
-        return PropertySaleProducer(parent_dir, io, factory, semaphore)
+        return PropertySaleProducer(parent_dir, io, factory)
 
     async def get_rows(self: Self, targets: List[NswVgTarget]):
         queue: Queue[ProducerPair | None] = Queue()
         count = 0
 
         async def row_worker(tg: asyncio.TaskGroup, file: PropertySaleDatFileMetaData):
-            async with self._semaphore:
-                parser = await tg.create_task(self._factory.create_parser(file))
-                if parser is None:
-                    return
+            parser = await tg.create_task(self._factory.create_parser(file))
+            if parser is None:
+                return
 
-                async for row in parser.get_data_from_file():
-                    await tg.create_task(queue.put((file, row)))
+            async for row in parser.get_data_from_file():
+                await tg.create_task(queue.put((file, row)))
 
         async def queue_work(tg: TaskGroup):
             self._logger.info("queuing files for worker")

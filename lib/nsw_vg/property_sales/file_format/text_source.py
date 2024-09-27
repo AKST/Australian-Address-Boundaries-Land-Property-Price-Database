@@ -52,6 +52,13 @@ class StringTextSource(AbstractTextSource):
         return cls(file_path, text)
 
 class BufferedFileReaderTextSource(AbstractTextSource):
+    """
+    Turns out this ain't a ton more efficent than the
+    string text source defined above. I hate my life
+    for having written this. But now I know more
+    about unicode I guess...
+    """
+    _offset: int = 0
     _buffer: bytes
     _chunk_size: int
     _file_path: str
@@ -59,7 +66,6 @@ class BufferedFileReaderTextSource(AbstractTextSource):
     _io_service: IoService
     _max_chunk_size: int = 64 * 1024 * 1024  # 64 MB maximum buffer size
 
-    _offset: int = 0  # Byte offset of the start of the buffer
 
     def __init__(self,
                  buffer: bytes,
@@ -81,33 +87,30 @@ class BufferedFileReaderTextSource(AbstractTextSource):
         return self._file_size  # Size in bytes
 
     async def read(self, start: int, end: int) -> str:
-        """Reads a range of bytes, loading more data if needed."""
-        data = b""
+        data_chunks = []
+
         while start < end:
             if start < self._offset or start >= self._offset + len(self._buffer):
-                # Calculate the required size for the next chunk
                 required_size = end - start
                 await self._load_chunk(start, required_size)
 
-            relative_start = start - self._offset
-            relative_end = min(end - self._offset, len(self._buffer))
+            relative_s = start - self._offset
+            relative_e = min(end - self._offset, len(self._buffer))
+            data_chunk = self._buffer[relative_s:relative_e]
+            data_chunks.append(data_chunk)
+            start += relative_e - relative_s
 
-            data += self._buffer[relative_start:relative_end]
-            start += relative_end - relative_start
-
-        return data.decode('utf-8')
+        data_bytes = b''.join(data_chunks)
+        return data_bytes.decode('utf-8')
 
     async def find_index(self, search: str, offset: int, retained_index: int) -> int:
-        """Finds the index of a byte sequence in the file."""
         search_b = search.encode('utf-8')
-        search_length = len(search_b)
 
         if offset < self._offset:
             raise ValueError("Offset is smaller than current buffer start. This should not happen in linear reading.")
 
         while True:
             if offset < self._offset or offset >= self._offset + len(self._buffer):
-                # Load buffer starting from retained_index
                 await self._load_chunk(retained_index)
 
             relative_offset = offset - self._offset
@@ -119,10 +122,30 @@ class BufferedFileReaderTextSource(AbstractTextSource):
             if self._offset + len(self._buffer) >= self._file_size:
                 return -1
 
-            if self._chunk_size < self._max_chunk_size:
-                self._chunk_size = min(self._chunk_size * 2, self._max_chunk_size)
+            additional_size = min(self._chunk_size, self._file_size - (self._offset + len(self._buffer)))
+            if additional_size == 0:
+                return -1
 
+            self._chunk_size = min(self._chunk_size + additional_size, self._max_chunk_size)
             await self._load_chunk(retained_index)
+
+    async def _load_chunk(self, start: int, required_size: int | None = None) -> None:
+        if required_size and required_size > self._chunk_size:
+            while self._chunk_size < required_size and self._chunk_size < self._max_chunk_size:
+                self._chunk_size *= 2
+            self._chunk_size = min(self._chunk_size, self._max_chunk_size)
+
+        self._offset = start
+        if start >= self._file_size:
+            # If the start is beyond file size, set empty buffer
+            self._buffer = b''
+        else:
+            read_size = min(self._chunk_size, self._file_size - start)
+            extra_bytes = 4  # Max UTF-8 character size
+            read_size_with_extra = min(read_size + extra_bytes, self._file_size - start)
+            self._buffer = b''
+            self._buffer = await self._io_service.f_read_slice(self._file_path, start, read_size_with_extra)
+            self._buffer = self._truncate_buffer_to_valid_utf8(self._buffer)
 
     @classmethod
     async def create(cls,
@@ -140,31 +163,14 @@ class BufferedFileReaderTextSource(AbstractTextSource):
         buffer = cls._truncate_buffer_to_valid_utf8(buffer)
         return cls(buffer, chunk_size, file_path, file_size, io_service)
 
-
-    async def _load_chunk(self, start: int, required_size: int | None = None) -> None:
-        if required_size and required_size > self._chunk_size:
-            while self._chunk_size < required_size and self._chunk_size < self._max_chunk_size:
-                self._chunk_size *= 2
-            self._chunk_size = min(self._chunk_size, self._max_chunk_size)
-
-        self._offset = start
-        if start >= self._file_size:
-            self._buffer = b''  # If the start is beyond file size, set empty buffer
-        else:
-            read_size = min(self._chunk_size, self._file_size - start)
-            extra_bytes = 4  # Max UTF-8 character size
-            read_size_with_extra = min(read_size + extra_bytes, self._file_size - start)
-            self._buffer = await self._io_service.f_read_slice(self._file_path, start, read_size_with_extra)
-            self._buffer = self._truncate_buffer_to_valid_utf8(self._buffer)
-
     @classmethod
     def _truncate_buffer_to_valid_utf8(cls, buffer: bytes) -> bytes:
-        for end in range(len(buffer), max(-1, len(buffer) - 4), -1):
-            try:
-                buffer[:end].decode('utf-8')
-                return buffer[:end]
-            except UnicodeDecodeError:
-                continue
-        raise ValueError("Unable to truncate buffer to valid UTF-8 boundary.")
+        if len(buffer) == 0:
+            return buffer
 
+        try:
+            buffer.decode('utf-8')
+            return buffer
+        except UnicodeDecodeError as e:
+            return b'' if e.start == 0 else buffer[:e.start]
 

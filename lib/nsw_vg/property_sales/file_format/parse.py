@@ -20,7 +20,7 @@ class PropertySalesRowParserFactory:
     def __init__(self: Self,
                  io: IoService,
                  Source: Type[AbstractTextSource],
-                 chunk_size: int = 8 * 2 ** 9):
+                 chunk_size: int = 8 * 2 ** 8):
         self._io = io
         self.Source = Source
         self.chunk_size = chunk_size
