@@ -10,6 +10,7 @@ from lib.service.io import IoService
 from lib.utility.concurrent import pipe, merge_async_iters
 
 from .file_format.parse import PropertySalesRowParserFactory
+from .file_format.text_source import StringTextSource, BufferedFileReaderTextSource
 from .file_format import PropertySaleDatFileMetaData
 
 ProducerPair = Tuple[PropertySaleDatFileMetaData, Any]
@@ -36,36 +37,33 @@ class PropertySaleProducer:
                io: IoService,
                concurrent_limit: int) -> 'PropertySaleProducer':
         semaphore = Semaphore(concurrent_limit)
-        factory = PropertySalesRowParserFactory(io)
+        factory = PropertySalesRowParserFactory(io, BufferedFileReaderTextSource)
         return PropertySaleProducer(parent_dir, io, factory, semaphore)
 
     async def get_rows(self: Self, targets: List[NswVgTarget]):
         queue: Queue[ProducerPair | None] = Queue()
         count = 0
 
+        async def row_worker(tg: asyncio.TaskGroup, file: PropertySaleDatFileMetaData):
+            async with self._semaphore:
+                parser = await tg.create_task(self._factory.create_parser(file))
+                if parser is None:
+                    return
+
+                async for row in parser.get_data_from_file():
+                    await tg.create_task(queue.put((file, row)))
+
         async def queue_work(tg: TaskGroup):
             self._logger.info("queuing files for worker")
+            running = []
 
-            files = [f async for f in self.get_files(tg, targets)]
-            count = len(files)
-
-            running = [
-                tg.create_task(row_worker(tg, f))
-                for f in sorted(files, key=lambda t: t.size)
-            ]
+            async for f in self.get_files(tg, targets):
+                task = tg.create_task(row_worker(tg, f))
+                running.append(task)
 
             self._logger.info("finished queuing all files")
             await asyncio.gather(*running)
             await queue.put(None)
-
-        async def row_worker(tg: asyncio.TaskGroup, file: PropertySaleDatFileMetaData):
-            parser = self._factory.create_parser(file)
-            if parser is None:
-                return
-
-            async with self._semaphore:
-                async for row in parser.get_data_from_file():
-                    await tg.create_task(queue.put((file, row)))
 
         async with TaskGroup() as tg:
             worker_task = tg.create_task(queue_work(tg))

@@ -39,7 +39,7 @@ async def ingest(env: Environment,
                  limit: int) -> None:
     logger = getLogger(f'{__name__}.ingest')
 
-    producer = PropertySaleProducer.create(ZIP_DIR, io, limit)
+    producer = PropertySaleProducer.create(ZIP_DIR, io, limit * 2)
 
     try:
         task, item = None, None

@@ -49,9 +49,9 @@ class IoService:
                 data = await f.read()
         return data
 
-    async def f_read_slice(self, file_path: str, offset: int, length: int) -> str:
+    async def f_read_slice(self, file_path: str, offset: int, length: int) -> bytes:
         async with self._semaphore:
-            async with aiofiles.open(file_path, 'r') as f:
+            async with aiofiles.open(file_path, 'rb') as f:
                 await f.seek(offset)
                 data = await f.read(length)
         return data

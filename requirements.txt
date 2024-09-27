@@ -5,6 +5,7 @@ types-psycopg2~=2.9.21
 types-psutil~=6.0.0
 
 pytest==8.3.3
+pytest-asyncio=0.24.0
 
 aiofiles==22.1.0
 aiopg==1.4.0
