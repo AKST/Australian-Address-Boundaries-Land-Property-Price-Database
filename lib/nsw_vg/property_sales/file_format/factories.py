@@ -2,7 +2,7 @@ import abc
 from datetime import datetime
 from typing import Any, Callable, Self, List, TypeVar
 
-import lib.nsw_vg.property_sales.file_format.text_data as t
+from lib.nsw_vg.property_sales import data as t
 
 class AbstractFormatFactory(abc.ABC):
     @classmethod

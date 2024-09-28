@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -7,29 +7,29 @@ class BasePropertySaleFileRow:
 
 @dataclass
 class SaleRecordFile(BasePropertySaleFileRow):
-    year: int
+    year: int = field(repr=False)
     district: int
-    file_path: str
+    file_path: str = field(repr=False)
     file_type: Optional[str]
     date_downloaded: datetime
     submitting_user_id: Optional[str]
 
 @dataclass
 class SaleRecordFile1990(BasePropertySaleFileRow):
-    year: int
+    year: int = field(repr=False)
     district: Optional[int]
     submitting_user_id: Optional[str]
     date_downloaded: datetime
-    file_path: str
+    file_path: str = field(repr=False)
 
 @dataclass
 class SalePropertyDetails(BasePropertySaleFileRow):
-    parent: SaleRecordFile
+    parent: SaleRecordFile = field(repr=False)
 
     district: int
     property_id: str
     sale_counter: str
-    date_downloaded: datetime
+    date_downloaded: datetime = field(repr=False)
     property_name: Optional[str]
     property_unit_number: Optional[str]
     property_house_number: Optional[str]
@@ -40,10 +40,10 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     area_type: Optional[str]
 
     # TODO confirm this is optional
-    contract_date: Optional[datetime]
+    contract_date: Optional[datetime] = field(repr=False)
 
     # TODO confirm this is optional
-    settlement_date: Optional[datetime]
+    settlement_date: Optional[datetime] = field(repr=False)
 
     """
     From 2002 onwards always defined.
@@ -63,7 +63,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyDetails1990(BasePropertySaleFileRow):
-    parent: SaleRecordFile1990
+    parent: SaleRecordFile1990 = field(repr=False)
 
     district: int
     source: Optional[str]
@@ -74,7 +74,7 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     property_street_name: Optional[str]
     property_locality: Optional[str]
     property_postcode: Optional[int]
-    contract_date: datetime
+    contract_date: datetime = field(repr=False)
     purchase_price: float
     land_description: str
     area: Optional[float]
@@ -85,26 +85,26 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
-    parent: SalePropertyDetails
+    parent: SalePropertyDetails = field(repr=False)
 
     district: int
     property_id: str
     sale_counter: str
-    date_downloaded: datetime
+    date_downloaded: datetime = field(repr=False)
     property_legal_description: str
 
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):
-    parent: SalePropertyLegalDescription
+    parent: SalePropertyLegalDescription = field(repr=False)
     district: int
     property_id: str
     sale_counter: str
-    date_downloaded: datetime
+    date_downloaded: datetime = field(repr=False)
     participant: str
 
 @dataclass
 class SaleDataFileSummary(BasePropertySaleFileRow):
-    parent: SaleRecordFile
+    parent: SaleRecordFile = field(repr=False)
     total_records: int
     total_sale_property_details: int
 

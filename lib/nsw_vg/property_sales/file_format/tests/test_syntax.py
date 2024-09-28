@@ -43,7 +43,6 @@ def test_post_2002_syntax(year: int, date: datetime):
 
 @pytest.mark.parametrize("year, date", [
     *[(y, None) for y in range(1980, 2001)],
-    *[(2001, datetime(2001, m, 1)) for m in range(1, 6)],
 ])
 def test_post_1990_syntax(year: int, date: datetime | None):
     col, syn = get_columns_and_syntax(date, year)

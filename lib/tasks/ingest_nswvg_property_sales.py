@@ -7,7 +7,8 @@ from pathlib import Path
 from pprint import pprint
 import os
 
-from lib.nsw_vg.property_sales import PropertySaleProducer
+from lib.nsw_vg.property_sales import PropertySaleProducer, PropertySaleDatFileMetaData
+from lib.nsw_vg.property_sales import SaleDataFileSummary, BasePropertySaleFileRow
 from lib.service.io import IoService
 from lib.tasks.fetch_static_files import Environment
 
@@ -27,11 +28,18 @@ class State:
         th, tm, ts = t // 3600, t // 60 % 60, t % 60
         return f'{th}h {tm}m {ts}s'
 
-    def acknowledge(self, y: int, amount: int):
-        self.records += amount
-        message = f'Parsed {amount} for {y} ' \
-                  f'(total {self.records}) ' \
-                  f'({self.elapsed()})'
+    def acknowledge_summary(self, row: SaleDataFileSummary, task: PropertySaleDatFileMetaData):
+        self.records += row.total_records
+        message = f'Parsed {row.total_records} ' \
+                  f'(total {self.records}) ({self.elapsed()}) ' \
+                  f'(published: {task.published_year} downloaded: {task.download_date})'
+        self._logger.info(message)
+
+    def acknowledge(self, row: BasePropertySaleFileRow):
+        self.records += 1
+        message = f'Parsed total {self.records} ' \
+                  f'({self.elapsed()}) ' \
+                  f'{repr(row)}'
         self._logger.info(message)
 
 async def ingest(env: Environment, io: IoService) -> None:
@@ -45,8 +53,8 @@ async def ingest(env: Environment, io: IoService) -> None:
         all_links = [*env.sale_price_annual.links, *env.sale_price_weekly.links]
 
         async for task, item in producer.get_rows(all_links):
-            if hasattr(item, 'total_records'):
-                state.acknowledge(item.parent.year, item.total_records)
+            if isinstance(item, SaleDataFileSummary):
+                state.acknowledge_summary(item, task)
     except Exception as e:
         raise e
 

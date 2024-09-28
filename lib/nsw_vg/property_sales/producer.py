@@ -12,8 +12,9 @@ from lib.utility.concurrent import pipe, merge_async_iters
 from .file_format.parse import PropertySalesRowParserFactory
 from .file_format.text_source import StringTextSource, BufferedFileReaderTextSource
 from .file_format import PropertySaleDatFileMetaData
+from .data import BasePropertySaleFileRow
 
-ProducerPair = Tuple[PropertySaleDatFileMetaData, Any]
+ProducerPair = Tuple[PropertySaleDatFileMetaData, BasePropertySaleFileRow]
 
 class PropertySaleProducer:
     _logger = getLogger(f'{__name__}.PropertySaleProducer')
@@ -99,7 +100,6 @@ class PropertySaleProducer:
         async for task in pipe(producer, with_path):
             if task is not None:
                 yield task
-
 
 def get_download_date(file_path: str) -> Optional[datetime]:
     if re.search(r"_\d{8}\.DAT$", file_path):

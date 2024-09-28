@@ -8,12 +8,16 @@ from ..input_data import PropertySaleDatFileMetaData
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("file_path,published_year,download_date", [
-    ('./_fixtures/ps_2011_03102011.dat', 2011, datetime(2011, 10, 3)),
+    ('./_fixtures/ps_2021_20210823.dat', 2021, datetime(2021, 8, 23)),
+    ('./_fixtures/ps_2011_20111003.dat', 2011, datetime(2011, 10, 3)),
     ('./_fixtures/ps_2004_20040916.dat', 2004, datetime(2004, 9, 16)),
+    ('./_fixtures/ps_2001_20010822.dat', 2001, datetime(2001, 8, 22)),
+    # ('./_fixtures/ps_2001_20010720.dat', 2001, datetime(2001, 7, 20)),
+    ('./_fixtures/ps_1990_fake.dat', 1990, None),
 ])
-async def test_2011_03102011(file_path: str,
+async def test_end_to_end(file_path: str,
                              published_year: int,
-                             download_date: datetime):
+                             download_date: datetime | None):
     io = IoService.create(1)
     s_factory = PropertySalesRowParserFactory(io,
                                               StringTextSource)
