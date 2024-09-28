@@ -48,6 +48,15 @@ def test_post_1990_syntax(year: int, date: datetime | None):
     col, syn = get_columns_and_syntax(date, year)
     assert syn == SYNTAX_1990
 
+@pytest.mark.parametrize("year, date", [
+    *[(2001, datetime(2001, m, 1)) for m in range(1, 7)],
+])
+def test_2002_july_syntax(year: int, date: datetime | None):
+    col, syn = get_columns_and_syntax(date, year)
+    assert syn == SYNTAX_2001_07
+
+
+
 
 
 

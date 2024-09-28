@@ -10,23 +10,23 @@ class AbstractFormatFactory(abc.ABC):
         raise NotImplementedError('create not implemented on AbstractFormatFactory')
 
     @abc.abstractmethod
-    def create_a(self: Self, row: List[str]) -> t.BasePropertySaleFileRow:
+    def create_a(self: Self, row: List[str], sc_count: int) -> t.BasePropertySaleFileRow:
         pass
 
     @abc.abstractmethod
-    def create_b(self: Self, row: List[str], a_record: Any) -> t.BasePropertySaleFileRow:
+    def create_b(self: Self, row: List[str], sc_count: int, a_record: Any) -> t.BasePropertySaleFileRow:
         pass
 
     @abc.abstractmethod
-    def create_c(self: Self, row: List[str], b_record: Any) -> t.SalePropertyLegalDescription:
+    def create_c(self: Self, row: List[str], sc_count: int, b_record: Any) -> t.SalePropertyLegalDescription:
         pass
 
     @abc.abstractmethod
-    def create_d(self: Self, row: List[str], c_record: Any) -> t.SaleParticipant:
+    def create_d(self: Self, row: List[str], sc_count: int, c_record: Any) -> t.SaleParticipant:
         pass
 
     @abc.abstractmethod
-    def create_z(self: Self, row: List[str], a_record: Any) -> t.SaleDataFileSummary:
+    def create_z(self: Self, row: List[str], sc_count: int, a_record: Any) -> t.SaleDataFileSummary:
         pass
 
 class CurrentFormatFactory(AbstractFormatFactory):
@@ -38,7 +38,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create(Cls, year: int, file_path: str) -> 'CurrentFormatFactory':
         return CurrentFormatFactory(year, file_path)
 
-    def create_a(self: Self, row: List[str]):
+    def create_a(self: Self, row: List[str], sc_count: int):
         return t.SaleRecordFile(
             year=self.year,
             file_path=self.file_path,
@@ -48,7 +48,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             submitting_user_id=row[3],
         )
 
-    def create_b(self: Self, row: List[str], a_record: Any):
+    def create_b(self: Self, row: List[str], sc_count: int, a_record: Any):
         return t.SalePropertyDetails(
             parent=a_record,
             district=read_int(row, 0, 'district'),
@@ -76,27 +76,27 @@ class CurrentFormatFactory(AbstractFormatFactory):
             dealing_number=row[22],
         )
 
-    def create_c(self: Self, row: List[str], b_record: Any):
+    def create_c(self: Self, row: List[str], sc_count: int, b_record: Any):
         return t.SalePropertyLegalDescription(
             parent=b_record,
             district=read_int(row, 0, 'district'),
-            property_id=row[1],
+            property_id=read_optional_int(row, 1, 'property_id'),
             sale_counter=row[2],
             date_downloaded=read_datetime(row, 3, 'date_downloaded'),
             property_legal_description=row[4],
         )
 
-    def create_d(self: Self, row: List[str], c_record: Any):
+    def create_d(self: Self, row: List[str], sc_count: int, c_record: Any):
         return t.SaleParticipant(
             parent=c_record,
             district=read_int(row, 0, 'district'),
-            property_id=row[1],
+            property_id=read_optional_int(row, 1, 'property_id'),
             sale_counter=row[2],
             date_downloaded=read_datetime(row, 3, 'date_downloaded'),
             participant=row[4],
         )
 
-    def create_z(self: Self, row: List[str], a_record: Any):
+    def create_z(self: Self, row: List[str], sc_count: int, a_record: Any):
         return t.SaleDataFileSummary(
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),
@@ -110,7 +110,7 @@ class Legacy2002Format(CurrentFormatFactory):
     def create(cls, year: int, file_path: str) -> 'Legacy2002Format':
         return Legacy2002Format(year, file_path)
 
-    def create_a(self: Self, row: List[str]):
+    def create_a(self: Self, row: List[str], sc_count: int):
         return t.SaleRecordFile(
             year=self.year,
             file_path=self.file_path,
@@ -119,6 +119,35 @@ class Legacy2002Format(CurrentFormatFactory):
             date_downloaded=read_datetime(row, 1, 'date_downloaded'),
             submitting_user_id=row[2],
         )
+
+    def create_c(self: Self, row: List[str], sc_count: int, b_record: Any):
+        if sc_count == 6:
+            return super().create_c(row, sc_count, b_record)
+
+        # Missing property id
+        return t.SalePropertyLegalDescription(
+            parent=b_record,
+            district=read_int(row, 0, 'district'),
+            property_id=None,
+            sale_counter=row[1],
+            date_downloaded=read_datetime(row, 2, 'date_downloaded'),
+            property_legal_description=row[3],
+        )
+
+    def create_d(self: Self, row: List[str], sc_count: int, c_record: Any):
+        if sc_count == 11:
+            return super().create_d(row, sc_count, c_record)
+
+        # Missing property id
+        return t.SaleParticipant(
+            parent=c_record,
+            district=read_int(row, 0, 'district'),
+            property_id=None,
+            sale_counter=row[1],
+            date_downloaded=read_datetime(row, 2, 'date_downloaded'),
+            participant=row[3],
+        )
+
 
 class Legacy1990Format(AbstractFormatFactory):
     def __init__(self: Self, year: int, file_path: str):
@@ -129,7 +158,7 @@ class Legacy1990Format(AbstractFormatFactory):
     def create(cls, year: int, file_path: str):
         return Legacy1990Format(year, file_path)
 
-    def create_a(self: Self, row: List[str]):
+    def create_a(self: Self, row: List[str], sc_count: int):
         return t.SaleRecordFile1990(
             year=self.year,
             file_path=self.file_path,
@@ -138,7 +167,7 @@ class Legacy1990Format(AbstractFormatFactory):
             date_downloaded=read_datetime(row, 2, 'date_downloaded'),
         )
 
-    def create_b(self: Self, row: List[str], a_record: Any):
+    def create_b(self: Self, row: List[str], sc_count: int, a_record: Any):
         return t.SalePropertyDetails1990(
             parent=a_record,
             district=read_int(row, 0, 'district'),
@@ -160,13 +189,13 @@ class Legacy1990Format(AbstractFormatFactory):
             comp_code=row[16] or None,
         )
 
-    def create_c(self: Self, row: List[str], b_record: Any):
+    def create_c(self: Self, row: List[str], sc_count: int, b_record: Any):
         raise TypeError('c record not allowed in 1990 format')
 
-    def create_d(self: Self, row: List[str], c_record: Any):
+    def create_d(self: Self, row: List[str], sc_count: int, c_record: Any):
         raise TypeError('d record not allowed in 1990 format')
 
-    def create_z(self: Self, row: List[str], a_record: Any):
+    def create_z(self: Self, row: List[str], sc_count: int, a_record: Any):
         return t.SaleDataFileSummary(
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),

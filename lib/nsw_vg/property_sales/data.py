@@ -88,7 +88,11 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
     parent: SalePropertyDetails = field(repr=False)
 
     district: int
-    property_id: str
+
+    """
+    Missing in property sale records from July 2001
+    """
+    property_id: Optional[int]
     sale_counter: str
     date_downloaded: datetime = field(repr=False)
     property_legal_description: str
@@ -97,7 +101,10 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
 class SaleParticipant(BasePropertySaleFileRow):
     parent: SalePropertyLegalDescription = field(repr=False)
     district: int
-    property_id: str
+    """
+    Missing in property sale records from July 2001
+    """
+    property_id: Optional[int]
     sale_counter: str
     date_downloaded: datetime = field(repr=False)
     participant: str

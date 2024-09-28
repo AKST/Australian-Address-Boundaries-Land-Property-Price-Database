@@ -30,9 +30,6 @@ class PropertySalesRowParserFactory:
         year = file_data.published_year
         path = file_data.file_path
 
-        # if year != 2001 or not date or date.month != 7:
-        #     return None
-
         Factory, syntax = get_columns_and_syntax(date, year)
         if Factory is None or syntax is None:
             return None
@@ -67,21 +64,21 @@ class PropertySalesParser:
         a, b, c, d = None, None, None, None
 
         try:
-            async for kind, row in self._reader.get_rows():
+            async for sc_count, kind, row in self._reader.get_rows():
                 if kind == 'A':
-                    a = self.constructors.create_a(row)
+                    a = self.constructors.create_a(row, sc_count)
                     yield a
                 elif kind == 'B':
-                    b = self.constructors.create_b(row, a_record=a)
+                    b = self.constructors.create_b(row, sc_count, a_record=a)
                     yield b
                 elif kind == 'C':
-                    c = self.constructors.create_c(row, b_record=b)
+                    c = self.constructors.create_c(row, sc_count, b_record=b)
                     yield c
                 elif kind == 'D':
-                    d = self.constructors.create_d(row, c_record=c)
+                    d = self.constructors.create_d(row, sc_count, c_record=c)
                     yield d
                 elif kind == 'Z':
-                    yield self.constructors.create_z(row, a_record=a)
+                    yield self.constructors.create_z(row, sc_count, a_record=a)
                 else:
                     raise ValueError(f"Unexpected record type: {kind}")
         except Exception as e:
@@ -97,8 +94,8 @@ class PropertySalesParser:
             self._logger.error(f'last c row: {c}')
             self._logger.error(f'last d row: {d}')
 
-            # reader_debug_info = await self._reader.debug_info()
-            # self._logger.error(f'Debug: {reader_debug_info}')
+            reader_debug_info = await self._reader.debug_info()
+            self._logger.error(f'Debug: {reader_debug_info}')
             self._logger.exception(e)
             raise e
 
@@ -117,36 +114,17 @@ class PropertySalesRowReader:
         self._source = source
         self._index = 0
 
-    async def get_rows(self: Self) -> AsyncIterator[Tuple[str, List[str]]]:
+    async def get_rows(self: Self) -> AsyncIterator[Tuple[int, str, List[str]]]:
         while self._index < self._source.size():
             row_s, mode = await self._get_mode()
-            row_e, row = await self._get_row(mode, row_s)
+            sc_count, row_e, row = await self._get_row_body(mode, row_s)
 
-            yield mode, row
+            yield sc_count, mode, row
 
             if mode == 'Z':
                 break
 
             self._index = row_e + 2
-
-    async def _get_row(self, mode: str, row_start: int) -> Tuple[int, List[str]]:
-        syntax = self._semi_colons[mode]
-        if isinstance(syntax, list):
-            raise TypeError('not implmented')
-
-        row_end = await self._find_nth_semicolon(syntax)
-
-        if row_end == -1:
-            raise ValueError(
-                f'Unexpected end of data: "{mode}"@{self._index}, ' \
-                f'last row: "{self.__last_row}", ' \
-                f'source: {self._source.source_name}'
-            )
-
-        row_s = await self._source.read(row_start+2, row_end)
-        self.__last_row = row_s
-
-        return row_end, row_s.split(';')
 
     async def _get_mode(self) -> Tuple[int, str]:
         mode_end = await self._find_nth_semicolon(1)
@@ -159,6 +137,37 @@ class PropertySalesRowReader:
                              f'source: {self._source.source_name}')
 
         return mode_end - 1, mode
+
+    async def _get_row_body(self, mode: str, row_start: int) -> Tuple[int, int, List[str]]:
+        sc_count_raw = self._semi_colons[mode]
+        if isinstance(sc_count_raw, list):
+            sc_count_ls = list(sorted(sc_count_raw, reverse=True))
+        else:
+            sc_count_ls = [sc_count_raw]
+
+        for i, sc_count in enumerate(sc_count_ls):
+            row_end = await self._find_nth_semicolon(sc_count)
+
+            if row_end == -1:
+                raise ValueError(
+                    f'Unexpected end of data: "{mode}"@{self._index}, ' \
+                    f'last row: "{self.__last_row}", ' \
+                    f'source: {self._source.source_name}'
+                )
+
+            row_s = await self._source.read(row_start+2, row_end)
+            row = row_s.split(';')
+
+            if i+1 == len(sc_count_ls):
+                break
+
+            if '\n' not in row[sc_count_ls[i+1] - 1]:
+                break
+        else:
+            raise ValueError(f'cannot iterate with this {sc_count_raw}')
+
+        self.__last_row = row_s
+        return sc_count, row_end, row
 
     async def _find_nth_semicolon(self: Self, n: int) -> int:
         position = self._index

@@ -12,7 +12,7 @@ from ..input_data import PropertySaleDatFileMetaData
     ('./_fixtures/ps_2011_20111003.dat', 2011, datetime(2011, 10, 3)),
     ('./_fixtures/ps_2004_20040916.dat', 2004, datetime(2004, 9, 16)),
     ('./_fixtures/ps_2001_20010822.dat', 2001, datetime(2001, 8, 22)),
-    # ('./_fixtures/ps_2001_20010720.dat', 2001, datetime(2001, 7, 20)),
+    ('./_fixtures/ps_2001_20010720.dat', 2001, datetime(2001, 7, 20)),
     ('./_fixtures/ps_1990_fake.dat', 1990, None),
 ])
 async def test_end_to_end(file_path: str,
