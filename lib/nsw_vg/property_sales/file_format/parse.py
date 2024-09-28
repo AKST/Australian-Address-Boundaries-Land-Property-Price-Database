@@ -31,9 +31,6 @@ class PropertySalesRowParserFactory:
         path = file_data.file_path
 
         Factory, syntax = get_columns_and_syntax(date, year)
-        if Factory is None or syntax is None:
-            return None
-
         factory = Factory.create(year=year, file_path=path)
         f_path = file_data.file_path
         source = await self.Source.create(
@@ -41,44 +38,52 @@ class PropertySalesRowParserFactory:
             self._io,
             chunk_size=self.chunk_size,
         )
-        reader = PropertySalesRowReader(source, syntax)
-        return PropertySalesParser(file_data, factory, reader)
+        return PropertySalesParser(file_data, factory, source, syntax)
 
 class PropertySalesParser:
     file_data: PropertySaleDatFileMetaData
     constructors: AbstractFormatFactory
 
-    _reader: 'PropertySalesRowReader'
+    _source: AbstractTextSource
+    _semi_colons: Syntax
+
+    __last_row: str = ''
+    _index: int = 0
     _logger = getLogger(f'{__name__}.PropertySalesParser')
 
     def __init__(self: Self,
                  file_data: PropertySaleDatFileMetaData,
                  constructors: AbstractFormatFactory,
-                 reader: 'PropertySalesRowReader') -> None:
+                 source: AbstractTextSource,
+                 semicolons: Syntax) -> None:
         self.file_data = file_data
         self.constructors = constructors
-        self._reader = reader
+        self._source = source
+        self._semi_colons = semicolons
+
+    async def remaining(self: Self) -> str:
+        return await self._source.read(self._index, self._index + 400)
 
     async def get_data_from_file(self: Self):
         kind, row = None, None
         a, b, c, d = None, None, None, None
 
         try:
-            async for sc_count, kind, row in self._reader.get_rows():
+            async for variant, kind, row in self.get_rows():
                 if kind == 'A':
-                    a = self.constructors.create_a(row, sc_count)
+                    a = self.constructors.create_a(row, variant=variant)
                     yield a
                 elif kind == 'B':
-                    b = self.constructors.create_b(row, sc_count, a_record=a)
+                    b = self.constructors.create_b(row, a_record=a, variant=variant)
                     yield b
                 elif kind == 'C':
-                    c = self.constructors.create_c(row, sc_count, b_record=b)
+                    c = self.constructors.create_c(row, b_record=b, variant=variant)
                     yield c
                 elif kind == 'D':
-                    d = self.constructors.create_d(row, sc_count, c_record=c)
+                    d = self.constructors.create_d(row, c_record=c, variant=variant)
                     yield d
                 elif kind == 'Z':
-                    yield self.constructors.create_z(row, sc_count, a_record=a)
+                    yield self.constructors.create_z(row, a_record=a, variant=variant)
                 else:
                     raise ValueError(f"Unexpected record type: {kind}")
         except Exception as e:
@@ -86,40 +91,24 @@ class PropertySalesParser:
             self._logger.error(f'Target Year: {self.file_data.published_year}')
             self._logger.error(f'Download Date: {self.file_data.download_date}')
             self._logger.error(f'Factory: {type(self.constructors)}')
-            self._logger.error(f'Syntax: {self._reader._semi_colons}')
+            self._logger.error(f'Syntax: {self._semi_colons}')
+            self._logger.error(f'Index: {self._index}')
             self._logger.error(f'last row: {row}')
             self._logger.error(f'last kind: {kind}')
             self._logger.error(f'last a row: {a}')
             self._logger.error(f'last b row: {b}')
             self._logger.error(f'last c row: {c}')
             self._logger.error(f'last d row: {d}')
-
-            reader_debug_info = await self._reader.debug_info()
-            self._logger.error(f'Debug: {reader_debug_info}')
+            self._logger.error(f'Remaining: {await self.remaining()}')
             self._logger.exception(e)
             raise e
 
-class PropertySalesRowReader:
-    _logger = getLogger(f'{__name__}.PropertySalesRowReader')
-    _source: AbstractTextSource
-    _index: int
-    _semi_colons: Syntax
-
-    __last_row: str = ''
-
-    def __init__(self,
-                 source: AbstractTextSource,
-                 semicolons: Syntax) -> None:
-        self._semi_colons = semicolons
-        self._source = source
-        self._index = 0
-
-    async def get_rows(self: Self) -> AsyncIterator[Tuple[int, str, List[str]]]:
+    async def get_rows(self: Self) -> AsyncIterator[Tuple[str | None, str, List[str]]]:
         while self._index < self._source.size():
             row_s, mode = await self._get_mode()
-            sc_count, row_e, row = await self._get_row_body(mode, row_s)
+            variant, row_e, row = await self._get_row_body(mode, row_s)
 
-            yield sc_count, mode, row
+            yield variant, mode, row
 
             if mode == 'Z':
                 break
@@ -138,14 +127,14 @@ class PropertySalesRowReader:
 
         return mode_end - 1, mode
 
-    async def _get_row_body(self, mode: str, row_start: int) -> Tuple[int, int, List[str]]:
+    async def _get_row_body(self, mode: str, row_start: int) -> Tuple[str | None, int, List[str]]:
         sc_count_raw = self._semi_colons[mode]
         if isinstance(sc_count_raw, list):
             sc_count_ls = list(sorted(sc_count_raw, reverse=True))
         else:
-            sc_count_ls = [sc_count_raw]
+            sc_count_ls = [(sc_count_raw, None)]
 
-        for i, sc_count in enumerate(sc_count_ls):
+        for i, (sc_count, variant) in enumerate(sc_count_ls):
             row_end = await self._find_nth_semicolon(sc_count)
 
             if row_end == -1:
@@ -161,13 +150,14 @@ class PropertySalesRowReader:
             if i+1 == len(sc_count_ls):
                 break
 
-            if '\n' not in row[sc_count_ls[i+1] - 1]:
+            sc_count_next, _ = sc_count_ls[i+1]
+            if '\n' not in row[sc_count_next - 1]:
                 break
         else:
-            raise ValueError(f'cannot iterate with this {sc_count_raw}')
+            raise ValueError(f'No iteration occurred when parsing {mode}')
 
         self.__last_row = row_s
-        return sc_count, row_end, row
+        return variant, row_end, row
 
     async def _find_nth_semicolon(self: Self, n: int) -> int:
         position = self._index
@@ -180,9 +170,4 @@ class PropertySalesRowReader:
             semicolon_count += 1
         return found_index
 
-    async def debug_info(self: Self) -> str:
-        remaining = await self._source.read(self._index, self._index + 400)
-        return f"index @ {self._index}\n" \
-               f"semicolumns @ {self._semi_colons}\n" \
-               f"REMAINING: {remaining}"
 

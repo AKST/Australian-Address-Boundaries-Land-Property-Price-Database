@@ -2,7 +2,6 @@ import pytest
 
 from ..factories import read_int, read_optional_int
 
-
 @pytest.mark.parametrize("row, index, result", [
     (["5", "asdf", "asdfaf"], 0, 5),
     (["sdfas", "23", "afaf"], 1, 23),
