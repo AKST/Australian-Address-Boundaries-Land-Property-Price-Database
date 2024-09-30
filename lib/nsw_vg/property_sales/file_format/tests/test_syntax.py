@@ -1,7 +1,8 @@
 from datetime import datetime
 import pytest
 
-from lib.nsw_vg.property_sales.file_format.syntax import *
+from ..syntax import get_columns_and_syntax
+from ..syntax import SYNTAX_1990, SYNTAX_2001_07, SYNTAX_2002, SYNTAX_2021, SYNTAX_2012
 
 def test_special_2021_syntax():
     """
