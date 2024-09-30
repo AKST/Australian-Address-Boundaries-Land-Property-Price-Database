@@ -57,5 +57,5 @@ async def test_snapshot(snapshot, file_name: str, published_year: int, download_
                                             size=file_size)
     s_parser = await s_factory.create_parser(file_data)
     s_items = [it async for it in s_parser.get_data_from_file()]
-    snapshot.assert_match(pformat(s_items), file_name)
+    snapshot.assert_match(pformat(s_items, width=150), file_name)
 

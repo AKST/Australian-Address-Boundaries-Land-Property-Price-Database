@@ -53,31 +53,32 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails(
             parent=a_record,
-            district=read_int(row, 0, 'district'),
-            property_id=row[1],
-            sale_counter=read_int(row, 2, 'sale_counter'),
-            date_downloaded=read_datetime(row, 3, 'date_downloaded'),
+            common=t.SalePropertyDetailsCommon(
+                district=read_int(row, 0, 'district'),
+                property_id=row[1],
+                address=t.Address(
+                    property_name=row[4] or None,
+                    unit_number=row[5] or None,
+                    house_number=row[6] or None,
+                    street_name=row[7] or None,
+                    locality=row[8] or None,
+                    postcode=read_optional_int(row, 9, 'property_postcode'),
+                ),
 
-            address=t.Address(
-                property_name=row[4] or None,
-                unit_number=row[5] or None,
-                house_number=row[6] or None,
-                street_name=row[7] or None,
-                locality=row[8] or None,
-                postcode=read_optional_int(row, 9, 'property_postcode'),
+                # columns 10 & 11
+                area=self.area_parser.from_row(row),
+                contract_date=read_optional_date(row, 12, 'contract_date'),
+                purchase_price=read_optional_float(row, 14, 'purchase_price'),
+                zoning=self._read_b_zoning(row),
+                comp_code=row[19] or None,
             ),
 
-            # columns 10 & 11
-            area=self.area_parser.from_row(row),
-
-            contract_date=read_optional_date(row, 12, 'contract_date'),
+            sale_counter=read_int(row, 2, 'sale_counter'),
+            date_downloaded=read_datetime(row, 3, 'date_downloaded'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
-            purchase_price=read_optional_float(row, 14, 'purchase_price'),
-            zoning=self._read_b_zoning(row),
             nature_of_property=row[16] or None,
             primary_purpose=row[17] or None,
             strata_lot_number=row[18] or None,
-            comp_code=row[19] or None,
             sale_code=row[20] or None,
             interest_of_sale=read_optional_int(row, 21, 'interest_of_sale'),
             dealing_number=row[22],
@@ -147,7 +148,7 @@ class Legacy2002Format(CurrentFormatFactory):
 
     def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
         if variant is None:
-            return super().create_c(row, c_record, variant)
+            return super().create_d(row, c_record, variant)
         elif variant == 'missing_property_id':
             return t.SaleParticipant(
                 parent=c_record,
@@ -187,28 +188,29 @@ class Legacy1990Format(AbstractFormatFactory):
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails1990(
             parent=a_record,
-            district=read_int(row, 0, 'district'),
+            common=t.SalePropertyDetailsCommon(
+                district=read_int(row, 0, 'district'),
+                property_id=row[3],
+                address=t.Address(
+                    property_name=None,
+                    unit_number=row[4] or None,
+                    house_number=row[5] or None,
+                    street_name=row[6] or None,
+                    locality=row[7] or None,
+                    postcode=read_optional_int(row, 8, 'property_postcode'),
+                ),
+                contract_date=read_date_pre_2002(row, 9, 'contract_date'),
+                purchase_price=read_float(row, 10, 'purchase_price'),
+                # columns 12 & 13
+                area=self.area_parser.from_row(row),
+
+                comp_code=row[15] or None,
+                zoning=read_legacy_zoning(row, 16, 'zoning'),
+            ),
             source=row[1],
             valuation_num=row[2],
-            property_id=row[3],
-            address=t.Address(
-                property_name=None,
-                unit_number=row[4] or None,
-                house_number=row[5] or None,
-                street_name=row[6] or None,
-                locality=row[7] or None,
-                postcode=read_optional_int(row, 8, 'property_postcode'),
-            ),
-            contract_date=read_date_pre_2002(row, 9, 'contract_date'),
-            purchase_price=read_float(row, 10, 'purchase_price'),
             land_description=row[11],
-
-            # columns 12 & 13
-            area=self.area_parser.from_row(row),
-
             dimensions=read_optional_str(row, 14, 'dimensions'),
-            comp_code=row[15] or None,
-            zoning=read_legacy_zoning(row, 16, 'zoning'),
         )
 
     def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):

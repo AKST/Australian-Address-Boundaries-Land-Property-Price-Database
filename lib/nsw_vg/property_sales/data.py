@@ -19,54 +19,42 @@ class SaleRecordFile(BasePropertySaleFileRow):
     district: Optional[int]
 
 @dataclass
-class SalePropertyDetails(BasePropertySaleFileRow):
-    parent: SaleRecordFile = field(repr=False)
-
-    district: int
+class SalePropertyDetailsCommon:
     property_id: str
-    sale_counter: int
-    date_downloaded: datetime = field(repr=False)
-    address: 'Address'
-    area: Optional['Area']
-
     # TODO confirm this is optional
-    contract_date: Optional[datetime] = field(repr=False)
-
-    # TODO confirm this is optional
-    settlement_date: Optional[datetime] = field(repr=False)
-
+    contract_date: Optional[datetime]
     """
     From 2002 onwards always defined.
     """
     purchase_price: Optional[float]
+    district: int
+    address: 'Address'
+    area: Optional['Area']
     zoning: Optional['AbstractZoning']
+    comp_code: Optional[str]
+
+@dataclass
+class SalePropertyDetails(BasePropertySaleFileRow):
+    parent: SaleRecordFile = field(repr=False)
+    common: SalePropertyDetailsCommon
+    sale_counter: int
+    date_downloaded: datetime
+    settlement_date: Optional[datetime]
     nature_of_property: Optional[str]
     primary_purpose: Optional[str]
-
-    # TODO some of these may may be ints.
     strata_lot_number: Optional[str]
-    comp_code: Optional[str]
     sale_code: Optional[str]
     interest_of_sale: Optional[int]
-
     dealing_number: str
 
 @dataclass
 class SalePropertyDetails1990(BasePropertySaleFileRow):
     parent: SaleRecordFile = field(repr=False)
-
-    district: int
+    common: SalePropertyDetailsCommon
     source: Optional[str]
     valuation_num: str
-    property_id: str
-    address: 'Address'
-    contract_date: datetime = field(repr=False)
-    purchase_price: float
     land_description: str
-    area: Optional['Area']
     dimensions: Optional[str]
-    comp_code: Optional[str]
-    zoning: Optional['AbstractZoning']
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
@@ -120,13 +108,6 @@ class Address:
     street_name: Optional[str]
     locality: Optional[str]
     postcode: Optional[int]
-
-@dataclass
-class SalePropertyLegacyData:
-    source: Optional[str]
-    valuation_num: str
-    comp_code: Optional[str]
-
 
 ZoneKind = Literal['< 2011', '>= 2011']
 
