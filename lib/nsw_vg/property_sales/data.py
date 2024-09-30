@@ -32,8 +32,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     property_street_name: Optional[str]
     property_locality: Optional[str]
     property_postcode: Optional[int]
-    area: Optional[float]
-    area_type: Optional[str]
+    area: Optional['Area']
 
     # TODO confirm this is optional
     contract_date: Optional[datetime] = field(repr=False)
@@ -73,17 +72,10 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     contract_date: datetime = field(repr=False)
     purchase_price: float
     land_description: str
-    area: Optional[float]
-    area_type: Optional[str]
+    area: Optional['Area']
     dimensions: Optional[str]
     comp_code: Optional[str]
     zoning: Optional['AbstractZoning']
-
-@dataclass
-class SalePropertyLegacyData:
-    source: Optional[str]
-    valuation_num: str
-    comp_code: Optional[str]
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
@@ -122,6 +114,17 @@ class SaleDataFileSummary(BasePropertySaleFileRow):
 
     # fields not provided in 1990 format
     total_sale_participants: int
+
+@dataclass
+class Area:
+    unit: str
+    amount: float
+
+@dataclass
+class SalePropertyLegacyData:
+    source: Optional[str]
+    valuation_num: str
+    comp_code: Optional[str]
 
 
 ZoneKind = Literal['< 2011', '>= 2011']

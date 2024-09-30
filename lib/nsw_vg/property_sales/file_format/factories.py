@@ -1,4 +1,5 @@
 import abc
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Self, List, TypeVar, Optional
 
@@ -33,6 +34,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def __init__(self: Self, year: int, file_path: str):
         self.year = year
         self.file_path = file_path
+        self.area_parser = AreaParser(area_column=10, area_type_column=11)
 
     @classmethod
     def create(Cls, year: int, file_path: str) -> 'CurrentFormatFactory':
@@ -61,8 +63,10 @@ class CurrentFormatFactory(AbstractFormatFactory):
             property_street_name=row[7] or None,
             property_locality=row[8] or None,
             property_postcode=read_optional_int(row, 9, 'property_postcode'),
-            area=read_optional_float(row, 10, 'area'),
-            area_type=row[11] or None,
+
+            # columns 10 & 11
+            area=self.area_parser.from_row(row),
+
             contract_date=read_optional_date(row, 12, 'contract_date'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
             purchase_price=read_optional_float(row, 14, 'purchase_price'),
@@ -160,6 +164,8 @@ class Legacy1990Format(AbstractFormatFactory):
     def __init__(self: Self, year: int, file_path: str):
         self.year = year
         self.file_path = file_path
+        self.area_parser = AreaParser(area_column=12, area_type_column=13)
+
 
     @classmethod
     def create(cls, year: int, file_path: str):
@@ -190,8 +196,10 @@ class Legacy1990Format(AbstractFormatFactory):
             contract_date=read_date_pre_2002(row, 9, 'contract_date'),
             purchase_price=read_float(row, 10, 'purchase_price'),
             land_description=row[11],
-            area=read_optional_float(row, 12, 'area'),
-            area_type=row[13] or None,
+
+            # columns 12 & 13
+            area=self.area_parser.from_row(row),
+
             dimensions=read_optional_str(row, 14, 'dimensions'),
             comp_code=row[15] or None,
             zoning=read_legacy_zoning(row, 16, 'zoning'),
@@ -255,6 +263,23 @@ def read_float(row: List[str], idx: int, name: str) -> float:
     except Exception as e:
         message = 'Failed to read FLOAT %s @ row[%s] IN %s' % (name, idx, row)
         raise Exception(message) from e
+
+@dataclass
+class AreaParser:
+    area_column: int
+    area_type_column: int
+
+    def from_row(self: Self, row: List[str]) -> Optional[t.Area]:
+        area = read_optional_float(row, self.area_column, 'area')
+
+        if area is None:
+            return None
+
+        match read_optional_str(row, self.area_type_column, 'area_type'):
+            case None: raise TypeError('Area found without unit')
+            case 'M': return t.Area(amount=area, unit='M')
+            case 'H': return t.Area(amount=area, unit='H')
+            case other: raise ValueError(f'Unknown area unit {other}')
 
 read_legacy_zoning = mk_read_optional(lambda row, idx, _: t.ZoningLegacy(zone=row[idx]))
 read_zoning = mk_read_optional(lambda row, idx, _: t.ZoningPost2011(zone=row[idx]))

@@ -12,7 +12,6 @@
                      property_locality='MOULAMEIN',
                      property_postcode=2733,
                      area=None,
-                     area_type=None,
                      purchase_price=8000000.0,
                      zoning=None,
                      nature_of_property='3',
