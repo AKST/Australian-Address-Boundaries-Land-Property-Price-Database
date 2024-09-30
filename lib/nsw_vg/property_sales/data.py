@@ -1,6 +1,7 @@
+import abc
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Self, Literal
 
 class BasePropertySaleFileRow:
     pass
@@ -8,19 +9,14 @@ class BasePropertySaleFileRow:
 @dataclass
 class SaleRecordFile(BasePropertySaleFileRow):
     year: int = field(repr=False)
-    district: int
     file_path: str = field(repr=False)
     file_type: Optional[str]
     date_downloaded: datetime
     submitting_user_id: Optional[str]
-
-@dataclass
-class SaleRecordFile1990(BasePropertySaleFileRow):
-    year: int = field(repr=False)
+    """
+    Missing in some data published prior to 2002
+    """
     district: Optional[int]
-    submitting_user_id: Optional[str]
-    date_downloaded: datetime
-    file_path: str = field(repr=False)
 
 @dataclass
 class SalePropertyDetails(BasePropertySaleFileRow):
@@ -28,7 +24,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 
     district: int
     property_id: str
-    sale_counter: str
+    sale_counter: int
     date_downloaded: datetime = field(repr=False)
     property_name: Optional[str]
     property_unit_number: Optional[str]
@@ -49,7 +45,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     From 2002 onwards always defined.
     """
     purchase_price: Optional[float]
-    zoning: Optional[str]
+    zoning: Optional['AbstractZoning']
     nature_of_property: Optional[str]
     primary_purpose: Optional[str]
 
@@ -63,7 +59,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyDetails1990(BasePropertySaleFileRow):
-    parent: SaleRecordFile1990 = field(repr=False)
+    parent: SaleRecordFile = field(repr=False)
 
     district: int
     source: Optional[str]
@@ -79,8 +75,14 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     land_description: str
     area: Optional[float]
     area_type: Optional[str]
-    dimensions: str
-    zoning: Optional[str]
+    dimensions: Optional[str]
+    comp_code: Optional[str]
+    zoning: Optional['AbstractZoning']
+
+@dataclass
+class SalePropertyLegacyData:
+    source: Optional[str]
+    valuation_num: str
     comp_code: Optional[str]
 
 @dataclass
@@ -120,3 +122,46 @@ class SaleDataFileSummary(BasePropertySaleFileRow):
 
     # fields not provided in 1990 format
     total_sale_participants: int
+
+
+ZoneKind = Literal['< 2011', '>= 2011']
+
+class AbstractZoning(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def kind(self: Self) -> ZoneKind:
+        pass
+
+@dataclass
+class ZoningPost2011(AbstractZoning):
+    """
+    These zones are used in sales information prior to 2011.
+    They are the same as the ones introduced in 2006.
+
+    https://legislation.nsw.gov.au/view/pdf/asmade/epi-2006-155
+
+    They were not used by the Register of Land Values until
+    2011. Instead they used more general zones.
+    """
+    zone: str
+
+    @property
+    def kind(self: Self) -> ZoneKind:
+        return '>= 2011'
+
+@dataclass
+class ZoningLegacy(AbstractZoning):
+    """
+    Prior to 2011, single character zone codes were used
+    to classify the zones of properties recorded in the
+    Register of Land Values.
+
+    https://www.nsw.gov.au/sites/default/files/noindex/2024-05/Property_Sales_Data_File_Zone_Codes_and_Descriptions_V2.pdf
+    """
+    zone: str
+
+    @property
+    def kind(self: Self) -> ZoneKind:
+        return '< 2011'
+
+

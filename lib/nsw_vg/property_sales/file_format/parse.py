@@ -25,7 +25,7 @@ class PropertySalesRowParserFactory:
         self.Source = Source
         self.chunk_size = chunk_size
 
-    async def create_parser(self: Self, file_data: PropertySaleDatFileMetaData) -> Optional['PropertySalesParser']:
+    async def create_parser(self: Self, file_data: PropertySaleDatFileMetaData) -> 'PropertySalesParser':
         date = file_data.download_date
         year = file_data.published_year
         path = file_data.file_path

@@ -53,7 +53,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             parent=a_record,
             district=read_int(row, 0, 'district'),
             property_id=row[1],
-            sale_counter=row[2],
+            sale_counter=read_int(row, 2, 'sale_counter'),
             date_downloaded=read_datetime(row, 3, 'date_downloaded'),
             property_name=row[4] or None,
             property_unit_number=row[5] or None,
@@ -66,7 +66,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             contract_date=read_optional_date(row, 12, 'contract_date'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
             purchase_price=read_optional_float(row, 14, 'purchase_price'),
-            zoning=row[15] or None,
+            zoning=self._read_b_zoning(row),
             nature_of_property=row[16] or None,
             primary_purpose=row[17] or None,
             strata_lot_number=row[18] or None,
@@ -104,6 +104,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             total_sale_property_legal_descriptions=read_int(row, 2, 'total_sale_property_legal_descriptions'),
             total_sale_participants=read_int(row, 3, 'total_sale_participants'),
         )
+
+    def _read_b_zoning(self, row) -> Optional[t.AbstractZoning]:
+        return read_zoning(row, 15, 'zoning')
 
 class Legacy2002Format(CurrentFormatFactory):
     @classmethod
@@ -150,6 +153,8 @@ class Legacy2002Format(CurrentFormatFactory):
         else:
             raise TypeError(f'unknown variant {variant}')
 
+    def _read_b_zoning(self, row) -> Optional[t.AbstractZoning]:
+        return read_legacy_zoning(row, 15, 'zoning')
 
 class Legacy1990Format(AbstractFormatFactory):
     def __init__(self: Self, year: int, file_path: str):
@@ -161,9 +166,10 @@ class Legacy1990Format(AbstractFormatFactory):
         return Legacy1990Format(year, file_path)
 
     def create_a(self: Self, row: List[str], variant: Optional[str]):
-        return t.SaleRecordFile1990(
+        return t.SaleRecordFile(
             year=self.year,
             file_path=self.file_path,
+            file_type=None,
             district=read_optional_int(row, 0, 'district'),
             submitting_user_id=row[1],
             date_downloaded=read_datetime(row, 2, 'date_downloaded'),
@@ -186,9 +192,9 @@ class Legacy1990Format(AbstractFormatFactory):
             land_description=row[11],
             area=read_optional_float(row, 12, 'area'),
             area_type=row[13] or None,
-            dimensions=row[14],
-            zoning=row[15] or None,
-            comp_code=row[16] or None,
+            dimensions=read_optional_str(row, 14, 'dimensions'),
+            comp_code=row[15] or None,
+            zoning=read_legacy_zoning(row, 16, 'zoning'),
         )
 
     def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
@@ -250,6 +256,10 @@ def read_float(row: List[str], idx: int, name: str) -> float:
         message = 'Failed to read FLOAT %s @ row[%s] IN %s' % (name, idx, row)
         raise Exception(message) from e
 
+read_legacy_zoning = mk_read_optional(lambda row, idx, _: t.ZoningLegacy(zone=row[idx]))
+read_zoning = mk_read_optional(lambda row, idx, _: t.ZoningPost2011(zone=row[idx]))
+
+read_optional_str = mk_read_optional(lambda row, idx, _: row[idx])
 read_optional_int = mk_read_optional(read_int)
 read_optional_float = mk_read_optional(read_float)
 read_date = mk_read_date(parse_date)
