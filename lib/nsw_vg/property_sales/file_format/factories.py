@@ -57,12 +57,15 @@ class CurrentFormatFactory(AbstractFormatFactory):
             property_id=row[1],
             sale_counter=read_int(row, 2, 'sale_counter'),
             date_downloaded=read_datetime(row, 3, 'date_downloaded'),
-            property_name=row[4] or None,
-            property_unit_number=row[5] or None,
-            property_house_number=row[6] or None,
-            property_street_name=row[7] or None,
-            property_locality=row[8] or None,
-            property_postcode=read_optional_int(row, 9, 'property_postcode'),
+
+            address=t.Address(
+                property_name=row[4] or None,
+                unit_number=row[5] or None,
+                house_number=row[6] or None,
+                street_name=row[7] or None,
+                locality=row[8] or None,
+                postcode=read_optional_int(row, 9, 'property_postcode'),
+            ),
 
             # columns 10 & 11
             area=self.area_parser.from_row(row),
@@ -74,9 +77,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             nature_of_property=row[16] or None,
             primary_purpose=row[17] or None,
             strata_lot_number=row[18] or None,
-            component_code=row[19] or None,
+            comp_code=row[19] or None,
             sale_code=row[20] or None,
-            interest_of_sale=row[21] or None,
+            interest_of_sale=read_optional_int(row, 21, 'interest_of_sale'),
             dealing_number=row[22],
         )
 
@@ -188,11 +191,14 @@ class Legacy1990Format(AbstractFormatFactory):
             source=row[1],
             valuation_num=row[2],
             property_id=row[3],
-            property_unit_number=row[4] or None,
-            property_house_number=row[5] or None,
-            property_street_name=row[6] or None,
-            property_locality=row[7] or None,
-            property_postcode=read_optional_int(row, 8, 'property_postcode'),
+            address=t.Address(
+                property_name=None,
+                unit_number=row[4] or None,
+                house_number=row[5] or None,
+                street_name=row[6] or None,
+                locality=row[7] or None,
+                postcode=read_optional_int(row, 8, 'property_postcode'),
+            ),
             contract_date=read_date_pre_2002(row, 9, 'contract_date'),
             purchase_price=read_float(row, 10, 'purchase_price'),
             land_description=row[11],
@@ -276,9 +282,12 @@ class AreaParser:
             return None
 
         match read_optional_str(row, self.area_type_column, 'area_type'):
-            case None: raise TypeError('Area found without unit')
             case 'M': return t.Area(amount=area, unit='M')
             case 'H': return t.Area(amount=area, unit='H')
+            case 'U': return t.Area(amount=area, unit='U', stardard=False)
+
+            # Unknown area unit
+            case None: return t.Area(amount=area, unit=None, stardard=False)
             case other: raise ValueError(f'Unknown area unit {other}')
 
 read_legacy_zoning = mk_read_optional(lambda row, idx, _: t.ZoningLegacy(zone=row[idx]))

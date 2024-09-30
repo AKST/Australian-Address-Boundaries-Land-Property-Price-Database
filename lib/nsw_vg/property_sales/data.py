@@ -26,12 +26,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     property_id: str
     sale_counter: int
     date_downloaded: datetime = field(repr=False)
-    property_name: Optional[str]
-    property_unit_number: Optional[str]
-    property_house_number: Optional[str]
-    property_street_name: Optional[str]
-    property_locality: Optional[str]
-    property_postcode: Optional[int]
+    address: 'Address'
     area: Optional['Area']
 
     # TODO confirm this is optional
@@ -50,9 +45,9 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 
     # TODO some of these may may be ints.
     strata_lot_number: Optional[str]
-    component_code: Optional[str]
+    comp_code: Optional[str]
     sale_code: Optional[str]
-    interest_of_sale: Optional[str]
+    interest_of_sale: Optional[int]
 
     dealing_number: str
 
@@ -64,11 +59,7 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     source: Optional[str]
     valuation_num: str
     property_id: str
-    property_unit_number: Optional[str]
-    property_house_number: Optional[str]
-    property_street_name: Optional[str]
-    property_locality: Optional[str]
-    property_postcode: Optional[int]
+    address: 'Address'
     contract_date: datetime = field(repr=False)
     purchase_price: float
     land_description: str
@@ -117,8 +108,18 @@ class SaleDataFileSummary(BasePropertySaleFileRow):
 
 @dataclass
 class Area:
-    unit: str
+    unit: Optional[str]
     amount: float
+    stardard: bool = field(default=True)
+
+@dataclass
+class Address:
+    property_name: Optional[str]
+    unit_number: Optional[str]
+    house_number: Optional[str]
+    street_name: Optional[str]
+    locality: Optional[str]
+    postcode: Optional[int]
 
 @dataclass
 class SalePropertyLegacyData:
