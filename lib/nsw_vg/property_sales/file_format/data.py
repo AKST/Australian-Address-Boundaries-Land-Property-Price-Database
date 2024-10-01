@@ -3,6 +3,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Self, Literal
 
+from lib.nsw_vg.discovery import NswVgTarget
+
+@dataclass
+class PropertySaleDatFileMetaData:
+    file_path: str
+    published_year: int
+    download_date: Optional[datetime]
+    size: int
+
 class BasePropertySaleFileRow:
     pass
 
@@ -55,7 +64,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 class SalePropertyDetails1990(BasePropertySaleFileRow):
     parent: SaleRecordFile = field(repr=False)
     common: SalePropertyDetailsCommon
-    submitting_user_id: Optional[str]
+    source: Optional[str]
     valuation_num: Optional[str]
     land_description: Optional[str]
     dimensions: Optional[str]
@@ -72,7 +81,7 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
     property_id: Optional[int]
     sale_counter: int
     date_provided: datetime
-    property_legal_description: str
+    property_description: Optional[str]
 
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):

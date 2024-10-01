@@ -7,8 +7,8 @@ import re
 
 from lib.service.io import IoService
 
+from .data import PropertySaleDatFileMetaData
 from .factories import AbstractFormatFactory
-from .input_data import PropertySaleDatFileMetaData
 from .syntax import get_columns_and_syntax, Syntax
 from .text_source import AbstractTextSource
 

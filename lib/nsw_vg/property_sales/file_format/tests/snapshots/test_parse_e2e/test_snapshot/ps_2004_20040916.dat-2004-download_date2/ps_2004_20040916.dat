@@ -25,7 +25,7 @@
                               property_id=3106156,
                               sale_counter=1,
                               date_provided=datetime.datetime(2004, 9, 16, 9, 55),
-                              property_legal_description='1/1069323'),
+                              property_description='1/1069323'),
  SaleParticipant(district_code=53, property_id=3106156, sale_counter=1, date_provided=datetime.datetime(2004, 9, 16, 9, 55), participant='P'),
  SaleParticipant(district_code=53, property_id=3106156, sale_counter=1, date_provided=datetime.datetime(2004, 9, 16, 9, 55), participant='V'),
  SaleDataFileSummary(total_records=6, total_sale_property_details=1, total_sale_property_legal_descriptions=1, total_sale_participants=2)]

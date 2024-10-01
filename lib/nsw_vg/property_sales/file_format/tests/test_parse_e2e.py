@@ -5,7 +5,7 @@ from datetime import datetime
 from lib.service.io import IoService
 from ..text_source import *
 from ..parse import PropertySalesRowParserFactory
-from ..input_data import PropertySaleDatFileMetaData
+from ..data import PropertySaleDatFileMetaData
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("file_name,published_year,download_date", [

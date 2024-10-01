@@ -11,8 +11,7 @@ from lib.utility.concurrent import pipe, merge_async_iters
 
 from .file_format.parse import PropertySalesRowParserFactory
 from .file_format.text_source import StringTextSource, BufferedFileReaderTextSource
-from .file_format import PropertySaleDatFileMetaData
-from .data import BasePropertySaleFileRow
+from .file_format import PropertySaleDatFileMetaData, BasePropertySaleFileRow
 
 ProducerPair = Tuple[PropertySaleDatFileMetaData, BasePropertySaleFileRow]
 

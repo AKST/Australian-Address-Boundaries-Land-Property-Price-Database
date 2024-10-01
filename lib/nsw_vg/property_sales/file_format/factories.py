@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Self, List, TypeVar, Optional
 
-from lib.nsw_vg.property_sales import data as t
+from lib.nsw_vg.property_sales.file_format import data as t
 
 class AbstractFormatFactory(abc.ABC):
     @classmethod
@@ -91,7 +91,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             property_id=read_optional_int(row, 1, 'property_id'),
             sale_counter=read_int(row, 2, 'sale_counter'),
             date_provided=read_datetime(row, 3, 'date_provided'),
-            property_legal_description=row[4],
+            property_description=row[4] or None,
         )
 
     def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
@@ -101,7 +101,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             property_id=read_optional_int(row, 1, 'property_id'),
             sale_counter=read_int(row, 2, 'sale_counter'),
             date_provided=read_datetime(row, 3, 'date_provided'),
-            participant=row[4],
+            participant=read_str(row, 4, 'participant'),
         )
 
     def create_z(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
@@ -141,7 +141,7 @@ class Legacy2002Format(CurrentFormatFactory):
                 property_id=None,
                 sale_counter=read_int(row, 1, 'sale_counter'),
                 date_provided=read_datetime(row, 2, 'date_provided'),
-                property_legal_description=row[3],
+                property_description=row[3] or None,
             )
         else:
             raise TypeError(f'unknown variant {variant}')
@@ -156,7 +156,7 @@ class Legacy2002Format(CurrentFormatFactory):
                 property_id=None,
                 sale_counter=read_int(row, 1, 'sale_counter'),
                 date_provided=read_datetime(row, 2, 'date_provided'),
-                participant=row[3],
+                participant=read_str(row, 3, 'participant'),
             )
         else:
             raise TypeError(f'unknown variant {variant}')
@@ -208,7 +208,7 @@ class Legacy1990Format(AbstractFormatFactory):
                 comp_code=row[15] or None,
                 zoning=read_legacy_zoning(row, 16, 'zoning'),
             ),
-            submitting_user_id=row[1] or None,
+            source=row[1] or None,
             valuation_num=row[2] or None,
             land_description=row[11] or None,
             dimensions=row[14] or None,

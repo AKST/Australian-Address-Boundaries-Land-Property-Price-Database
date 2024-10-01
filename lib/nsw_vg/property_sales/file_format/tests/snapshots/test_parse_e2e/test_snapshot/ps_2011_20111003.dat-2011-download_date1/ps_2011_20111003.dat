@@ -25,5 +25,5 @@
                               property_id=3601612,
                               sale_counter=1,
                               date_provided=datetime.datetime(2011, 10, 3, 3, 30),
-                              property_legal_description='12, 53/754816 1/881177'),
+                              property_description='12, 53/754816 1/881177'),
  SaleDataFileSummary(total_records=4, total_sale_property_details=1, total_sale_property_legal_descriptions=1, total_sale_participants=0)]

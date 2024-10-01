@@ -25,7 +25,7 @@
                               property_id=4182183,
                               sale_counter=1,
                               date_provided=datetime.datetime(2021, 8, 23, 1, 7),
-                              property_legal_description='2/1248965'),
+                              property_description='2/1248965'),
  SaleParticipant(district_code=52, property_id=4182183, sale_counter=1, date_provided=datetime.datetime(2021, 8, 23, 1, 7), participant='P'),
  SaleParticipant(district_code=52, property_id=4182183, sale_counter=1, date_provided=datetime.datetime(2021, 8, 23, 1, 7), participant='V'),
  SaleDataFileSummary(total_records=6, total_sale_property_details=1, total_sale_property_legal_descriptions=1, total_sale_participants=2)]
