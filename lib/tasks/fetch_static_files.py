@@ -4,12 +4,13 @@ from lib.service.http import AbstractClientSession, ClientSession, CachedClientS
 from lib.service.http import BackoffConfig, RetryPreference
 from lib.service.http.middleware.cache import FileCacher
 
+from lib.abs import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
 from lib.service.io import IoService
 from lib.gnaf.discovery import GnafPublicationDiscovery
 from lib.nsw_vg.defaults import THROTTLE_CONFIG
 from lib.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
 from lib.service.static_environment import StaticEnvironmentInitialiser
-from lib.service.static_environment.defaults import get_static_dirs, get_static_assets
+from lib.service.static_environment.defaults import get_static_dirs
 
 BACKOFF_CONFIG = BackoffConfig(
     RetryPreference(allowed=16, pause_other_requests_while_retrying=True),
@@ -40,8 +41,8 @@ async def initialise(io_service: IoService, session: AbstractClientSession) -> E
     for d in get_static_dirs():
         initialiser.queue_directory(d)
 
-    for a in get_static_assets():
-        initialiser.queue_target(a)
+    initialiser.queue_target(ABS_MAIN_STRUCTURES.static_file_target)
+    initialiser.queue_target(NON_ABS_MAIN_STRUCTURES.static_file_target)
 
     if gnaf_dis.publication:
         initialiser.queue_target(gnaf_dis.publication)

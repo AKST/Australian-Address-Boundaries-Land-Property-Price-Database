@@ -29,6 +29,9 @@ OWSLib==0.31.0
 pandas==2.2.2
 psutil==6.0.0
 psycopg2==2.9.9
+psycopg==3.2.3
+psycopg-binary==3.2.3
+psycopg-pool==3.2.3
 pyarrow==16.1.0
 pyperclip==1.9.0
 pyproj==3.6.1

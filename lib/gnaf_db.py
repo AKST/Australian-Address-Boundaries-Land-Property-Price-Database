@@ -18,14 +18,14 @@ class GnafImage:
         self.image_name = image_name
         self.image_tag = image_tag
         self.dockerfile_path = dockerfile_path
-        
+
     @staticmethod
     def create(client=None, name=None, tag=None, dockerfile=None):
         import docker
-        
+
         return GnafImage(
-            client or docker.from_env(), 
-            name or nc.gnaf_image_name, 
+            client or docker.from_env(),
+            name or nc.gnaf_image_name,
             tag or nc.gnaf_image_tag,
             dockerfile or "./dockerfiles/postgres_2")
 
@@ -55,7 +55,7 @@ class GnafImage:
             return True
         except ImageNotFound:
             return False
-        
+
 
 class GnafContainer:
     def __init__(self, docker, container_name, image, project_name):
@@ -63,14 +63,14 @@ class GnafContainer:
         self.container_name = container_name
         self.image = image
         self.project_name = project_name
-        
+
     @staticmethod
     def create(client=None, container_name=None, image=None, project_name=None):
         import docker
-        
+
         return GnafContainer(
-            client or docker.from_env(), 
-            container_name or nc.gnaf_container, 
+            client or docker.from_env(),
+            container_name or nc.gnaf_container,
             image or GnafImage.create(),
             project_name or nc.gnaf_docker_project_label)
 
@@ -92,7 +92,7 @@ class GnafContainer:
 
     def start(self):
         self._get_container().start()
-        
+
     def stop(self):
         self._get_container().stop()
 
@@ -149,6 +149,6 @@ class GnafDb:
             with self.connect() as conn:
                 cursor = conn.cursor()
                 with open(script, 'r') as sql_file:
-                    print(f"running {script}") 
+                    print(f"running {script}")
                     cursor.execute(sql_file.read())
                 cursor.close()

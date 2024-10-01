@@ -1,5 +1,6 @@
 [tool.mypy]
 overrides = [
+  { module = "pandas", ignore_missing_imports = true },
   { module = "geopandas", ignore_missing_imports = true },
   { module = "docker", ignore_missing_imports = true },
   { module = "docker.errors", ignore_missing_imports = true }
