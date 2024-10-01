@@ -5,7 +5,7 @@ After starting docker, and installing the dependencies, go to the `data-ingestio
 ## Tests
 
 ```
-python -m unittest discover
+./scripts/check_tests.sh
 ```
 
 ## Data used

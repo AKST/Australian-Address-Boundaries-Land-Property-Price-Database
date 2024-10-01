@@ -61,7 +61,6 @@ async def ingest(env: Environment, io: IoService) -> None:
 if __name__ == '__main__':
     import resource
     import logging
-    import cProfile
 
     from .fetch_static_files import get_session, initialise
 
@@ -79,9 +78,5 @@ if __name__ == '__main__':
             environment = await initialise(io_service, session)
         await ingest(environment, io_service)
 
-    # profiler = cProfile.Profile()
-    # profiler.enable()
     asyncio.run(main())
-    # profiler.disable()
-    # profiler.dump_stats("_out_debug/ingest_nswvg_property_sales.prof")
 

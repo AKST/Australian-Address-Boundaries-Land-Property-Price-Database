@@ -2,9 +2,8 @@ from dataclasses import dataclass
 from typing import Dict, Self, Iterator
 
 from lib.service.static_environment.config import Target
+from .constants import ABS_STRUCTURES_SHAPEFILES, NON_ABS_STRUCTURES_SHAPEFILES
 
-ABS_STRUCTURES_SHAPEFILES = 'https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/ASGS_2021_MAIN_STRUCTURE_GPKG_GDA2020.zip'
-NON_ABS_STRUCTURES_SHAPEFILES = 'https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/ASGS_Ed3_Non_ABS_Structures_GDA2020_updated_2024.zip'
 
 @dataclass
 class IngestionConfig:

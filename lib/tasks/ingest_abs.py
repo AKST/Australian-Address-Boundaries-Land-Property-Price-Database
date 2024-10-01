@@ -32,9 +32,8 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
-    gnaf_db = GnafDb.create()
-
     async def main() -> None:
+        gnaf_db = GnafDb.create()
         io_service = IoService.create(file_limit)
         async with get_session(io_service) as session:
             await initialise(io_service, session)

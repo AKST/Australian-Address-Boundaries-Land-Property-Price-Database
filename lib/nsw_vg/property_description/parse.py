@@ -1,4 +1,4 @@
-from typing import List, Union, Any, Tuple
+from typing import List, Union, Any, Tuple, Generator
 import re
 
 from lib.nsw_vg.property_description import types as t
@@ -24,7 +24,7 @@ def parse_land_parcel_ids(desc: str):
             skip -= 1
         return read_from
 
-    def impl():
+    def impl() -> Generator[t.LandParcel, None, str]:
         read_from = 0
         chunk = None
 
