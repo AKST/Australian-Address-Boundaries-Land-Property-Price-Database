@@ -8,26 +8,30 @@ class BasePropertySaleFileRow:
 
 @dataclass
 class SaleRecordFile(BasePropertySaleFileRow):
-    year: int = field(repr=False)
+    year_of_sale: int = field(repr=False)
     file_path: str = field(repr=False)
     file_type: Optional[str]
-    date_downloaded: datetime
+    date_provided: datetime
     submitting_user_id: Optional[str]
-    """
-    Missing in some data published prior to 2002
-    """
-    district: Optional[int]
+    district_code: int
+
+@dataclass
+class SaleRecordFileLegacy(BasePropertySaleFileRow):
+    year_of_sale: int = field(repr=False)
+    file_path: str = field(repr=False)
+    date_provided: datetime
+    submitting_user_id: Optional[str]
 
 @dataclass
 class SalePropertyDetailsCommon:
-    property_id: str
+    property_id: Optional[int]
     # TODO confirm this is optional
     contract_date: Optional[datetime]
     """
     From 2002 onwards always defined.
     """
     purchase_price: Optional[float]
-    district: int
+    district_code: int
     address: 'Address'
     area: Optional['Area']
     zoning: Optional['AbstractZoning']
@@ -38,11 +42,11 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     parent: SaleRecordFile = field(repr=False)
     common: SalePropertyDetailsCommon
     sale_counter: int
-    date_downloaded: datetime
+    date_provided: datetime
     settlement_date: Optional[datetime]
-    nature_of_property: Optional[str]
+    nature_of_property: str
     primary_purpose: Optional[str]
-    strata_lot_number: Optional[str]
+    strata_lot_number: Optional[int]
     sale_code: Optional[str]
     interest_of_sale: Optional[int]
     dealing_number: str
@@ -51,35 +55,35 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 class SalePropertyDetails1990(BasePropertySaleFileRow):
     parent: SaleRecordFile = field(repr=False)
     common: SalePropertyDetailsCommon
-    source: Optional[str]
-    valuation_num: str
-    land_description: str
+    submitting_user_id: Optional[str]
+    valuation_num: Optional[str]
+    land_description: Optional[str]
     dimensions: Optional[str]
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
     parent: SalePropertyDetails = field(repr=False)
 
-    district: int
+    district_code: int
 
     """
     Missing in property sale records from July 2001
     """
     property_id: Optional[int]
-    sale_counter: str
-    date_downloaded: datetime = field(repr=False)
+    sale_counter: int
+    date_provided: datetime
     property_legal_description: str
 
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):
     parent: SalePropertyLegalDescription = field(repr=False)
-    district: int
+    district_code: int
     """
     Missing in property sale records from July 2001
     """
     property_id: Optional[int]
-    sale_counter: str
-    date_downloaded: datetime = field(repr=False)
+    sale_counter: int
+    date_provided: datetime
     participant: str
 
 @dataclass
@@ -109,7 +113,7 @@ class Address:
     locality: Optional[str]
     postcode: Optional[int]
 
-ZoneKind = Literal['< 2011', '>= 2011']
+ZoneKind = Literal['legacy', '2011.08']
 
 class AbstractZoning(abc.ABC):
     @property
@@ -132,7 +136,7 @@ class ZoningPost2011(AbstractZoning):
 
     @property
     def kind(self: Self) -> ZoneKind:
-        return '>= 2011'
+        return '2011.08'
 
 @dataclass
 class ZoningLegacy(AbstractZoning):
@@ -147,6 +151,6 @@ class ZoningLegacy(AbstractZoning):
 
     @property
     def kind(self: Self) -> ZoneKind:
-        return '< 2011'
+        return 'legacy'
 
 

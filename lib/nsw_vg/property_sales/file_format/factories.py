@@ -42,26 +42,26 @@ class CurrentFormatFactory(AbstractFormatFactory):
 
     def create_a(self: Self, row: List[str], variant: Optional[str]):
         return t.SaleRecordFile(
-            year=self.year,
+            year_of_sale=self.year,
             file_path=self.file_path,
             file_type=row[0],
-            district=read_int(row, 1, 'district'),
-            date_downloaded=read_datetime(row, 2, 'date_downloaded'),
-            submitting_user_id=row[3],
+            district_code=read_int(row, 1, 'district_code'),
+            date_provided=read_datetime(row, 2, 'date_provided'),
+            submitting_user_id=read_str(row, 3, 'submitting_user_id'),
         )
 
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails(
             parent=a_record,
             common=t.SalePropertyDetailsCommon(
-                district=read_int(row, 0, 'district'),
-                property_id=row[1],
+                district_code=read_int(row, 0, 'district_code'),
+                property_id=read_optional_int(row, 1, 'property_id'),
                 address=t.Address(
                     property_name=row[4] or None,
                     unit_number=row[5] or None,
                     house_number=row[6] or None,
-                    street_name=row[7] or None,
-                    locality=row[8] or None,
+                    street_name=row[7],
+                    locality=row[8],
                     postcode=read_optional_int(row, 9, 'property_postcode'),
                 ),
 
@@ -74,33 +74,33 @@ class CurrentFormatFactory(AbstractFormatFactory):
             ),
 
             sale_counter=read_int(row, 2, 'sale_counter'),
-            date_downloaded=read_datetime(row, 3, 'date_downloaded'),
+            date_provided=read_datetime(row, 3, 'date_provided'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
-            nature_of_property=row[16] or None,
-            primary_purpose=row[17] or None,
-            strata_lot_number=row[18] or None,
-            sale_code=row[20] or None,
+            nature_of_property=read_str(row, 16, 'nature_of_property'),
+            primary_purpose=row[17],
+            strata_lot_number=read_optional_int(row, 18, 'strata_lot_number'),
+            sale_code=row[20],
             interest_of_sale=read_optional_int(row, 21, 'interest_of_sale'),
-            dealing_number=row[22],
+            dealing_number=read_str(row, 22, 'dealing_number'),
         )
 
     def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
         return t.SalePropertyLegalDescription(
             parent=b_record,
-            district=read_int(row, 0, 'district'),
+            district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
-            sale_counter=row[2],
-            date_downloaded=read_datetime(row, 3, 'date_downloaded'),
+            sale_counter=read_int(row, 2, 'sale_counter'),
+            date_provided=read_datetime(row, 3, 'date_provided'),
             property_legal_description=row[4],
         )
 
     def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
         return t.SaleParticipant(
             parent=c_record,
-            district=read_int(row, 0, 'district'),
+            district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
-            sale_counter=row[2],
-            date_downloaded=read_datetime(row, 3, 'date_downloaded'),
+            sale_counter=read_int(row, 2, 'sale_counter'),
+            date_provided=read_datetime(row, 3, 'date_provided'),
             participant=row[4],
         )
 
@@ -123,11 +123,11 @@ class Legacy2002Format(CurrentFormatFactory):
 
     def create_a(self: Self, row: List[str], variant: Optional[str]):
         return t.SaleRecordFile(
-            year=self.year,
+            year_of_sale=self.year,
             file_path=self.file_path,
             file_type=None,
-            district=read_int(row, 0, 'district'),
-            date_downloaded=read_datetime(row, 1, 'date_downloaded'),
+            district_code=read_int(row, 0, 'district_code'),
+            date_provided=read_datetime(row, 1, 'date_provided'),
             submitting_user_id=row[2],
         )
 
@@ -137,10 +137,10 @@ class Legacy2002Format(CurrentFormatFactory):
         elif variant == 'missing_property_id':
             return t.SalePropertyLegalDescription(
                 parent=b_record,
-                district=read_int(row, 0, 'district'),
+                district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
-                sale_counter=row[1],
-                date_downloaded=read_datetime(row, 2, 'date_downloaded'),
+                sale_counter=read_int(row, 1, 'sale_counter'),
+                date_provided=read_datetime(row, 2, 'date_provided'),
                 property_legal_description=row[3],
             )
         else:
@@ -152,10 +152,10 @@ class Legacy2002Format(CurrentFormatFactory):
         elif variant == 'missing_property_id':
             return t.SaleParticipant(
                 parent=c_record,
-                district=read_int(row, 0, 'district'),
+                district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
-                sale_counter=row[1],
-                date_downloaded=read_datetime(row, 2, 'date_downloaded'),
+                sale_counter=read_int(row, 1, 'sale_counter'),
+                date_provided=read_datetime(row, 2, 'date_provided'),
                 participant=row[3],
             )
         else:
@@ -170,27 +170,28 @@ class Legacy1990Format(AbstractFormatFactory):
         self.file_path = file_path
         self.area_parser = AreaParser(area_column=12, area_type_column=13)
 
-
     @classmethod
     def create(cls, year: int, file_path: str):
         return Legacy1990Format(year, file_path)
 
     def create_a(self: Self, row: List[str], variant: Optional[str]):
-        return t.SaleRecordFile(
-            year=self.year,
+        """
+        Column 0 in the row will always be empty. I guess is this is
+        to maintain some level of consistency with the later formats.
+        """
+        return t.SaleRecordFileLegacy(
+            year_of_sale=self.year,
             file_path=self.file_path,
-            file_type=None,
-            district=read_optional_int(row, 0, 'district'),
             submitting_user_id=row[1],
-            date_downloaded=read_datetime(row, 2, 'date_downloaded'),
+            date_provided=read_datetime(row, 2, 'date_provided'),
         )
 
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails1990(
             parent=a_record,
             common=t.SalePropertyDetailsCommon(
-                district=read_int(row, 0, 'district'),
-                property_id=row[3],
+                district_code=read_int(row, 0, 'district_code'),
+                property_id=read_optional_int(row, 3, 'property_id'),
                 address=t.Address(
                     property_name=None,
                     unit_number=row[4] or None,
@@ -207,10 +208,10 @@ class Legacy1990Format(AbstractFormatFactory):
                 comp_code=row[15] or None,
                 zoning=read_legacy_zoning(row, 16, 'zoning'),
             ),
-            source=row[1],
-            valuation_num=row[2],
-            land_description=row[11],
-            dimensions=read_optional_str(row, 14, 'dimensions'),
+            submitting_user_id=row[1] or None,
+            valuation_num=row[2] or None,
+            land_description=row[11] or None,
+            dimensions=row[14] or None,
         )
 
     def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
@@ -258,6 +259,13 @@ def mk_read_optional(f: Callable[[List[str], int, str], T]) -> Callable[[List[st
             return f(row, idx, name)
     return impl
 
+def read_str(row: List[str], idx: int, name: str) -> str:
+    if not row[idx]:
+        message = 'Failed to read STR %s @ row[%s] IN %s' % (name, idx, row)
+        raise Exception(message)
+    return row[idx]
+
+
 def read_int(row: List[str], idx: int, name: str) -> int:
     try:
         return int(row[idx])
@@ -283,19 +291,18 @@ class AreaParser:
         if area is None:
             return None
 
-        match read_optional_str(row, self.area_type_column, 'area_type'):
+        match row[self.area_type_column]:
             case 'M': return t.Area(amount=area, unit='M')
             case 'H': return t.Area(amount=area, unit='H')
             case 'U': return t.Area(amount=area, unit='U', stardard=False)
 
             # Unknown area unit
-            case None: return t.Area(amount=area, unit=None, stardard=False)
+            case '': return t.Area(amount=area, unit=None, stardard=False)
             case other: raise ValueError(f'Unknown area unit {other}')
 
 read_legacy_zoning = mk_read_optional(lambda row, idx, _: t.ZoningLegacy(zone=row[idx]))
 read_zoning = mk_read_optional(lambda row, idx, _: t.ZoningPost2011(zone=row[idx]))
 
-read_optional_str = mk_read_optional(lambda row, idx, _: row[idx])
 read_optional_int = mk_read_optional(read_int)
 read_optional_float = mk_read_optional(read_float)
 read_date = mk_read_date(parse_date)
