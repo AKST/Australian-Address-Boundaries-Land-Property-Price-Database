@@ -1,6 +1,7 @@
 import time
-import psycopg2
+import psycopg
 import subprocess
+from typing import Self
 
 from docker.errors import NotFound, ImageNotFound
 from lib import notebook_constants as nc
@@ -13,7 +14,7 @@ def pg_url(conf, dbname):
     return f"postgresql+psycopg2://{conf['user']}:{conf['password']}@{conf['host']}:{conf['port']}/{dbname}"
 
 class GnafImage:
-    def __init__(self, docker, image_name, image_tag, dockerfile_path):
+    def __init__(self: Self, docker, image_name, image_tag, dockerfile_path):
         self.docker = docker
         self.image_name = image_name
         self.image_tag = image_tag
@@ -29,27 +30,27 @@ class GnafImage:
             tag or nc.gnaf_image_tag,
             dockerfile or "./dockerfiles/postgres_2")
 
-    def build_container(self, **kwargs):
+    def build_container(self: Self, **kwargs):
         self.docker.containers.run(
             image=f"{self.image_name}:{self.image_tag}",
             **kwargs,
         )
 
-    def prepare(self):
+    def prepare(self: Self):
         if not self._image_built():
             self.docker.images.build(
                 path=self.dockerfile_path,
                 tag=f"{self.image_name}:{self.image_tag}"
             )
 
-    def nuke(self):
+    def nuke(self: Self):
         f = {"ancestor": self.image_name}
         for container in self.docker.containers.list(all=True, filters=f):
             container.stop()
             container.remove()
-        self.docker.images.remove(image=f"{image_name}:{image_tag}", force=True)
+        self.docker.images.remove(image=f"{self.image_name}:{self.image_tag}", force=True)
 
-    def _image_built(self):
+    def _image_built(self: Self):
         try:
             self.docker.images.get(f"{self.image_name}:{self.image_tag}")
             return True
@@ -58,7 +59,7 @@ class GnafImage:
 
 
 class GnafContainer:
-    def __init__(self, docker, container_name, image, project_name):
+    def __init__(self: Self, docker, container_name, image, project_name):
         self.docker = docker
         self.container_name = container_name
         self.image = image
@@ -74,7 +75,7 @@ class GnafContainer:
             image or GnafImage.create(),
             project_name or nc.gnaf_docker_project_label)
 
-    def prepare(self, conf, dbname):
+    def prepare(self: Self, conf, dbname):
         try:
             self._get_container()
         except NotFound:
@@ -90,13 +91,13 @@ class GnafContainer:
                 detach=True,
             )
 
-    def start(self):
+    def start(self: Self):
         self._get_container().start()
 
-    def stop(self):
+    def stop(self: Self):
         self._get_container().stop()
 
-    def clean(self):
+    def clean(self: Self):
         try:
             container = self._get_container()
             container.stop()
@@ -109,11 +110,11 @@ class GnafContainer:
             container.stop()
             container.remove()
 
-    def _get_container(self):
+    def _get_container(self: Self):
         return self.docker.containers.get(self.container_name)
 
 class GnafDb:
-    def __init__(self, conf, dbname):
+    def __init__(self: Self, conf, dbname):
         self.conf = conf
         self.dbname = dbname
 
@@ -122,25 +123,28 @@ class GnafDb:
         from lib import notebook_constants as nc
         return GnafDb(conf or nc.gnaf_dbconf, dbname or nc.gnaf_dbname)
 
-    def engine(self):
+    def engine(self: Self):
         return create_engine(pg_url(self.conf, self.dbname))
 
-    def connect(self):
-        return psycopg2.connect(database=self.dbname, **self.conf)
+    def connect(self: Self) -> psycopg.Connection:
+        return psycopg.connect(dbname=self.dbname, **self.conf)
 
-    def wait_till_running(self, interval=5, timeout=60):
+    async def async_connect(self: Self) -> psycopg.AsyncConnection:
+        return await psycopg.AsyncConnection.connect(dbname=self.dbname, **self.conf)
+
+    def wait_till_running(self: Self, interval=5, timeout=60):
         start_time = time.time()
         while True:
             try:
-                conn = psycopg2.connect(dbname='postgres', **self.conf)
+                conn = psycopg.connect(dbname='postgres', **self.conf)
                 conn.close()
                 break
-            except psycopg2.OperationalError as e:
+            except psycopg.OperationalError as e:
                 if time.time() - start_time > timeout:
                     raise e
                 time.sleep(interval)
 
-    def init_schema(self, gnaf_target):
+    def init_schema(self: Self, gnaf_target):
         for script in [
             gnaf_target.create_tables_sql,
             gnaf_target.fk_constraints_sql,

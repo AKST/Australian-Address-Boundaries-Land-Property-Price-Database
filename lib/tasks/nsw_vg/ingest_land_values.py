@@ -8,7 +8,6 @@ from lib.nsw_vg.land_values.ingest import parse_property_description
 from lib.nsw_vg.land_values.ingest import empty_raw_entries
 from lib.nsw_vg.discovery import NswVgTarget
 
-from lib.service.io import IoService
 
 _ZIPDIR = './_out_zip'
 
@@ -52,8 +51,9 @@ if __name__ == '__main__':
     import resource
 
     from lib import notebook_constants as nc
+    from lib.service.io import IoService
 
-    from .fetch_static_files import get_session, initialise
+    from lib.tasks.fetch_static_files import get_session, initialise
 
     parser = argparse.ArgumentParser(description="Ingest NSW Land values")
     parser.add_argument("--keep-raw", type=bool, default=False)

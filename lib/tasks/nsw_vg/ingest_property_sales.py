@@ -42,7 +42,7 @@ class State:
                   f'{repr(row)}'
         self._logger.info(message)
 
-async def ingest(env: Environment, io: IoService) -> None:
+async def ingest_property_sales(env: Environment, io: IoService) -> None:
     logger = getLogger(f'{__name__}.ingest')
 
     producer = PropertySaleProducer.create(ZIP_DIR, io)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     import resource
     import logging
 
-    from .fetch_static_files import get_session, initialise
+    from lib.tasks.fetch_static_files import get_session, initialise
 
     logging.basicConfig(
         level=logging.INFO,
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         io_service = IoService.create(file_limit)
         async with get_session(io_service) as session:
             environment = await initialise(io_service, session)
-        await ingest(environment, io_service)
+        await ingest_property_sales(environment, io_service)
 
     asyncio.run(main())
 
