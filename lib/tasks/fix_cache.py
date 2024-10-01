@@ -5,7 +5,17 @@ from lib.service.io import IoService
 _CACHE_STATE = './_out_state/http-cache.json'
 _CACHE_DIR = '_out_cache'
 
-async def clean_cache(io: IoService) -> None:
+async def fix_cache(io: IoService) -> None:
+    """
+    For a number reasons it's possible for the cache to
+    become kind of broken. Such reasons include:
+
+    1. Running multiple tasks at a time that are writing
+       and reading to the cache, and either of them
+       recording a new asset (resulting it being orphaned).
+
+    2. The logic for cache could be buggy in some cases.
+    """
     state = json.loads(await io.f_read(_CACHE_STATE))
 
     remove_from_state: List[Tuple[str, str]] = []
@@ -50,5 +60,5 @@ if __name__ == '__main__':
     file_limit = int(file_limit * 0.8)
 
     io = IoService.create(file_limit)
-    asyncio.run(clean_cache(io))
+    asyncio.run(fix_cache(io))
 

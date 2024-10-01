@@ -2,9 +2,18 @@ from lib.abs.config import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
 from lib.abs.ingest import ingest_sync
 from lib.gnaf_db import GnafDb
 
+_OUTDIR = './_out_zip'
+
 async def ingest(gnaf_db: GnafDb) -> None:
-    ingest_sync(gnaf_db, ABS_MAIN_STRUCTURES)
-    ingest_sync(gnaf_db, NON_ABS_MAIN_STRUCTURES)
+    """
+    Note while the body of this isn't async (yet), I made the
+    function async as a matter of establishing a stable
+    interface in which I can add async functionality without
+    having to chase up where it's being called (mostly the
+    note books).
+    """
+    ingest_sync(gnaf_db, ABS_MAIN_STRUCTURES, _OUTDIR)
+    ingest_sync(gnaf_db, NON_ABS_MAIN_STRUCTURES, _OUTDIR)
 
 if __name__ == '__main__':
     import asyncio

@@ -5,7 +5,9 @@ from lib.gnaf_db import GnafDb
 
 from .config import IngestionConfig
 
-def ingest_sync(gnaf_db: GnafDb, config: IngestionConfig) -> None:
+def ingest_sync(gnaf_db: GnafDb,
+                config: IngestionConfig,
+                outdir: str) -> None:
     with gnaf_db.connect() as conn:
         cursor = conn.cursor()
 
@@ -32,7 +34,7 @@ def ingest_sync(gnaf_db: GnafDb, config: IngestionConfig) -> None:
     for layer_name, table_name in config.layer_to_table.items():
         column_renames = config.database_column_names_for_dataframe_columns[layer_name]
 
-        df = gpd.read_file(f'_out_zip/{config.gpkg_export_path}', layer=layer_name)
+        df = gpd.read_file(f'{outdir}/{config.gpkg_export_path}', layer=layer_name)
         df = df.rename(columns=column_renames)
         df = df[list(column_renames.values())]
 
