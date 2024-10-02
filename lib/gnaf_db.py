@@ -8,6 +8,7 @@ from lib import notebook_constants as nc
 from sqlalchemy import create_engine
 
 from lib.gnaf.discovery import GnafPublicationTarget
+from lib.service.database import DatabaseConfig
 
 
 def pg_url(conf, dbname):
@@ -75,7 +76,7 @@ class GnafContainer:
             image or GnafImage.create(),
             project_name or nc.gnaf_docker_project_label)
 
-    def prepare(self: Self, conf, dbname):
+    def prepare(self: Self, config: DatabaseConfig):
         try:
             self._get_container()
         except NotFound:
@@ -83,11 +84,11 @@ class GnafContainer:
                 name=self.container_name,
                 labels={"project": self.project_name},
                 environment={
-                    'POSTGRES_DB': dbname,
-                    'POSTGRES_USER': conf['user'],
-                    'POSTGRES_PASSWORD': conf['password'],
+                    'POSTGRES_DB': config.dbname,
+                    'POSTGRES_USER': config.user,
+                    'POSTGRES_PASSWORD': config.password,
                 },
-                ports={'5432/tcp': conf['port']},
+                ports={'5432/tcp': config.port},
                 detach=True,
             )
 
@@ -112,47 +113,3 @@ class GnafContainer:
 
     def _get_container(self: Self):
         return self.docker.containers.get(self.container_name)
-
-class GnafDb:
-    def __init__(self: Self, conf, dbname):
-        self.conf = conf
-        self.dbname = dbname
-
-    @staticmethod
-    def create(conf=None, dbname=None):
-        from lib import notebook_constants as nc
-        return GnafDb(conf or nc.gnaf_dbconf, dbname or nc.gnaf_dbname)
-
-    def engine(self: Self):
-        return create_engine(pg_url(self.conf, self.dbname))
-
-    def connect(self: Self) -> psycopg.Connection:
-        return psycopg.connect(dbname=self.dbname, **self.conf)
-
-    async def async_connect(self: Self) -> psycopg.AsyncConnection:
-        return await psycopg.AsyncConnection.connect(dbname=self.dbname, **self.conf)
-
-    def wait_till_running(self: Self, interval=5, timeout=60):
-        start_time = time.time()
-        while True:
-            try:
-                conn = psycopg.connect(dbname='postgres', **self.conf)
-                conn.close()
-                break
-            except psycopg.OperationalError as e:
-                if time.time() - start_time > timeout:
-                    raise e
-                time.sleep(interval)
-
-    def init_schema(self: Self, gnaf_target):
-        for script in [
-            gnaf_target.create_tables_sql,
-            gnaf_target.fk_constraints_sql,
-            *nc.gnaf_all_scripts,
-        ]:
-            with self.connect() as conn:
-                cursor = conn.cursor()
-                with open(script, 'r') as sql_file:
-                    print(f"running {script}")
-                    cursor.execute(sql_file.read())
-                cursor.close()

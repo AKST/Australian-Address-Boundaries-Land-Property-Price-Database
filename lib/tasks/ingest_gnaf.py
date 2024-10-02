@@ -1,27 +1,25 @@
-import asyncio
-from lib.abs.config import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
-from lib.abs.ingest import ingest
-
+from lib.gnaf.ingestion import ingest
+from lib.gnaf.discovery import GnafPublicationTarget
 from lib.service.database import DatabaseService
 
-_OUTDIR = './_out_zip'
-
-async def ingest_all(db: DatabaseService) -> None:
+async def ingest_gnaf(target: GnafPublicationTarget, db: DatabaseService) -> None:
     """
-    TODO make concurrent. Before I can do that I need to
-    handle the schema initialisation more gracefully.
+    Note while the body of this isn't async (yet), I made the
+    function async as a matter of establishing a stable
+    interface in which I can add async functionality without
+    having to chase up where it's being called (mostly the
+    note books).
     """
-    await ingest(db, ABS_MAIN_STRUCTURES, _OUTDIR)
-    await ingest(db, NON_ABS_MAIN_STRUCTURES, _OUTDIR)
+    ingest(target, db)
 
 if __name__ == '__main__':
+    import asyncio
     import argparse
     import logging
     import resource
 
     from lib.service.io import IoService
     from lib.service.database.defaults import instance_1_config, instance_2_config
-
     from .fetch_static_files import get_session, initialise
 
     parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
@@ -48,8 +46,11 @@ if __name__ == '__main__':
         db = DatabaseService(db_conf)
         io = IoService.create(file_limit)
         async with get_session(io) as session:
-            await initialise(io, session)
-        await ingest_all(db)
+            env = await initialise(io, session)
+
+        if env.gnaf.publication is None:
+            raise ValueError('no gnaf publication')
+
+        await ingest_gnaf(env.gnaf.publication, db)
 
     asyncio.run(main())
-

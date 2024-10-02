@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import logging
 from typing import List
 
-from lib.gnaf_db import GnafDb
+from lib.service.database import DatabaseService
 from lib.service.io import IoService
 
 _logger = logging.getLogger(f'{__name__}.initialise_db_schema')
@@ -18,14 +18,14 @@ packages_allowed = [
 ]
 
 @dataclass
-class InitialiseDbSchemaConfig:
-    packages: List[str]
+class UpdateSchemaConfig:
+    packages: List[str] = field(default_factory=lambda: packages_allowed)
     apply: bool = field(default=True)
     revert: bool = field(default=False)
 
-async def initialise_db_schema(
-    config: InitialiseDbSchemaConfig,
-    gnaf_db: GnafDb,
+async def update_schema(
+    config: UpdateSchemaConfig,
+    db: DatabaseService,
     io: IoService,
 ) -> None:
     _logger.info('initalising nsw_vg db schema')
@@ -56,10 +56,7 @@ async def initialise_db_schema(
             _logger.error(f"failed to run {file}")
             raise e
 
-    async with (
-        await gnaf_db.async_connect() as conn,
-        conn.cursor() as cursor
-    ):
+    async with await db.async_connect() as c, c.cursor() as cursor:
         for file in revert_files:
             await run_sql(file, cursor)
 
@@ -72,10 +69,10 @@ if __name__ == '__main__':
     import argparse
     import resource
 
-    from lib import notebook_constants as nc
+    from lib.service.database.defaults import instance_1_config, instance_2_config
 
     parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
-    parser.add_argument("--instance", type=int, default=1)
+    parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--packages", nargs='*', default=[])
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--enable-revert", action='store_true', default=False)
@@ -89,9 +86,9 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     if args.instance == 1:
-        db_conf, db_name = nc.gnaf_dbconf, nc.gnaf_dbname
+        db_conf = instance_1_config
     elif args.instance == 2:
-        db_conf, db_name = nc.gnaf_dbconf_2, nc.gnaf_dbname_2
+        db_conf = instance_2_config
     else:
         raise ValueError('invalid instance')
 
@@ -103,7 +100,7 @@ if __name__ == '__main__':
     else:
         packages = packages_allowed
 
-    config = InitialiseDbSchemaConfig(
+    config = UpdateSchemaConfig(
         packages=packages,
         apply=not args.disable_apply,
         revert=args.enable_revert,
@@ -112,14 +109,13 @@ if __name__ == '__main__':
     main_logger = logging.getLogger(f'{__name__}::init')
     main_logger.debug(f'operating on instance #{args.instance}')
     main_logger.debug(f'db config {db_conf}')
-    main_logger.debug(f'db name {db_name}')
     main_logger.debug(f'file limit {file_limit}')
     main_logger.debug(f'config {config}')
 
     async def main() -> None:
-        gnaf_db = GnafDb.create(db_conf, db_name)
-        io_service = IoService.create(file_limit)
-        await initialise_db_schema(config, gnaf_db, io_service)
+        db = DatabaseService(db_conf)
+        io = IoService.create(file_limit)
+        await update_schema(config, db, io)
 
     asyncio.run(main())
 

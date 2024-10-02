@@ -1,12 +1,13 @@
 import csv
-import glob
-import os
-import concurrent.futures
-
 from collections import defaultdict, deque
-from datetime import datetime
-from typing import List, Dict, Set, Any
+import concurrent.futures
+import glob
+import logging
+import os
 from threading import Lock
+from typing import List, Dict, Set, Any
+
+from lib.service.database import DatabaseService
 
 from .discovery import GnafPublicationTarget
 from .scheduler import GnafDataIngestionScheduler
@@ -15,7 +16,9 @@ _schema = 'gnaf'
 _WORKER_COUNT: int = os.cpu_count() or 1
 _BATCH_SIZE: float = 64000 / _WORKER_COUNT # idk what I'm doing here tbh.
 
-def ingest(target: GnafPublicationTarget, db: Any):
+_logger = logging.getLogger(__name__)
+
+def ingest(target: GnafPublicationTarget, db: DatabaseService):
     scheduler = GnafDataIngestionScheduler.create(target)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=_WORKER_COUNT) as executor:
@@ -23,16 +26,13 @@ def ingest(target: GnafPublicationTarget, db: Any):
         for future in concurrent.futures.as_completed(futures):
             future.result()
 
-def worker(schedule: GnafDataIngestionScheduler, db):
+def worker(schedule: GnafDataIngestionScheduler, db: DatabaseService):
     for file in schedule.iter():
         table_name = _get_table_name(file)
 
-        with db.connect() as conn:
-            cursor = conn.cursor()
-
+        with db.connect() as conn, conn.cursor() as cursor:
             with open(file, 'r') as f:
-                time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"{time} Populating from {os.path.basename(file)}")
+                _logger.info(f"Populating from {os.path.basename(file)}")
                 reader = csv.reader(f, delimiter='|')
                 headers = next(reader)
                 insert_query = f"""

@@ -1,19 +1,19 @@
 import geopandas as gpd
+import logging
 import pandas as pd
 
-from lib.gnaf_db import GnafDb
+from lib.service.database import DatabaseService
 
 from .config import IngestionConfig
 
-def ingest_sync(gnaf_db: GnafDb,
-                config: IngestionConfig,
-                outdir: str) -> None:
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
+_logger = logging.getLogger(__name__)
 
+async def ingest(db: DatabaseService, config: IngestionConfig, outdir: str) -> None:
+
+    async with await db.async_connect() as c, c.cursor() as cursor:
         # this really won't do anything unless you need to rerun this portion of the script
         for table in config.tables():
-            cursor.execute(f"""
+            await cursor.execute(f"""
             DO $$ BEGIN
               IF EXISTS (
                 SELECT 1 FROM information_schema.tables
@@ -25,11 +25,9 @@ def ingest_sync(gnaf_db: GnafDb,
             """)
 
         with open(config.create_table_script, 'r') as f:
-            cursor.execute(f.read())
+            await cursor.execute(f.read())
 
-        cursor.close()
-
-    engine = gnaf_db.engine()
+    engine = db.engine()
 
     for layer_name, table_name in config.layer_to_table.items():
         column_renames = config.database_column_names_for_dataframe_columns[layer_name]
@@ -49,4 +47,5 @@ def ingest_sync(gnaf_db: GnafDb,
 
         with engine.connect() as connection:
             result = pd.read_sql(f"SELECT COUNT(*) FROM {config.schema}.{table_name}", connection)
-            print(f"Populated {config.schema}.{table_name} with {result.iloc[0, 0]}/{len(df)} rows.")
+            _logger.info(f"Populated {config.schema}.{table_name} with {result.iloc[0, 0]}/{len(df)} rows.")
+

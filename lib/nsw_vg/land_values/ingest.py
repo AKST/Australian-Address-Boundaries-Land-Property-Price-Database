@@ -1,3 +1,4 @@
+import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from logging import getLogger
@@ -6,7 +7,7 @@ import pandas as pd
 import os
 from typing import Self, List
 
-from lib.gnaf_db import GnafDb
+from lib.service.database import DatabaseService
 from lib.nsw_vg.discovery import NswVgTarget
 from lib.nsw_vg.property_description import parse_land_parcel_ids
 from lib.nsw_vg.property_description.types import LandParcel
@@ -16,7 +17,7 @@ from .constants import *
 _SCHEMA = 'nsw_valuer_general'
 
 class _Ctrl:
-    def __init__(self, db: GnafDb, logger_name: str) -> None:
+    def __init__(self, db: DatabaseService, logger_name: str) -> None:
         self.db = db
         self._logger = getLogger(f'{__name__}.{logger_name}')
 
@@ -34,7 +35,7 @@ class _Ctrl:
         count = self.get_count(table_name)
         self._logger.info(f'{table_name} {count}')
 
-def ingest_raw_files(gnaf_db: GnafDb,
+async def ingest_raw_files(db: DatabaseService,
                      target: NswVgTarget,
                      read_dir: str) -> None:
     """
@@ -42,18 +43,17 @@ def ingest_raw_files(gnaf_db: GnafDb,
     land value publication with minimal changes, and a bit
     of sanitisizing.
     """
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"DROP TABLE IF EXISTS {_SCHEMA}.raw_entries_lv CASCADE")
+    async with await db.async_connect() as c, c.cursor() as cursor:
+        await cursor.execute(f"DROP TABLE IF EXISTS {_SCHEMA}.raw_entries_lv CASCADE")
         with open('sql/nsw_lv_schema_1_raw.sql', 'r') as f:
-            cursor.execute(f.read())
-        cursor.close()
+            await cursor.execute(f.read())
 
     column_mappings = {
         **LV_LONG_COLUMN_MAPPINGS,
         **LV_WIDE_COLUMNS_MAPPINGS,
     }
 
+    # TODO convert to use ASYNCIO
     def process_file(file: str, ctrl: _Ctrl) -> None:
         if not file.endswith("csv"):
             return
@@ -75,20 +75,20 @@ def ingest_raw_files(gnaf_db: GnafDb,
         df['postcode'] = [(n if math.isnan(n) else str(int(n))) for n in df['postcode']]
 
         try:
-            df.to_sql('raw_entries_lv', gnaf_db.engine(), schema='nsw_valuer_general', if_exists='append', index=False)
+            df.to_sql('raw_entries_lv', db.engine(), schema='nsw_valuer_general', if_exists='append', index=False)
         finally:
             count = ctrl.get_count('raw_entries_lv')
             ctrl.debug(f'raw_entries_lv (total {count}) read {full_file_path}')
 
     files = sorted(os.listdir(f"_out_zip/{target.zip_dst}"))
-    ctrl = _Ctrl(gnaf_db, 'ingest_raw_files')
+    ctrl = _Ctrl(db, 'ingest_raw_files')
 
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         futures = [executor.submit(process_file, file, ctrl) for file in files]
         for future in as_completed(futures):
             future.result()
 
-def create_vg_tables_from_raw(gnaf_db: GnafDb) -> None:
+async def create_vg_tables_from_raw(db: DatabaseService) -> None:
     """
     Just to break up the data into more efficent
     representations of the data, and data that will be
@@ -97,26 +97,23 @@ def create_vg_tables_from_raw(gnaf_db: GnafDb) -> None:
     populate the tables we care about.
     """
 
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source_file CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.district CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.suburb CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.street CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.property CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.property_description CASCADE")
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.valuations CASCADE")
+    async with await db.async_connect() as c, c.cursor() as cursor:
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source_file CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.district CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.suburb CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.street CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.property CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.property_description CASCADE")
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.valuations CASCADE")
 
         with open('sql/nsw_lv_schema_2_structure.sql', 'r') as f:
-            cursor.execute(f.read())
+            await cursor.execute(f.read())
 
         with open('sql/nsw_lv_from_raw.sql', 'r') as f:
-            cursor.execute(f.read())
+            await cursor.execute(f.read())
 
-        cursor.close()
-
-    ctrl = _Ctrl(gnaf_db, 'create_vg_tables_from_raw')
+    ctrl = _Ctrl(db, 'create_vg_tables_from_raw')
     ctrl.log_count('district')
     ctrl.log_count('suburb')
     ctrl.log_count('street')
@@ -124,20 +121,17 @@ def create_vg_tables_from_raw(gnaf_db: GnafDb) -> None:
     ctrl.log_count('property_description')
     ctrl.log_count('valuations')
 
-def parse_property_description(gnaf_db: GnafDb) -> None:
-    engine = gnaf_db.engine()
-
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.land_parcel_link")
+async def parse_property_description(db: DatabaseService) -> None:
+    async with await db.async_connect() as c, c.cursor() as cursor:
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.land_parcel_link")
         with open('sql/nsw_lv_schema_3_property_description_meta_data.sql', 'r') as f:
-            cursor.execute(f.read())
-        cursor.close()
+            await cursor.execute(f.read())
 
     def land_parcels(desc: str) -> List[LandParcel]:
         desc, parcels = parse_land_parcel_ids(desc)
         return parcels
 
+    engine = db.engine()
     query = "SELECT * FROM nsw_valuer_general.property_description"
     for df_chunk in pd.read_sql(query, engine, chunksize=10000):
         df_chunk = df_chunk.dropna(subset=['property_description'])
@@ -155,16 +149,11 @@ def parse_property_description(gnaf_db: GnafDb) -> None:
             index=False,
         )
 
-    ctrl = _Ctrl(gnaf_db, 'parse_property_description')
+    ctrl = _Ctrl(db, 'parse_property_description')
 
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
-        for t in ['property', 'land_parcel_link']:
-            ctrl.log_count(t)
-        cursor.close()
+    for t in ['property', 'land_parcel_link']:
+        ctrl.log_count(t)
 
-def empty_raw_entries(gnaf_db: GnafDb) -> None:
-    with gnaf_db.connect() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.raw_entries_lv")
-        cursor.close()
+async def empty_raw_entries(db: DatabaseService) -> None:
+    async with await db.async_connect() as c, c.cursor() as cursor:
+        await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.raw_entries_lv")

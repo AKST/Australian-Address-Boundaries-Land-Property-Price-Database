@@ -16,7 +16,3 @@ gnaf_dbconf_2 = { **gnaf_dbconf, 'password': 'throw away password 2', 'port': 54
 gnaf_db_url_2 = \
     "postgresql+psycopg2://" \
     f"{gnaf_dbconf_2['user']}:{gnaf_dbconf_2['password']}@{gnaf_dbconf_2['host']}:{gnaf_dbconf_2['port']}/{gnaf_dbname_2}"
-
-gnaf_all_scripts = ['sql/move_gnaf_to_schema.sql']
-
-nsw_adminstrative_boundaries = 'https://data.gov.au/data/dataset/8047ddd1-7193-4667-aef9-b75bc3076075/resource/fc587b12-c699-45a2-aa62-22a5c0e82ef3/download/gda2020.zip'

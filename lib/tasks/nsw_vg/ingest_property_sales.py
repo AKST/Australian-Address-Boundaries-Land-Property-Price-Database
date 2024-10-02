@@ -13,52 +13,29 @@ from lib.service.io import IoService
 from lib.tasks.fetch_static_files import Environment
 
 ZIP_DIR = './_out_zip'
-LIMIT = 256 * 4
 
-class State:
-    _logger = getLogger(f'{__name__}.State')
-    _start: float
-    records = 0
-
-    def __init__(self):
-        self._start = time()
-
-    def elapsed(self):
-        t = int(time() - self._start)
-        th, tm, ts = t // 3600, t // 60 % 60, t % 60
-        return f'{th}h {tm}m {ts}s'
-
-    def acknowledge_summary(self, row: SaleDataFileSummary, task: PropertySaleDatFileMetaData):
-        self.records += row.total_records
-        message = f'Parsed {row.total_records} ' \
-                  f'(total {self.records}) ({self.elapsed()}) ' \
-                  f'(published: {task.published_year} downloaded: {task.download_date})'
-        self._logger.info(message)
-
-    def acknowledge(self, row: BasePropertySaleFileRow):
-        self.records += 1
-        message = f'Parsed total {self.records} ' \
-                  f'({self.elapsed()}) ' \
-                  f'{repr(row)}'
-        self._logger.info(message)
-
-async def ingest_property_sales(env: Environment, io: IoService) -> None:
+async def count_property_sales_rows(e: Environment, io: IoService) -> None:
     logger = getLogger(f'{__name__}.ingest')
-
     producer = PropertySaleProducer.create(ZIP_DIR, io)
+    start = time()
+    total = 0
 
     try:
-        task, item = None, None
-        state = State()
-        all_links = [*env.sale_price_annual.links, *env.sale_price_weekly.links]
-
+        all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
         async for task, item in producer.get_rows(all_links):
             if isinstance(item, SaleDataFileSummary):
-                state.acknowledge_summary(item, task)
+                total, t = total + item.total_records, int(time() - start)
+                th, tm, ts = t // 3600, t // 60 % 60, t % 60
+                logger.info(f'Parsed {item.total_records} ' \
+                            f'(total {total}) ' \
+                            f'({th}h {tm}m {ts}s) ' \
+                            f'(published: {task.published_year} ' \
+                            f'downloaded: {task.download_date})')
     except Exception as e:
         raise e
 
 if __name__ == '__main__':
+    import argparse
     import resource
     import logging
 
@@ -73,10 +50,10 @@ if __name__ == '__main__':
     file_limit = int(file_limit * 0.8)
 
     async def main() -> None:
-        io_service = IoService.create(file_limit)
-        async with get_session(io_service) as session:
-            environment = await initialise(io_service, session)
-        await ingest_property_sales(environment, io_service)
+        io = IoService.create(file_limit)
+        async with get_session(io) as session:
+            environment = await initialise(io, session)
+        await count_property_sales_rows(environment, io)
 
     asyncio.run(main())
 
