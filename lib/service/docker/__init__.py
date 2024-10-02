@@ -7,6 +7,9 @@ from lib.service.database import DatabaseConfig
 from .config import ImageConfig, ContainerConfig
 
 class DockerService:
+    """
+    To be honest... This is more of a factory.
+    """
     docker: Any
 
     def __init__(self: Self, docker: Any) -> None:

@@ -6,8 +6,8 @@ import math
 from random import shuffle
 from typing import Any, AsyncIterator, List, Tuple
 
-from lib.gis.predicate import PredicateParam
-from lib.gis.request import GisSchema, GisProjection
+from lib.pipeline.gis.predicate import PredicateParam
+from lib.pipeline.gis.request import GisSchema, GisProjection
 from lib.service.http import AbstractClientSession, CacheHeader
 from lib.service.http.util import url_with_params
 from lib.utility.concurrent import pipe, merge_async_iters

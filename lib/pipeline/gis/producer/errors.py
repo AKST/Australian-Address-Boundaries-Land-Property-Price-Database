@@ -1,6 +1,6 @@
-from lib.gis.request import GisProjection
 from typing import Any
 
+from lib.pipeline.gis.request import GisProjection
 
 class GisReaderError(Exception):
     offset: Any

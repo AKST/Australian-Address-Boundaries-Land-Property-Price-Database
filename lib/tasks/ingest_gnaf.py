@@ -1,5 +1,5 @@
-from lib.gnaf.ingestion import ingest
-from lib.gnaf.discovery import GnafPublicationTarget
+from lib.pipeline.gnaf.ingestion import ingest
+from lib.pipeline.gnaf.discovery import GnafPublicationTarget
 from lib.service.database import DatabaseService
 
 async def ingest_gnaf(target: GnafPublicationTarget, db: DatabaseService) -> None:

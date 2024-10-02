@@ -5,7 +5,7 @@ from logging import getLogger
 import re
 from typing import Any, AsyncIterator, List, Optional, Self, Tuple
 
-from lib.nsw_vg.discovery import NswVgTarget
+from lib.pipeline.nsw_vg.discovery import NswVgTarget
 from lib.service.io import IoService
 from lib.utility.concurrent import pipe, merge_async_iters
 

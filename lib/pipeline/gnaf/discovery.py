@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Optional, Self
 import os
 
+from lib.pipeline.gnaf.constants import data_gov_au_gnaf_information_page
 from lib.service.http import CacheHeader
 from lib.service.static_environment import Target
-from lib.gnaf.constants import data_gov_au_gnaf_information_page
 
 _sql_dir_path = 'G-NAF/Extras/GNAF_TableCreation_Scripts'
 

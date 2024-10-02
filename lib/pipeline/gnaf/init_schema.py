@@ -1,6 +1,8 @@
 import logging
+
 from lib.service.io import IoService
 from lib.service.database import DatabaseService
+
 from .discovery import GnafPublicationTarget
 
 _logger = logging.getLogger(__name__)

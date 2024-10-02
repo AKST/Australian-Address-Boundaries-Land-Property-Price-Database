@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Self, Literal
 
-from lib.nsw_vg.discovery import NswVgTarget
+from lib.pipeline.nsw_vg.discovery import NswVgTarget
 
 @dataclass
 class PropertySaleDatFileMetaData:

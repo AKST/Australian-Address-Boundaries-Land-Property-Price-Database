@@ -1,14 +1,14 @@
 import asyncio
 from dataclasses import dataclass
+
+from lib.pipeline.abs import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
+from lib.pipeline.gnaf.discovery import GnafPublicationDiscovery
+from lib.pipeline.nsw_vg.defaults import THROTTLE_CONFIG
+from lib.pipeline.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
+from lib.service.io import IoService
 from lib.service.http import AbstractClientSession, ClientSession, CachedClientSession, ExpBackoffClientSession, ThrottledClientSession
 from lib.service.http import BackoffConfig, RetryPreference
 from lib.service.http.middleware.cache import FileCacher
-
-from lib.abs import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
-from lib.service.io import IoService
-from lib.gnaf.discovery import GnafPublicationDiscovery
-from lib.nsw_vg.defaults import THROTTLE_CONFIG
-from lib.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
 from lib.service.static_environment import StaticEnvironmentInitialiser
 from lib.service.static_environment.defaults import get_static_dirs
 

@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Tuple
 
+from lib.pipeline.nsw_vg.constants import lv_download_page, ps_download_page
 from lib.service.http import AbstractClientSession, CacheHeader
 from lib.service.static_environment import Target
-from lib.nsw_vg.constants import lv_download_page, ps_download_page
 
 ListItem = namedtuple('ListItem', ['Name', 'Link'])
 

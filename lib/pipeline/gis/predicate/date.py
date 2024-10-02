@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Tuple, Iterator
 
 from lib.service.clock import ClockService
+
 from .base import PredicateFunction, PredicateParam
 
 

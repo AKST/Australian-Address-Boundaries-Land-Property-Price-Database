@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 import logging
 
+from lib.pipeline.nsw_vg.land_values.ingest import ingest_raw_files
+from lib.pipeline.nsw_vg.land_values.ingest import create_vg_tables_from_raw
+from lib.pipeline.nsw_vg.land_values.ingest import parse_property_description
+from lib.pipeline.nsw_vg.land_values.ingest import empty_raw_entries
+from lib.pipeline.nsw_vg.discovery import NswVgTarget
 from lib.service.database import DatabaseService
-from lib.nsw_vg.land_values.ingest import ingest_raw_files
-from lib.nsw_vg.land_values.ingest import create_vg_tables_from_raw
-from lib.nsw_vg.land_values.ingest import parse_property_description
-from lib.nsw_vg.land_values.ingest import empty_raw_entries
-from lib.nsw_vg.discovery import NswVgTarget
 
 _ZIPDIR = './_out_zip'
 

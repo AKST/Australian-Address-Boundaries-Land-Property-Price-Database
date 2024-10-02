@@ -3,10 +3,8 @@ import unittest
 from unittest.mock import Mock
 
 from lib.service.clock.mocks import MockClockService
-import lib.gis.predicate as p
-from lib.gis.predicate import DateRangeParam
-from lib.gis.predicate import YearMonth as YM
-from lib.gis.predicate.date import DateRangeParam
+
+from ..date import DateRangeParam, YearMonth as YM
 
 mock_dt = datetime(2012, 10, 1)
 get_now = lambda: datetime(2012, 10, 1)

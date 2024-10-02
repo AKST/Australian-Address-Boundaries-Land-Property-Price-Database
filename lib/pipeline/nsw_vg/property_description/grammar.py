@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Union, Any, Optional
 import re
 
-from lib.nsw_vg.property_description import types as t
+from lib.pipeline.nsw_vg.property_description import types as t
 
 @dataclass
 class IdPattern:

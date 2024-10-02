@@ -1,7 +1,7 @@
 import asyncio
-from lib.abs.config import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
-from lib.abs.ingest import ingest
 
+from lib.pipeline.abs.config import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
+from lib.pipeline.abs.ingest import ingest
 from lib.service.database import DatabaseService
 
 _OUTDIR = './_out_zip'

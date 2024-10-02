@@ -7,8 +7,8 @@ from pathlib import Path
 from pprint import pprint
 import os
 
-from lib.nsw_vg.property_sales import PropertySaleProducer, PropertySaleDatFileMetaData
-from lib.nsw_vg.property_sales import SaleDataFileSummary, BasePropertySaleFileRow
+from lib.pipeline.nsw_vg.property_sales import PropertySaleProducer, PropertySaleDatFileMetaData
+from lib.pipeline.nsw_vg.property_sales import SaleDataFileSummary, BasePropertySaleFileRow
 from lib.service.io import IoService
 from lib.tasks.fetch_static_files import Environment
 

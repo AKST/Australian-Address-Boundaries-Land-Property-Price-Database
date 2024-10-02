@@ -8,9 +8,9 @@ import os
 from typing import Self, List
 
 from lib.service.database import DatabaseService
-from lib.nsw_vg.discovery import NswVgTarget
-from lib.nsw_vg.property_description import parse_land_parcel_ids
-from lib.nsw_vg.property_description.types import LandParcel
+from lib.pipeline.nsw_vg.discovery import NswVgTarget
+from lib.pipeline.nsw_vg.property_description import parse_land_parcel_ids
+from lib.pipeline.nsw_vg.property_description.types import LandParcel
 
 from .constants import *
 

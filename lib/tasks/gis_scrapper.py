@@ -5,14 +5,13 @@ import math
 import time
 from typing import Self
 
-from lib.gis.defaults import HOST_SEMAPHORE_CONFIG, BACKOFF_CONFIG
-from lib.gis.defaults import ENSW_DA_PROJECTION
-from lib.gis.defaults import SNSW_LOT_PROJECTION
-from lib.gis.defaults import SNSW_PROP_PROJECTION
-from lib.gis.defaults import ENSW_ZONE_PROJECTION
-
-from lib.gis.producer import GisProducer
-from lib.gis.predicate.date import YearMonth, DateRangeParam
+from lib.pipeline.gis.defaults import HOST_SEMAPHORE_CONFIG, BACKOFF_CONFIG
+from lib.pipeline.gis.defaults import ENSW_DA_PROJECTION
+from lib.pipeline.gis.defaults import SNSW_LOT_PROJECTION
+from lib.pipeline.gis.defaults import SNSW_PROP_PROJECTION
+from lib.pipeline.gis.defaults import ENSW_ZONE_PROJECTION
+from lib.pipeline.gis.producer import GisProducer
+from lib.pipeline.gis.predicate.date import YearMonth, DateRangeParam
 from lib.service.io import IoService
 from lib.service.clock import ClockService
 from lib.service.http import CachedClientSession, ThrottledClientSession, ExpBackoffClientSession

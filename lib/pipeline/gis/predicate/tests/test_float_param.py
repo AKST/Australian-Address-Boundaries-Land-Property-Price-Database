@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from lib.gis.predicate import FloatRangeParam
+from ..float import FloatRangeParam
 
 class FloatParamTestCase(unittest.TestCase):
     def test_shard_100_to_200(self):
