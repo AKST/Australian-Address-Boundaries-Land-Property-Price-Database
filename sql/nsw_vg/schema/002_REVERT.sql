@@ -1,2 +1,8 @@
-DROP TABLE IF NOT EXISTS nsw_vg_stage.raw_land_value_data;
-
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_d;
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_c;
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_b_modern;
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_b_legacy;
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_a_modern;
+DROP TABLE IF EXISTS nsw_vg_raw.property_sale_data_row_a_legacy;
+DROP TABLE IF EXISTS nsw_vg_raw.land_value_row;
+DROP SCHEMA IF EXISTS nsw_vg_raw;

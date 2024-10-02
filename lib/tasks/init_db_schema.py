@@ -1,41 +1,70 @@
 from dataclasses import dataclass, field
 import logging
+from typing import List
 
 from lib.gnaf_db import GnafDb
 from lib.service.io import IoService
 
-_logger = logging.getLogger(f'{__name__}.initialise_nsw_vg_schema')
+_logger = logging.getLogger(f'{__name__}.initialise_db_schema')
+
+packages_allowed = [
+    'meta',
+    'abs',
+    'nsw_lrs',
+    'nsw_environment',
+    'nsw_property',
+    'nsw_spatial',
+    'nsw_vg',
+]
 
 @dataclass
-class InitialiseNswVgSchemaConfig:
+class InitialiseDbSchemaConfig:
+    packages: List[str]
     apply: bool = field(default=True)
     revert: bool = field(default=False)
 
-async def initialise_nsw_vg_schema(
-    config: InitialiseNswVgSchemaConfig,
+async def initialise_db_schema(
+    config: InitialiseDbSchemaConfig,
     gnaf_db: GnafDb,
     io: IoService,
 ) -> None:
     _logger.info('initalising nsw_vg db schema')
-    revert_files = [f async for f in io.grep_dir('sql/nsw_vg/schema', '*_REVERT.sql')]
-    apply_files = [f async for f in io.grep_dir('sql/nsw_vg/schema', '*_APPLY_*.sql')]
+    revert_files = [
+        file
+        for p in reversed(config.packages)
+        for file in sorted([
+            file
+            async for file in io.grep_dir(f'sql/{p}/schema', '*_REVERT.sql')
+        ], reverse=True)
+    ] if config.revert else []
+
+    apply_files = [
+        file
+        for p in config.packages
+        for file in sorted([
+            file
+            async for file in io.grep_dir(f'sql/{p}/schema', '*_APPLY_*.sql')
+        ])
+    ] if config.apply else []
+
+    async def run_sql(file, cursor):
+        try:
+            _logger.info(f'running {file}')
+            file_body = await io.f_read(file)
+            await cursor.execute(file_body)
+        except Exception as e:
+            _logger.error(f"failed to run {file}")
+            raise e
 
     async with (
         await gnaf_db.async_connect() as conn,
         conn.cursor() as cursor
     ):
-        if config.revert:
-            for file in sorted(revert_files, reverse=True):
-                _logger.info(f'running revert {file}')
-        if config.apply:
-            for file in sorted(apply_files):
-                _logger.info(f'running apply {file}')
-                try:
-                    file_body = await io.f_read(file)
-                    await cursor.execute(file_body)
-                except Exception as e:
-                    _logger.error(f"failed to run {file}")
-                    raise e
+        for file in revert_files:
+            await run_sql(file, cursor)
+
+        for file in apply_files:
+            await run_sql(file, cursor)
 
 
 if __name__ == '__main__':
@@ -47,6 +76,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
     parser.add_argument("--instance", type=int, default=1)
+    parser.add_argument("--packages", nargs='*', default=[])
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--enable-revert", action='store_true', default=False)
     parser.add_argument("--disable-apply", action='store_true', default=False)
@@ -68,7 +98,13 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
-    config = InitialiseNswVgSchemaConfig(
+    if args.packages:
+        packages = [p for p in packages_allowed if p in args.packages]
+    else:
+        packages = packages_allowed
+
+    config = InitialiseDbSchemaConfig(
+        packages=packages,
         apply=not args.disable_apply,
         revert=args.enable_revert,
     )
@@ -83,7 +119,7 @@ if __name__ == '__main__':
     async def main() -> None:
         gnaf_db = GnafDb.create(db_conf, db_name)
         io_service = IoService.create(file_limit)
-        await initialise_nsw_vg_schema(config, gnaf_db, io_service)
+        await initialise_db_schema(config, gnaf_db, io_service)
 
     asyncio.run(main())
 
