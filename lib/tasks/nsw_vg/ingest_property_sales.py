@@ -3,6 +3,7 @@ from datetime import datetime
 from functools import reduce
 from logging import getLogger
 from time import time
+from typing import Self
 from pathlib import Path
 from pprint import pprint
 import os
@@ -18,23 +19,33 @@ from ..update_schema import update_schema
 
 ZIP_DIR = './_out_zip'
 
+class Counter:
+    _logger = getLogger(f'{__name__}.count')
+
+    def __init__(self: Self):
+        self.start = time()
+        self.total = 0
+
+    def count(self: Self, task, item: SaleDataFileSummary):
+        self.total = self.total + item.total_records
+        t = int(time() - self.start)
+        th, tm, ts = t // 3600, t // 60 % 60, t % 60
+        self._logger.info(f'Parsed {item.total_records} ' \
+                          f'(total {self.total}) ' \
+                          f'({th}h {tm}m {ts}s) ' \
+                          f'(published: {task.published_year} ' \
+                          f'downloaded: {task.download_date})')
+
 async def count_property_sales_rows(e: Environment, io: IoService) -> None:
     logger = getLogger(f'{__name__}.count')
     producer = PropertySaleProducer.create(ZIP_DIR, io)
-    start = time()
-    total = 0
+    counter = Counter()
 
     try:
         all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
         async for task, item in producer.get_rows(all_links):
             if isinstance(item, SaleDataFileSummary):
-                total, t = total + item.total_records, int(time() - start)
-                th, tm, ts = t // 3600, t // 60 % 60, t % 60
-                logger.info(f'Parsed {item.total_records} ' \
-                            f'(total {total}) ' \
-                            f'({th}h {tm}m {ts}s) ' \
-                            f'(published: {task.published_year} ' \
-                            f'downloaded: {task.download_date})')
+                counter.count(task, item)
     except Exception as e:
         raise e
 
@@ -45,15 +56,18 @@ async def ingest_property_sales_rows(
 ) -> None:
     logger = getLogger(f'{__name__}.ingest')
     producer = PropertySaleProducer.create(ZIP_DIR, io)
-    ingestion = PropertySalesIngestion(db, CONFIG)
-    start = time()
-    total = 0
+    ingestion = PropertySalesIngestion.create(db, CONFIG)
+    counter = Counter()
 
     try:
         all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
         async for task, item in producer.get_rows(all_links):
-            await ingestion.queue_row(item)
+            ingestion.queue(item)
+            if isinstance(item, SaleDataFileSummary):
+                counter.count(task, item)
+        await ingestion.flush()
     except Exception as e:
+        ingestion.abort()
         raise e
 
 

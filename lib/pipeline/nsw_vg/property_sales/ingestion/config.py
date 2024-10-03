@@ -54,7 +54,7 @@ class IngestionConfig:
     schema: str
     tables: IngestionTableMap
 
-    def get_config(self: Self, row: t.BasePropertySaleFileRow) -> IngestionTableConfig | None:
+    def get_config(self: Self, row: t.BasePropertySaleFileRow) -> IngestionTableConfig:
         match self.tables.get_config(row):
-            case None: return None
+            case None: raise ValueError('unexpected row type')
             case conf: return conf.hydrate(schema=self.schema)
