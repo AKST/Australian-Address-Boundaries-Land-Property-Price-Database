@@ -53,10 +53,11 @@ async def ingest_property_sales_rows(
     e: Environment,
     io: IoService,
     db: DatabaseService,
+    batch_size: int
 ) -> None:
     logger = getLogger(f'{__name__}.ingest')
     producer = PropertySaleProducer.create(ZIP_DIR, io)
-    ingestion = PropertySalesIngestion.create(db, CONFIG)
+    ingestion = PropertySalesIngestion.create(db, CONFIG, batch_size)
     counter = Counter()
 
     try:
@@ -76,11 +77,11 @@ async def _count_main(io) -> None:
         environment = await initialise(io, session)
     await count_property_sales_rows(environment, io)
 
-async def _ingest_main(io, db, update_conf) -> None:
+async def _ingest_main(io, db, batch_size: int, update_conf: UpdateSchemaConfig) -> None:
     await update_schema(update_conf, db, io)
     async with get_session(io) as session:
         environment = await initialise(io, session)
-    await ingest_property_sales_rows(environment, io, db)
+    await ingest_property_sales_rows(environment, io, db, batch_size)
 
 
 if __name__ == '__main__':
@@ -100,6 +101,7 @@ if __name__ == '__main__':
 
     ingest_parser = cmd_parser.add_parser('ingest', help='ingests property sales data')
     ingest_parser.add_argument("--instance", type=int, required=True)
+    ingest_parser.add_argument("--batch_size", type=int, default=100)
 
     args = parser.parse_args()
 
@@ -130,7 +132,7 @@ if __name__ == '__main__':
             )
 
             db = DatabaseService(db_connect_config)
-            asyncio.run(_ingest_main(io, db, db_update_conf))
+            asyncio.run(_ingest_main(io, db, args.batch_size, db_update_conf))
         case other:
             parser.print_help()
 

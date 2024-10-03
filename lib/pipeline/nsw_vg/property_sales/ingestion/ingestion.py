@@ -37,8 +37,10 @@ class PropertySalesIngestion:
         self._config = config
 
     @staticmethod
-    def create(db: DatabaseService, config: IngestionConfig) -> 'PropertySalesIngestion':
-        return PropertySalesIngestion(db, config, 50, {
+    def create(db: DatabaseService,
+               config: IngestionConfig,
+               batch_size: int) -> 'PropertySalesIngestion':
+        return PropertySalesIngestion(db, config, batch_size, {
             t.SaleRecordFileLegacy: [],
             t.SalePropertyDetails1990: [],
             t.SaleRecordFile: [],
