@@ -31,10 +31,11 @@ class AbstractFormatFactory(abc.ABC):
         pass
 
 class CurrentFormatFactory(AbstractFormatFactory):
+    zone_standard: t.ZoningKind = 'ep&a_2006'
+
     def __init__(self: Self, year: int, file_path: str):
         self.year = year
         self.file_path = file_path
-        self.area_parser = AreaParser(area_column=10, area_type_column=11)
 
     @classmethod
     def create(Cls, year: int, file_path: str) -> 'CurrentFormatFactory':
@@ -44,7 +45,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
         return t.SaleRecordFile(
             year_of_sale=self.year,
             file_path=self.file_path,
-            file_type=row[0],
+            file_type=row[0] or None,
             district_code=read_int(row, 1, 'district_code'),
             date_provided=read_datetime(row, 2, 'date_provided'),
             submitting_user_id=read_str(row, 3, 'submitting_user_id'),
@@ -53,33 +54,28 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails(
             parent=a_record,
-            common=t.SalePropertyDetailsCommon(
-                district_code=read_int(row, 0, 'district_code'),
-                property_id=read_optional_int(row, 1, 'property_id'),
-                address=t.Address(
-                    property_name=row[4] or None,
-                    unit_number=row[5] or None,
-                    house_number=row[6] or None,
-                    street_name=row[7],
-                    locality=row[8],
-                    postcode=read_optional_int(row, 9, 'property_postcode'),
-                ),
-
-                # columns 10 & 11
-                area=self.area_parser.from_row(row),
-                contract_date=read_optional_date(row, 12, 'contract_date'),
-                purchase_price=read_optional_float(row, 14, 'purchase_price'),
-                zoning=self._read_b_zoning(row),
-                comp_code=row[19] or None,
-            ),
-
+            district_code=read_int(row, 0, 'district_code'),
+            property_id=read_optional_int(row, 1, 'property_id'),
             sale_counter=read_int(row, 2, 'sale_counter'),
             date_provided=read_datetime(row, 3, 'date_provided'),
+            property_name=row[4] or None,
+            unit_number=row[5] or None,
+            house_number=row[6] or None,
+            street_name=row[7],
+            locality_name=row[8],
+            postcode=read_optional_int(row, 9, 'property_postcode'),
+            area=read_optional_float(row, 10, 'area'),
+            area_type=read_area_type(row, 11, 'area_type'),
+            contract_date=read_optional_date(row, 12, 'contract_date'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
+            purchase_price=read_optional_float(row, 14, 'purchase_price'),
+            zone_code=row[15] or None,
+            zone_standard=self.zone_standard,
             nature_of_property=read_str(row, 16, 'nature_of_property'),
-            primary_purpose=row[17],
+            primary_purpose=row[17] or None,
             strata_lot_number=read_optional_int(row, 18, 'strata_lot_number'),
-            sale_code=row[20],
+            comp_code=row[19] or None,
+            sale_code=row[20] or None,
             interest_of_sale=read_optional_int(row, 21, 'interest_of_sale'),
             dealing_number=read_str(row, 22, 'dealing_number'),
         )
@@ -113,10 +109,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             total_sale_participants=read_int(row, 3, 'total_sale_participants'),
         )
 
-    def _read_b_zoning(self, row) -> Optional[t.AbstractZoning]:
-        return read_zoning(row, 15, 'zoning')
-
 class Legacy2002Format(CurrentFormatFactory):
+    zone_standard = 'legacy_vg_2011'
+
     @classmethod
     def create(cls, year: int, file_path: str) -> 'Legacy2002Format':
         return Legacy2002Format(year, file_path)
@@ -161,14 +156,10 @@ class Legacy2002Format(CurrentFormatFactory):
         else:
             raise TypeError(f'unknown variant {variant}')
 
-    def _read_b_zoning(self, row) -> Optional[t.AbstractZoning]:
-        return read_legacy_zoning(row, 15, 'zoning')
-
 class Legacy1990Format(AbstractFormatFactory):
     def __init__(self: Self, year: int, file_path: str):
         self.year = year
         self.file_path = file_path
-        self.area_parser = AreaParser(area_column=12, area_type_column=13)
 
     @classmethod
     def create(cls, year: int, file_path: str):
@@ -180,8 +171,8 @@ class Legacy1990Format(AbstractFormatFactory):
         to maintain some level of consistency with the later formats.
         """
         return t.SaleRecordFileLegacy(
-            year_of_sale=self.year,
             file_path=self.file_path,
+            year_of_sale=self.year,
             submitting_user_id=row[1],
             date_provided=read_datetime(row, 2, 'date_provided'),
         )
@@ -189,29 +180,24 @@ class Legacy1990Format(AbstractFormatFactory):
     def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails1990(
             parent=a_record,
-            common=t.SalePropertyDetailsCommon(
-                district_code=read_int(row, 0, 'district_code'),
-                property_id=read_optional_int(row, 3, 'property_id'),
-                address=t.Address(
-                    property_name=None,
-                    unit_number=row[4] or None,
-                    house_number=row[5] or None,
-                    street_name=row[6] or None,
-                    locality=row[7] or None,
-                    postcode=read_optional_int(row, 8, 'property_postcode'),
-                ),
-                contract_date=read_date_pre_2002(row, 9, 'contract_date'),
-                purchase_price=read_float(row, 10, 'purchase_price'),
-                # columns 12 & 13
-                area=self.area_parser.from_row(row),
-
-                comp_code=row[15] or None,
-                zoning=read_legacy_zoning(row, 16, 'zoning'),
-            ),
+            district_code=read_int(row, 0, 'district_code'),
             source=row[1] or None,
-            valuation_num=row[2] or None,
+            valuation_number=row[2] or None,
+            property_id=read_optional_int(row, 3, 'property_id'),
+            unit_number=row[4] or None,
+            house_number=row[5] or None,
+            street_name=row[6] or None,
+            locality_name=row[7] or None,
+            postcode=read_optional_int(row, 8, 'property_postcode'),
+            contract_date=read_date_pre_2002(row, 9, 'contract_date'),
+            purchase_price=read_float(row, 10, 'purchase_price'),
             land_description=row[11] or None,
+            area=read_optional_float(row, 12, 'area'),
+            area_type=read_area_type(row, 13, 'area_type'),
             dimensions=row[14] or None,
+            comp_code=row[15] or None,
+            zone_code=row[16] or None,
+            zone_standard='legacy_vg_2011',
         )
 
     def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
@@ -280,28 +266,16 @@ def read_float(row: List[str], idx: int, name: str) -> float:
         message = 'Failed to read FLOAT %s @ row[%s] IN %s' % (name, idx, row)
         raise Exception(message) from e
 
-@dataclass
-class AreaParser:
-    area_column: int
-    area_type_column: int
 
-    def from_row(self: Self, row: List[str]) -> Optional[t.Area]:
-        area = read_optional_float(row, self.area_column, 'area')
+def read_area_type(row: List[str], idx: int, name: str) -> str | None:
+    match row[idx]:
+        case 'M': return 'M'
+        case 'H': return 'H'
+        case 'U': return 'U'
 
-        if area is None:
-            return None
-
-        match row[self.area_type_column]:
-            case 'M': return t.Area(amount=area, unit='M')
-            case 'H': return t.Area(amount=area, unit='H')
-            case 'U': return t.Area(amount=area, unit='U', stardard=False)
-
-            # Unknown area unit
-            case '': return t.Area(amount=area, unit=None, stardard=False)
-            case other: raise ValueError(f'Unknown area unit {other}')
-
-read_legacy_zoning = mk_read_optional(lambda row, idx, _: t.ZoningLegacy(zone=row[idx]))
-read_zoning = mk_read_optional(lambda row, idx, _: t.ZoningPost2011(zone=row[idx]))
+        # Unknown area unit
+        case '': return None
+        case other: raise ValueError(f'Unknown area unit {other}')
 
 read_optional_int = mk_read_optional(read_int)
 read_optional_float = mk_read_optional(read_float)

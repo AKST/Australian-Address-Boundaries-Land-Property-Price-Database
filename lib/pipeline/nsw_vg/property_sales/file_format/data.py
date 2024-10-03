@@ -1,9 +1,11 @@
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, Field
 from datetime import datetime
-from typing import Optional, Self, Literal
+from typing import Optional, Self, Literal, List, Tuple
 
 from lib.pipeline.nsw_vg.discovery import NswVgTarget
+
+ZoningKind = Literal['ep&a_2006', 'legacy_vg_2011']
 
 @dataclass
 class PropertySaleDatFileMetaData:
@@ -12,62 +14,93 @@ class PropertySaleDatFileMetaData:
     download_date: Optional[datetime]
     size: int
 
-class BasePropertySaleFileRow:
-    pass
-
-@dataclass
-class SaleRecordFile(BasePropertySaleFileRow):
-    year_of_sale: int = field(repr=False)
-    file_path: str = field(repr=False)
-    file_type: Optional[str]
-    date_provided: datetime
-    submitting_user_id: Optional[str]
-    district_code: int
+class BasePropertySaleFileRow(abc.ABC):
+    @abc.abstractmethod
+    def db_columns(self: Self) -> List[str]:
+        raise NotImplementedError('ahh')
 
 @dataclass
 class SaleRecordFileLegacy(BasePropertySaleFileRow):
-    year_of_sale: int = field(repr=False)
     file_path: str = field(repr=False)
-    date_provided: datetime
+    year_of_sale: int = field(repr=False)
     submitting_user_id: Optional[str]
+    date_provided: datetime
+
+    def db_columns(self: Self) -> List[str]:
+        return list(map(lambda f: f.name, fields(self)))
 
 @dataclass
-class SalePropertyDetailsCommon:
-    property_id: Optional[int]
-    # TODO confirm this is optional
-    contract_date: Optional[datetime]
-    """
-    From 2002 onwards always defined.
-    """
-    purchase_price: Optional[float]
+class SalePropertyDetails1990(BasePropertySaleFileRow):
+    parent: SaleRecordFileLegacy = field(repr=False)
     district_code: int
-    address: 'Address'
-    area: Optional['Area']
-    zoning: Optional['AbstractZoning']
+    source: Optional[str]
+    valuation_number: Optional[str]
+    property_id: Optional[int]
+    unit_number: Optional[str]
+    house_number: Optional[str]
+    street_name: Optional[str]
+    locality_name: Optional[str]
+    postcode: Optional[int]
+    contract_date: Optional[datetime]
+    purchase_price: Optional[float]
+    land_description: Optional[str]
+    area: Optional[float]
+    area_type: Optional[str]
+    dimensions: Optional[str]
     comp_code: Optional[str]
+    zone_code: Optional[str]
+    zone_standard: ZoningKind
+
+    def db_columns(self: Self) -> List[str]:
+        not_allowed = {'parent'}
+        return [f.name for f in fields(self) if f.name not in not_allowed]
+
+@dataclass
+class SaleRecordFile(BasePropertySaleFileRow):
+    year_of_sale: int
+    file_path: str = field(repr=False)
+    file_type: Optional[str]
+    district_code: int
+    date_provided: datetime
+    submitting_user_id: str
+
+    def db_columns(self: Self) -> List[str]:
+        return list(map(lambda f: f.name, fields(self)))
 
 @dataclass
 class SalePropertyDetails(BasePropertySaleFileRow):
     parent: SaleRecordFile = field(repr=False)
-    common: SalePropertyDetailsCommon
+    district_code: int
+    property_id: Optional[int]
     sale_counter: int
     date_provided: datetime
+    property_name: Optional[str]
+    unit_number: Optional[str]
+    house_number: Optional[str]
+    street_name: Optional[str]
+    locality_name: Optional[str]
+    postcode: Optional[int]
+    area: Optional[float]
+    area_type: Optional[str]
+    contract_date: Optional[datetime]
     settlement_date: Optional[datetime]
+    """
+    From 2002 onwards always defined.
+    """
+    purchase_price: Optional[float]
+    zone_code: Optional[str]
+    zone_standard: ZoningKind
     nature_of_property: str
     primary_purpose: Optional[str]
     strata_lot_number: Optional[int]
+    comp_code: Optional[str]
     sale_code: Optional[str]
     interest_of_sale: Optional[int]
     dealing_number: str
 
-@dataclass
-class SalePropertyDetails1990(BasePropertySaleFileRow):
-    parent: SaleRecordFile = field(repr=False)
-    common: SalePropertyDetailsCommon
-    source: Optional[str]
-    valuation_num: Optional[str]
-    land_description: Optional[str]
-    dimensions: Optional[str]
+    def db_columns(self: Self) -> List[str]:
+        not_allowed = {'parent'}
+        return [f.name for f in fields(self) if f.name not in not_allowed]
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
@@ -83,6 +116,10 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
     date_provided: datetime
     property_description: Optional[str]
 
+    def db_columns(self: Self) -> List[str]:
+        not_allowed = {'parent'}
+        return [f.name for f in fields(self) if f.name not in not_allowed]
+
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):
     parent: SalePropertyLegalDescription = field(repr=False)
@@ -94,6 +131,10 @@ class SaleParticipant(BasePropertySaleFileRow):
     sale_counter: int
     date_provided: datetime
     participant: str
+
+    def db_columns(self: Self) -> List[str]:
+        not_allowed = {'parent'}
+        return [f.name for f in fields(self) if f.name not in not_allowed]
 
 @dataclass
 class SaleDataFileSummary(BasePropertySaleFileRow):
@@ -107,59 +148,7 @@ class SaleDataFileSummary(BasePropertySaleFileRow):
     # fields not provided in 1990 format
     total_sale_participants: int
 
-@dataclass
-class Area:
-    unit: Optional[str]
-    amount: float
-    stardard: bool = field(default=True)
-
-@dataclass
-class Address:
-    property_name: Optional[str]
-    unit_number: Optional[str]
-    house_number: Optional[str]
-    street_name: Optional[str]
-    locality: Optional[str]
-    postcode: Optional[int]
-
-ZoneKind = Literal['legacy', '2011.08']
-
-class AbstractZoning(abc.ABC):
-    @property
-    @abc.abstractmethod
-    def kind(self: Self) -> ZoneKind:
-        pass
-
-@dataclass
-class ZoningPost2011(AbstractZoning):
-    """
-    These zones are used in sales information prior to 2011.
-    They are the same as the ones introduced in 2006.
-
-    https://legislation.nsw.gov.au/view/pdf/asmade/epi-2006-155
-
-    They were not used by the Register of Land Values until
-    2011. Instead they used more general zones.
-    """
-    zone: str
-
-    @property
-    def kind(self: Self) -> ZoneKind:
-        return '2011.08'
-
-@dataclass
-class ZoningLegacy(AbstractZoning):
-    """
-    Prior to 2011, single character zone codes were used
-    to classify the zones of properties recorded in the
-    Register of Land Values.
-
-    https://www.nsw.gov.au/sites/default/files/noindex/2024-05/Property_Sales_Data_File_Zone_Codes_and_Descriptions_V2.pdf
-    """
-    zone: str
-
-    @property
-    def kind(self: Self) -> ZoneKind:
-        return 'legacy'
-
+    def db_columns(self: Self) -> List[str]:
+        not_allowed = {'parent'}
+        return [f.name for f in fields(self) if f.name not in not_allowed]
 

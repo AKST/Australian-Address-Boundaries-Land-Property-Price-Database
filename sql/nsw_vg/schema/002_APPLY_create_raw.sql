@@ -42,61 +42,63 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_a_legacy (
     file_path TEXT PRIMARY KEY,
-    file_type TEXT,
     year_of_sale INT NOT NULL,
-    date_provided DATE NOT NULL,
-    submitting_user_id TEXT
+    submitting_user_id TEXT,
+    date_provided DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_legacy (
     district_code INT NOT NULL,
+    source TEXT,
+    valuation_number TEXT,
     property_id INT,
-    property_name TEXT,
     unit_number TEXT,
     house_number TEXT,
     street_name TEXT,
-    suburb_name TEXT,
+    locality_name TEXT,
     postcode varchar(4),
+    contract_date DATE,
+    purchase_price FLOAT,
+    land_description TEXT,
     area FLOAT,
     area_type varchar(1),
-    zone_code varchar(3),
-    zone_standard nsw_environment.zoning_standard,
+    dimensions TEXT,
     comp_code TEXT,
-    source TEXT,
-    valuation_number TEXT,
-    land_description TEXT,
-    dimensions TEXT
+    zone_code varchar(3),
+    zone_standard nsw_environment.zoning_standard NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_a_modern (
+    year_of_sale INT NOT NULL,
     file_path TEXT PRIMARY KEY,
     file_type TEXT,
-    year_of_sale INT NOT NULL,
+    district_code INT NOT NULL,
     date_provided DATE NOT NULL,
-    submitting_user_id TEXT,
-    district_code INT NOT NULL
+    submitting_user_id TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_modern (
     district_code INT NOT NULL,
+    property_id INT,
     sale_counter INT NOT NULL,
     date_provided DATE NOT NULL,
-    property_id INT,
     property_name TEXT,
     unit_number TEXT,
     house_number TEXT,
     street_name TEXT,
-    suburb_name TEXT,
+    locality_name TEXT,
     postcode varchar(4),
     area FLOAT,
     area_type varchar(1),
-    zone_code varchar(3),
-    zone_standard nsw_environment.zoning_standard,
-    comp_code TEXT,
+    contract_date DATE,
     settlement_date DATE,
+    purchase_price FLOAT,
+    zone_code varchar(3),
+    zone_standard nsw_environment.zoning_standard NOT NULL,
     nature_of_property TEXT NOT NULL,
     primary_purpose TEXT,
     strata_lot_number INT,
+    comp_code TEXT,
     sale_code TEXT,
     interest_of_sale INT,
     dealing_number TEXT NOT NULL
