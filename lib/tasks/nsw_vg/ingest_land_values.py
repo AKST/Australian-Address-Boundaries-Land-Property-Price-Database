@@ -80,7 +80,7 @@ if __name__ == '__main__':
     logger.debug(f'config {db_conf}')
 
     async def main() -> None:
-        db = DatabaseService(db_conf)
+        db = DatabaseService.create(db_conf, 32)
         io = IoService.create(file_limit)
 
         async with get_session(io) as session:

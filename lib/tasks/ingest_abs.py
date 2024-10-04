@@ -2,7 +2,7 @@ import asyncio
 
 from lib.pipeline.abs.config import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
 from lib.pipeline.abs.ingest import ingest
-from lib.service.database import DatabaseService
+from lib.service.database import DatabaseService, DatabaseConfig
 
 _OUTDIR = './_out_zip'
 
@@ -13,6 +13,14 @@ async def ingest_all(db: DatabaseService) -> None:
     """
     await ingest(db, ABS_MAIN_STRUCTURES, _OUTDIR)
     await ingest(db, NON_ABS_MAIN_STRUCTURES, _OUTDIR)
+
+async def _main(db_conf: DatabaseConfig,
+                file_limit: int) -> None:
+        db = DatabaseService.create(db_conf, 32)
+        io = IoService.create(file_limit)
+        async with get_session(io) as session:
+            await initialise(io, session)
+        await ingest_all(db)
 
 if __name__ == '__main__':
     import argparse
@@ -34,22 +42,12 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    if args.instance == 1:
-        db_conf = instance_1_config
-    elif args.instance == 2:
-        db_conf = instance_2_config
-    else:
+    if args.instance < 1 or args.instance > 2:
         raise ValueError('invalid instance')
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
+    db_conf = { 1: instance_1_config, 2: instance_2_config }[args.instance]
 
-    async def main() -> None:
-        db = DatabaseService(db_conf)
-        io = IoService.create(file_limit)
-        async with get_session(io) as session:
-            await initialise(io, session)
-        await ingest_all(db)
-
-    asyncio.run(main())
+    asyncio.run(_main(db_conf, file_limit))
 

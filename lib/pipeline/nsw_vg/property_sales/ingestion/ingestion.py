@@ -50,9 +50,11 @@ class PropertySalesIngestion:
         })
 
     def abort(self: Self) -> None:
-        self._maintain_runnning()
         for t in self._tasks:
             t.cancel()
+
+        completed = {t for t in self._tasks if t.done()}
+        self._task = self._tasks - completed
 
     async def flush(self: Self) -> None:
         for t, queued in self._state.items():
@@ -62,10 +64,10 @@ class PropertySalesIngestion:
 
         self._state = {t: [] for t in self._state.keys()}
         await asyncio.gather(*self._tasks)
-        self._maintain_runnning()
+        await self._maintain_runnning()
 
-    def queue(self: Self, row: t.BasePropertySaleFileRow) -> None:
-        self._maintain_runnning()
+    async def queue(self: Self, row: t.BasePropertySaleFileRow) -> None:
+        await self._maintain_runnning()
 
         if isinstance(row, t.SaleDataFileSummary):
             return
@@ -93,12 +95,14 @@ class PropertySalesIngestion:
         task = asyncio.create_task(self._worker(sql, values, c.table_symbol))
         self._tasks.add(task)
 
-    def _maintain_runnning(self) -> None:
+    async def _maintain_runnning(self) -> None:
         completed = {t for t in self._tasks if t.done()}
         self._task = self._tasks - completed
+        for t in completed:
+            await t
 
     async def _worker(self, sql: str, values: List[List[str]], name: str) -> None:
-        async with await self._db.async_connect() as c, c.cursor() as cursor:
+        async with self._db.async_connect() as c, c.cursor() as cursor:
             await cursor.executemany(sql, values)
         self._logger.debug(f'inserted {len(values)} for {name}')
 

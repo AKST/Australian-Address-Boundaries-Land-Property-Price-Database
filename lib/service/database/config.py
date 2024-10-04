@@ -10,6 +10,14 @@ class DatabaseConfig:
     password: str
 
     @property
+    def connection_str(self: Self) -> str:
+        return f'dbname={self.dbname} ' \
+               f'port={self.port} ' \
+               f'user={self.user} ' \
+               f'host={self.host} ' \
+               f'password={self.password}'
+
+    @property
     def psycopg2_url(self: Self) -> str:
         return \
             f"postgresql+psycopg2://" \

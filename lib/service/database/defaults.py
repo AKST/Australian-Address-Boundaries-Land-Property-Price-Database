@@ -15,7 +15,7 @@ instance_1_config = DatabaseConfig(
     user='postgres',
     host='localhost',
     port=5432,
-    password='throw away password',
+    password='throwAwayPassword',
 )
 
 instance_2_config = DatabaseConfig(
@@ -23,6 +23,6 @@ instance_2_config = DatabaseConfig(
     user='postgres',
     host='localhost',
     port=5433,
-    password='throw away password 2',
+    password='throwAwayPassword2',
 )
 

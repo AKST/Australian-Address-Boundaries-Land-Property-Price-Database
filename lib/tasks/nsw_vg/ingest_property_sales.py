@@ -12,10 +12,10 @@ from lib.pipeline.nsw_vg.property_sales import PropertySaleProducer, PropertySal
 from lib.pipeline.nsw_vg.property_sales import SaleDataFileSummary, BasePropertySaleFileRow
 from lib.pipeline.nsw_vg.property_sales.ingestion import CONFIG, PropertySalesIngestion
 from lib.service.io import IoService
-from lib.service.database import DatabaseService
+from lib.service.database import DatabaseService, DatabaseConfig
 
 from ..fetch_static_files import Environment, get_session, initialise
-from ..update_schema import update_schema
+from ..update_schema import update_schema, UpdateSchemaConfig
 
 ZIP_DIR = './_out_zip'
 
@@ -63,7 +63,7 @@ async def ingest_property_sales_rows(
     try:
         all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
         async for task, item in producer.get_rows(all_links):
-            ingestion.queue(item)
+            await ingestion.queue(item)
             if isinstance(item, SaleDataFileSummary):
                 counter.count(task, item)
         await ingestion.flush()
@@ -72,16 +72,28 @@ async def ingest_property_sales_rows(
         raise e
 
 
-async def _count_main(io) -> None:
+async def _count_main(file_limt: int) -> None:
+    io = IoService.create(file_limit)
     async with get_session(io) as session:
         environment = await initialise(io, session)
     await count_property_sales_rows(environment, io)
 
-async def _ingest_main(io, db, batch_size: int, update_conf: UpdateSchemaConfig) -> None:
-    await update_schema(update_conf, db, io)
-    async with get_session(io) as session:
-        environment = await initialise(io, session)
-    await ingest_property_sales_rows(environment, io, db, batch_size)
+async def _ingest_main(file_limt: int,
+                       db_conf: DatabaseConfig,
+                       batch_size: int,
+                       update_conf: UpdateSchemaConfig) -> None:
+    try:
+        io = IoService.create(file_limit - 32)
+        db = DatabaseService.create(db_conf, 32)
+        await db.open()
+        await update_schema(update_conf, db, io)
+
+        async with get_session(io) as session:
+            environment = await initialise(io, session)
+
+        await ingest_property_sales_rows(environment, io, db, batch_size)
+    finally:
+        await db.close()
 
 
 if __name__ == '__main__':
@@ -90,7 +102,6 @@ if __name__ == '__main__':
     import logging
 
     from lib.service.database.defaults import instance_1_config, instance_2_config
-    from ..update_schema import UpdateSchemaConfig
 
     parser = argparse.ArgumentParser(description="Ingest NSW Land values")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -101,7 +112,7 @@ if __name__ == '__main__':
 
     ingest_parser = cmd_parser.add_parser('ingest', help='ingests property sales data')
     ingest_parser.add_argument("--instance", type=int, required=True)
-    ingest_parser.add_argument("--batch_size", type=int, default=100)
+    ingest_parser.add_argument("--batch_size", type=int, default=250)
 
     args = parser.parse_args()
 
@@ -116,13 +127,10 @@ if __name__ == '__main__':
     logging.debug(args)
 
     db_conf_map = { 1: instance_1_config, 2: instance_2_config }
-    io = IoService.create(file_limit)
 
     match args.command:
         case 'count':
-            asyncio.run(_count_main(io))
-        case 'ingest' if args.instance not in db_conf_map:
-            raise ValueError('unknown db instance')
+            asyncio.run(_count_main(file_limit))
         case 'ingest':
             db_connect_config = db_conf_map[args.instance]
             db_update_conf = UpdateSchemaConfig(
@@ -130,9 +138,12 @@ if __name__ == '__main__':
                 apply=True,
                 revert=True,
             )
-
-            db = DatabaseService(db_connect_config)
-            asyncio.run(_ingest_main(io, db, args.batch_size, db_update_conf))
+            asyncio.run(_ingest_main(
+                file_limit,
+                db_connect_config,
+                args.batch_size,
+                db_update_conf,
+            ))
         case other:
             parser.print_help()
 

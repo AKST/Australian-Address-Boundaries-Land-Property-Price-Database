@@ -9,8 +9,7 @@ from .config import IngestionConfig
 _logger = logging.getLogger(__name__)
 
 async def ingest(db: DatabaseService, config: IngestionConfig, outdir: str) -> None:
-
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         # this really won't do anything unless you need to rerun this portion of the script
         for table in config.tables():
             await cursor.execute(f"""

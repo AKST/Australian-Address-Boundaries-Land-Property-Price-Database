@@ -19,5 +19,5 @@ async def init_target_schema(
         'sql/move_gnaf_to_schema.sql',
     ]:
         _logger.info(f"running {script}")
-        async with await db.async_connect() as c, c.cursor() as cursor:
+        async with db.async_connect() as c, c.cursor() as cursor:
             await cursor.execute(await io.f_read(script))

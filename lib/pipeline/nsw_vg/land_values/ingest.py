@@ -43,7 +43,7 @@ async def ingest_raw_files(db: DatabaseService,
     land value publication with minimal changes, and a bit
     of sanitisizing.
     """
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         await cursor.execute(f"DROP TABLE IF EXISTS {_SCHEMA}.raw_entries_lv CASCADE")
         with open('sql/nsw_lv_schema_1_raw.sql', 'r') as f:
             await cursor.execute(f.read())
@@ -97,7 +97,7 @@ async def create_vg_tables_from_raw(db: DatabaseService) -> None:
     populate the tables we care about.
     """
 
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source_file CASCADE")
         await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.source CASCADE")
         await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.district CASCADE")
@@ -122,7 +122,7 @@ async def create_vg_tables_from_raw(db: DatabaseService) -> None:
     ctrl.log_count('valuations')
 
 async def parse_property_description(db: DatabaseService) -> None:
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.land_parcel_link")
         with open('sql/nsw_lv_schema_3_property_description_meta_data.sql', 'r') as f:
             await cursor.execute(f.read())
@@ -155,5 +155,5 @@ async def parse_property_description(db: DatabaseService) -> None:
         ctrl.log_count(t)
 
 async def empty_raw_entries(db: DatabaseService) -> None:
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         await cursor.execute("DROP TABLE IF EXISTS nsw_valuer_general.raw_entries_lv")

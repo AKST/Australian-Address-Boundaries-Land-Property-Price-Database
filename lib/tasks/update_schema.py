@@ -56,7 +56,7 @@ async def update_schema(
             _logger.error(f"failed to run {file}")
             raise e
 
-    async with await db.async_connect() as c, c.cursor() as cursor:
+    async with db.async_connect() as c, c.cursor() as cursor:
         for file in revert_files:
             await run_sql(file, cursor)
 
@@ -113,9 +113,14 @@ if __name__ == '__main__':
     main_logger.debug(f'config {config}')
 
     async def main() -> None:
-        db = DatabaseService(db_conf)
         io = IoService.create(file_limit)
-        await update_schema(config, db, io)
+        db = DatabaseService.create(db_conf, 1)
+        try:
+            await db.open()
+            await update_schema(config, db, io)
+        finally:
+            await db.close()
+
 
     asyncio.run(main())
 
