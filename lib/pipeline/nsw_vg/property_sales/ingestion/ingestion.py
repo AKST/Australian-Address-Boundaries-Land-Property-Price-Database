@@ -3,7 +3,7 @@ from logging import getLogger
 from typing import Any, Dict, List, Self, Set, Tuple, Type
 
 from lib.service.database import DatabaseService
-from lib.pipeline.nsw_vg.property_sales.file_format import data as t
+from lib.pipeline.nsw_vg.property_sales import data as t
 
 from .config import IngestionConfig, IngestionTableConfig
 

@@ -5,9 +5,9 @@ from typing import Any, Dict, AsyncIterator, List, Optional, Tuple, Self, Type
 import os
 import re
 
+from lib.pipeline.nsw_vg.property_sales import PropertySaleDatFileMetaData
 from lib.service.io import IoService
 
-from .data import PropertySaleDatFileMetaData
 from .factories import AbstractFormatFactory
 from .syntax import get_columns_and_syntax, Syntax
 from .text_source import AbstractTextSource

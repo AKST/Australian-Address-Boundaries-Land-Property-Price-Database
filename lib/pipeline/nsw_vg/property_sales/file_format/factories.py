@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Self, List, TypeVar, Optional
 
-from lib.pipeline.nsw_vg.property_sales.file_format import data as t
+from lib.pipeline.nsw_vg.property_sales import data as t
 
 class AbstractFormatFactory(abc.ABC):
     @classmethod

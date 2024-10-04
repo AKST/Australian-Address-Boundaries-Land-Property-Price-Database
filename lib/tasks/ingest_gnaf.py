@@ -43,7 +43,7 @@ if __name__ == '__main__':
     file_limit = int(file_limit * 0.8)
 
     async def main() -> None:
-        db = DatabaseService(db_conf)
+        db = DatabaseService.create(db_conf, 32)
         io = IoService.create(file_limit)
         async with get_session(io) as session:
             env = await initialise(io, session)

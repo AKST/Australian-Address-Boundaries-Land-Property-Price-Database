@@ -2,10 +2,11 @@ import pytest
 from pprint import pformat
 from datetime import datetime
 
+from lib.pipeline.nsw_vg.property_sales.data import PropertySaleDatFileMetaData
 from lib.service.io import IoService
+
 from ..text_source import *
 from ..parse import PropertySalesRowParserFactory
-from ..data import PropertySaleDatFileMetaData
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("file_name,published_year,download_date", [

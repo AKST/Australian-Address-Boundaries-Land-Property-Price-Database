@@ -7,13 +7,6 @@ from lib.pipeline.nsw_vg.discovery import NswVgTarget
 
 ZoningKind = Literal['ep&a_2006', 'legacy_vg_2011', 'unknown']
 
-@dataclass
-class PropertySaleDatFileMetaData:
-    file_path: str
-    published_year: int
-    download_date: Optional[datetime]
-    size: int
-
 class BasePropertySaleFileRow(abc.ABC):
     @abc.abstractmethod
     def db_columns(self: Self) -> List[str]:

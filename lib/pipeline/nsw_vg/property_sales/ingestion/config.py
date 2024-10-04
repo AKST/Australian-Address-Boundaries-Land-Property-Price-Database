@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Self
 
-from lib.pipeline.nsw_vg.property_sales.file_format import data as t
+from lib.pipeline.nsw_vg.property_sales import data as t
 
 @dataclass
 class IngestionTableConfig:

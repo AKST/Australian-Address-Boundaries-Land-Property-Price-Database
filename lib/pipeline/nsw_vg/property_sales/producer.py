@@ -11,7 +11,7 @@ from lib.utility.concurrent import pipe, merge_async_iters
 
 from .file_format.parse import PropertySalesRowParserFactory
 from .file_format.text_source import StringTextSource, BufferedFileReaderTextSource
-from .file_format import PropertySaleDatFileMetaData, BasePropertySaleFileRow
+from .data import PropertySaleDatFileMetaData, BasePropertySaleFileRow
 
 ProducerPair = Tuple[PropertySaleDatFileMetaData, BasePropertySaleFileRow]
 
@@ -40,9 +40,6 @@ class PropertySaleProducer:
 
         async def row_worker(tg: asyncio.TaskGroup, file: PropertySaleDatFileMetaData):
             parser = await tg.create_task(self._factory.create_parser(file))
-            if parser is None:
-                return
-
             async for row in parser.get_data_from_file():
                 await tg.create_task(queue.put((file, row)))
 
