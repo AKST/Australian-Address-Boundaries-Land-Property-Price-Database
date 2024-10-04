@@ -1,9 +1,10 @@
 import asyncio
 from datetime import datetime
+from dataclasses import dataclass
 from functools import reduce
 from logging import getLogger
 from time import time
-from typing import Self
+from typing import Self, Optional, Tuple
 from pathlib import Path
 from pprint import pprint
 import os
@@ -19,82 +20,101 @@ from ..update_schema import update_schema, UpdateSchemaConfig
 
 ZIP_DIR = './_out_zip'
 
-class Counter:
-    _logger = getLogger(f'{__name__}.count')
+async def ingest_property_sales_rows(*args, **kwargs):
+    await Main.main(*args, **kwargs)
 
-    def __init__(self: Self):
-        self.start = time()
+@dataclass
+class PropertySaleIngestionDbConfig:
+    pool_size: int
+    batch_size: int
+    config: DatabaseConfig
+    update: UpdateSchemaConfig
+
+@dataclass
+class PropertySaleIngestionConfig:
+    file_limit: int
+    db: Optional[PropertySaleIngestionDbConfig]
+
+class Main:
+    logger = getLogger(f'{__name__}.ingest')
+    total: int
+    start: float
+    producer: PropertySaleProducer
+    ingestion: Optional[PropertySalesIngestion]
+
+    def __init__(self, producer, ingestion) -> None:
         self.total = 0
+        self.start = time()
+        self.producer = producer
+        self.ingestion = ingestion
 
-    def count(self: Self, task, item: SaleDataFileSummary):
-        self.total = self.total + item.total_records
+    async def run(self, e: Environment) -> None:
+        try:
+            async for task, item in self.producer.get_rows([
+                *e.sale_price_annual.links,
+                *e.sale_price_weekly.links,
+            ]):
+                if self.ingestion:
+                    await self.ingestion.queue(item)
+
+                if isinstance(item, SaleDataFileSummary):
+                    self._count(task, item)
+
+            if self.ingestion:
+                await self.ingestion.flush()
+        except Exception as e:
+            if self.ingestion:
+                self.ingestion.abort()
+            raise e
+
+    def _count(self, task, item: SaleDataFileSummary):
+        self.total += item.total_records
         t = int(time() - self.start)
         th, tm, ts = t // 3600, t // 60 % 60, t % 60
-        self._logger.info(f'Parsed {item.total_records} ' \
-                          f'(total {self.total}) ' \
-                          f'({th}h {tm}m {ts}s) ' \
-                          f'(published: {task.published_year} ' \
-                          f'downloaded: {task.download_date})')
+        self.logger.info(f'Parsed {item.total_records} ' \
+                         f'(total {self.total}) ' \
+                         f'({th}h {tm}m {ts}s) ' \
+                         f'(published: {task.published_year} ' \
+                         f'downloaded: {task.download_date})')
 
-async def count_property_sales_rows(e: Environment, io: IoService) -> None:
-    logger = getLogger(f'{__name__}.count')
-    producer = PropertySaleProducer.create(ZIP_DIR, io)
-    counter = Counter()
+    @staticmethod
+    async def main(
+            e: Environment,
+            io: IoService,
+            db_conf: Optional[Tuple[DatabaseService, int]]):
+        if db_conf:
+            db, batch_size = db_conf
+            ingestion = PropertySalesIngestion.create(db, CONFIG, batch_size)
+        else:
+            ingestion = None
+        producer = PropertySaleProducer.create(ZIP_DIR, io)
 
-    try:
-        all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
-        async for task, item in producer.get_rows(all_links):
-            if isinstance(item, SaleDataFileSummary):
-                counter.count(task, item)
-    except Exception as e:
-        raise e
+        task = Main(producer, ingestion)
+        await task.run(e)
 
-async def ingest_property_sales_rows(
-    e: Environment,
-    io: IoService,
-    db: DatabaseService,
-    batch_size: int
-) -> None:
-    logger = getLogger(f'{__name__}.ingest')
-    producer = PropertySaleProducer.create(ZIP_DIR, io)
-    ingestion = PropertySalesIngestion.create(db, CONFIG, batch_size)
-    counter = Counter()
+    @staticmethod
+    async def cli_main(c: PropertySaleIngestionConfig):
+        try:
+            db: Optional[DatabaseService] = None
+            fl = c.file_limit - c.db.pool_size if c.db else c.file_limit
+            io = IoService.create(fl)
 
-    try:
-        all_links = [*e.sale_price_annual.links, *e.sale_price_weekly.links]
-        async for task, item in producer.get_rows(all_links):
-            await ingestion.queue(item)
-            if isinstance(item, SaleDataFileSummary):
-                counter.count(task, item)
-        await ingestion.flush()
-    except Exception as e:
-        ingestion.abort()
-        raise e
+            async with get_session(io) as session:
+                environment = await initialise(io, session)
 
+            if c.db:
+                db = DatabaseService.create(c.db.config, c.db.pool_size)
+                await db.open()
+                await update_schema(c.db.update, db, io)
 
-async def _count_main(file_limt: int) -> None:
-    io = IoService.create(file_limit)
-    async with get_session(io) as session:
-        environment = await initialise(io, session)
-    await count_property_sales_rows(environment, io)
-
-async def _ingest_main(file_limt: int,
-                       db_conf: DatabaseConfig,
-                       batch_size: int,
-                       update_conf: UpdateSchemaConfig) -> None:
-    try:
-        io = IoService.create(file_limit - 32)
-        db = DatabaseService.create(db_conf, 32)
-        await db.open()
-        await update_schema(update_conf, db, io)
-
-        async with get_session(io) as session:
-            environment = await initialise(io, session)
-
-        await ingest_property_sales_rows(environment, io, db, batch_size)
-    finally:
-        await db.close()
-
+            await Main.main(
+                environment,
+                io,
+                (db, c.db.batch_size) if c.db and db else None,
+            )
+        finally:
+            if db:
+                await db.close()
 
 if __name__ == '__main__':
     import argparse
@@ -112,7 +132,8 @@ if __name__ == '__main__':
 
     ingest_parser = cmd_parser.add_parser('ingest', help='ingests property sales data')
     ingest_parser.add_argument("--instance", type=int, required=True)
-    ingest_parser.add_argument("--batch_size", type=int, default=250)
+    ingest_parser.add_argument("--batch_size", type=int, default=50)
+    ingest_parser.add_argument("--db_pool_size", type=int, default=24)
 
     args = parser.parse_args()
 
@@ -130,20 +151,21 @@ if __name__ == '__main__':
 
     match args.command:
         case 'count':
-            asyncio.run(_count_main(file_limit))
+            db = None
         case 'ingest':
-            db_connect_config = db_conf_map[args.instance]
-            db_update_conf = UpdateSchemaConfig(
-                packages=['nsw_vg'],
-                apply=True,
-                revert=True,
+            db = PropertySaleIngestionDbConfig(
+                batch_size=args.batch_size,
+                pool_size=args.db_pool_size,
+                config=db_conf_map[args.instance],
+                update=UpdateSchemaConfig(
+                    packages=['nsw_vg'],
+                    apply=True,
+                    revert=True,
+                ),
             )
-            asyncio.run(_ingest_main(
-                file_limit,
-                db_connect_config,
-                args.batch_size,
-                db_update_conf,
-            ))
         case other:
             parser.print_help()
+
+    config = PropertySaleIngestionConfig(file_limit, db)
+    asyncio.run(Main.cli_main(config))
 

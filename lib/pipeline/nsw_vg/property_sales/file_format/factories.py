@@ -1,5 +1,5 @@
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Self, List, TypeVar, Optional
 
@@ -32,6 +32,7 @@ class AbstractFormatFactory(abc.ABC):
 
 class CurrentFormatFactory(AbstractFormatFactory):
     zone_standard: t.ZoningKind = 'ep&a_2006'
+    zone_code_len: int = 3
 
     def __init__(self: Self, year: int, file_path: str):
         self.year = year
@@ -69,7 +70,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             contract_date=read_optional_date(row, 12, 'contract_date'),
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
             purchase_price=read_optional_float(row, 14, 'purchase_price'),
-            zone_code=row[15] or None,
+            zone_code=StrCheck(max_len=self.zone_code_len).read_optional(row, 15, 'zone_code'),
             zone_standard=self.zone_standard,
             nature_of_property=read_str(row, 16, 'nature_of_property'),
             primary_purpose=row[17] or None,
@@ -111,6 +112,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
 
 class Legacy2002Format(CurrentFormatFactory):
     zone_standard = 'legacy_vg_2011'
+    zone_code_len = 4
 
     @classmethod
     def create(cls, year: int, file_path: str) -> 'Legacy2002Format':
@@ -196,7 +198,7 @@ class Legacy1990Format(AbstractFormatFactory):
             area_type=read_area_type(row, 13, 'area_type'),
             dimensions=row[14] or None,
             comp_code=row[15] or None,
-            zone_code=row[16] or None,
+            zone_code=StrCheck(max_len=4).read_optional(row, 16, 'zone_code'),
             zone_standard='legacy_vg_2011',
         )
 
@@ -244,6 +246,31 @@ def mk_read_optional(f: Callable[[List[str], int, str], T]) -> Callable[[List[st
         else:
             return f(row, idx, name)
     return impl
+
+@dataclass
+class StrCheck:
+    min_len: int | None = field(default=None)
+    max_len: int | None = field(default=None)
+
+    def read_optional(self, *args, **kwargs) -> str | None:
+        return mk_read_optional(self.read)(*args, **kwargs)
+
+    def read(self, row: List[str], idx: int, name: str) -> str:
+        if not row[idx]:
+            message = 'Failed to read STR %s @ row[%s] IN %s' % (name, idx, row)
+            raise Exception(message)
+
+        s = row[idx]
+
+        if self.min_len and len(s) < self.min_len:
+            message = '%s too long (%s @ row[%s] IN %s)' % (s, name, idx, row)
+            raise Exception(message)
+
+        if self.max_len and len(s) > self.max_len:
+            message = '%s too long (%s @ row[%s] IN %s)' % (s, name, idx, row)
+            raise Exception(message)
+
+        return s
 
 def read_str(row: List[str], idx: int, name: str) -> str:
     if not row[idx]:

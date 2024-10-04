@@ -7,3 +7,5 @@ BEGIN
   END IF;
 END
 $$;
+
+CREATE SCHEMA IF EXISTS nsw_vg_raw;
