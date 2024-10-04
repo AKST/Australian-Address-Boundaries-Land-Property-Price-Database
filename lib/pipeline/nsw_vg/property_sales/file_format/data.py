@@ -5,7 +5,7 @@ from typing import Optional, Self, Literal, List, Tuple
 
 from lib.pipeline.nsw_vg.discovery import NswVgTarget
 
-ZoningKind = Literal['ep&a_2006', 'legacy_vg_2011']
+ZoningKind = Literal['ep&a_2006', 'legacy_vg_2011', 'unknown']
 
 @dataclass
 class PropertySaleDatFileMetaData:
@@ -21,6 +21,7 @@ class BasePropertySaleFileRow(abc.ABC):
 
 @dataclass
 class SaleRecordFileLegacy(BasePropertySaleFileRow):
+    position: int
     file_path: str = field(repr=False)
     year_of_sale: int = field(repr=False)
     submitting_user_id: Optional[str]
@@ -31,6 +32,7 @@ class SaleRecordFileLegacy(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyDetails1990(BasePropertySaleFileRow):
+    position: int
     parent: SaleRecordFileLegacy = field(repr=False)
     district_code: int
     source: Optional[str]
@@ -49,7 +51,7 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     dimensions: Optional[str]
     comp_code: Optional[str]
     zone_code: Optional[str]
-    zone_standard: ZoningKind
+    zone_standard: ZoningKind | None
 
     def db_columns(self: Self) -> List[str]:
         not_allowed = {'parent'}
@@ -57,6 +59,7 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
 
 @dataclass
 class SaleRecordFile(BasePropertySaleFileRow):
+    position: int
     year_of_sale: int
     file_path: str = field(repr=False)
     file_type: Optional[str]
@@ -69,6 +72,7 @@ class SaleRecordFile(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyDetails(BasePropertySaleFileRow):
+    position: int
     parent: SaleRecordFile = field(repr=False)
     district_code: int
     property_id: Optional[int]
@@ -89,7 +93,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     """
     purchase_price: Optional[float]
     zone_code: Optional[str]
-    zone_standard: ZoningKind
+    zone_standard: ZoningKind | None
     nature_of_property: str
     primary_purpose: Optional[str]
     strata_lot_number: Optional[int]
@@ -104,6 +108,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
+    position: int
     parent: SalePropertyDetails = field(repr=False)
 
     district_code: int
@@ -122,6 +127,7 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
 
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):
+    position: int
     parent: SalePropertyLegalDescription = field(repr=False)
     district_code: int
     """
@@ -138,6 +144,7 @@ class SaleParticipant(BasePropertySaleFileRow):
 
 @dataclass
 class SaleDataFileSummary(BasePropertySaleFileRow):
+    position: int
     parent: SaleRecordFile = field(repr=False)
     total_records: int
     total_sale_property_details: int

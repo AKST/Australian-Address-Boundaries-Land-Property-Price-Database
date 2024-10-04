@@ -125,6 +125,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Ingest NSW Land values")
     parser.add_argument("--debug", action='store_true', default=False)
+    parser.add_argument("--file-limit", type=int)
 
     cmd_parser = parser.add_subparsers(dest='command')
 
@@ -142,8 +143,18 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
-    file_limit = int(file_limit * 0.8)
+    if args.file_limit:
+        soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+        soft_limit_2 = min(args.file_limit, hard_limit)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit_2, hard_limit))
+        file_limit = int(soft_limit_2 * 0.8)
+        logging.debug('updated the soft file (%s) limit to (%s)' % (
+            soft_limit,
+            soft_limit_2,
+        ))
+    else:
+        file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+        file_limit = int(file_limit * 0.8)
 
     logging.debug(args)
 

@@ -32,6 +32,11 @@ async def test_end_to_end(file_name: str,
     b_parser = await b_factory.create_parser(file_data)
     s_items = [it async for it in s_parser.get_data_from_file()]
     b_items = [it async for it in b_parser.get_data_from_file()]
+
+    # these differ which is fine
+    for a, b in zip(s_items, b_items):
+        a.position = b.position
+
     assert s_items == b_items
 
 @pytest.mark.asyncio

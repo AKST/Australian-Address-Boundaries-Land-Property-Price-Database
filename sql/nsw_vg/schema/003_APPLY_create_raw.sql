@@ -1,11 +1,13 @@
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_a_legacy (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
+    position bigint NOT NULL,
     file_path TEXT PRIMARY KEY,
     year_of_sale INT NOT NULL,
     submitting_user_id TEXT,
     date_provided DATE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_legacy (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
+    position bigint NOT NULL,
     district_code INT NOT NULL,
     source TEXT,
     valuation_number TEXT,
@@ -26,7 +28,8 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_legacy (
     zone_standard nsw_environment.zoning_standard NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_a_modern (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
+    position bigint NOT NULL,
     year_of_sale INT NOT NULL,
     file_path TEXT PRIMARY KEY,
     file_type TEXT,
@@ -35,7 +38,8 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_a_modern (
     submitting_user_id TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_modern (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
+    position bigint NOT NULL,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,
@@ -69,7 +73,8 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_b_modern (
     dealing_number TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_c (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c (
+    position bigint NOT NULL,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,
@@ -77,7 +82,8 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_c (
     property_description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.property_sale_data_row_d (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d (
+    position bigint NOT NULL,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,

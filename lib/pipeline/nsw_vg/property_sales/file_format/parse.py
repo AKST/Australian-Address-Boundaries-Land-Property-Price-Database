@@ -69,21 +69,21 @@ class PropertySalesParser:
         a, b, c, d = None, None, None, None
 
         try:
-            async for variant, kind, row in self.get_rows():
+            async for pos, variant, kind, row in self.get_rows():
                 if kind == 'A':
-                    a = self.constructors.create_a(row, variant=variant)
+                    a = self.constructors.create_a(pos, row, variant=variant)
                     yield a
                 elif kind == 'B':
-                    b = self.constructors.create_b(row, a_record=a, variant=variant)
+                    b = self.constructors.create_b(pos, row, a_record=a, variant=variant)
                     yield b
                 elif kind == 'C':
-                    c = self.constructors.create_c(row, b_record=b, variant=variant)
+                    c = self.constructors.create_c(pos, row, b_record=b, variant=variant)
                     yield c
                 elif kind == 'D':
-                    d = self.constructors.create_d(row, c_record=c, variant=variant)
+                    d = self.constructors.create_d(pos, row, c_record=c, variant=variant)
                     yield d
                 elif kind == 'Z':
-                    yield self.constructors.create_z(row, a_record=a, variant=variant)
+                    yield self.constructors.create_z(pos, row, a_record=a, variant=variant)
                 else:
                     raise ValueError(f"Unexpected record type: {kind}")
         except Exception as e:
@@ -103,12 +103,14 @@ class PropertySalesParser:
             self._logger.exception(e)
             raise e
 
-    async def get_rows(self: Self) -> AsyncIterator[Tuple[str | None, str, List[str]]]:
+    async def get_rows(self: Self) -> AsyncIterator[Tuple[int, str | None, str, List[str]]]:
         while self._index < self._source.size():
+            position = self._index
             row_s, mode = await self._get_mode()
             variant, row_e, row = await self._get_row_body(mode, row_s)
 
-            yield variant, mode, row
+
+            yield position, variant, mode, row
 
             if mode == 'Z':
                 break

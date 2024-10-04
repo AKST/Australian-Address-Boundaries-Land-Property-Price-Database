@@ -11,23 +11,23 @@ class AbstractFormatFactory(abc.ABC):
         raise NotImplementedError('create not implemented on AbstractFormatFactory')
 
     @abc.abstractmethod
-    def create_a(self: Self, row: List[str], variant: Optional[str]) -> t.BasePropertySaleFileRow:
+    def create_a(self: Self, pos: int, row: List[str], variant: Optional[str]) -> t.BasePropertySaleFileRow:
         pass
 
     @abc.abstractmethod
-    def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]) -> t.BasePropertySaleFileRow:
+    def create_b(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]) -> t.BasePropertySaleFileRow:
         pass
 
     @abc.abstractmethod
-    def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]) -> t.SalePropertyLegalDescription:
+    def create_c(self: Self, pos: int, row: List[str], b_record: Any, variant: Optional[str]) -> t.SalePropertyLegalDescription:
         pass
 
     @abc.abstractmethod
-    def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]) -> t.SaleParticipant:
+    def create_d(self: Self, pos: int, row: List[str], c_record: Any, variant: Optional[str]) -> t.SaleParticipant:
         pass
 
     @abc.abstractmethod
-    def create_z(self: Self, row: List[str], a_record: Any, variant: Optional[str]) -> t.SaleDataFileSummary:
+    def create_z(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]) -> t.SaleDataFileSummary:
         pass
 
 class CurrentFormatFactory(AbstractFormatFactory):
@@ -42,8 +42,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create(Cls, year: int, file_path: str) -> 'CurrentFormatFactory':
         return CurrentFormatFactory(year, file_path)
 
-    def create_a(self: Self, row: List[str], variant: Optional[str]):
+    def create_a(self: Self, pos: int, row: List[str], variant: Optional[str]):
         return t.SaleRecordFile(
+            position=pos,
             year_of_sale=self.year,
             file_path=self.file_path,
             file_type=row[0] or None,
@@ -52,8 +53,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             submitting_user_id=read_str(row, 3, 'submitting_user_id'),
         )
 
-    def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
+    def create_b(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails(
+            position=pos,
             parent=a_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -71,7 +73,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             settlement_date=read_optional_date(row, 13, 'settlement_date'),
             purchase_price=read_optional_float(row, 14, 'purchase_price'),
             zone_code=StrCheck(max_len=self.zone_code_len).read_optional(row, 15, 'zone_code'),
-            zone_standard=self.zone_standard,
+            zone_standard=read_zone_std(row, 15, 'zone_code'),
             nature_of_property=read_str(row, 16, 'nature_of_property'),
             primary_purpose=row[17] or None,
             strata_lot_number=read_optional_int(row, 18, 'strata_lot_number'),
@@ -81,8 +83,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             dealing_number=read_str(row, 22, 'dealing_number'),
         )
 
-    def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
+    def create_c(self: Self, pos: int, row: List[str], b_record: Any, variant: Optional[str]):
         return t.SalePropertyLegalDescription(
+            position=pos,
             parent=b_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -91,8 +94,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             property_description=row[4] or None,
         )
 
-    def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
+    def create_d(self: Self, pos: int, row: List[str], c_record: Any, variant: Optional[str]):
         return t.SaleParticipant(
+            position=pos,
             parent=c_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -101,8 +105,9 @@ class CurrentFormatFactory(AbstractFormatFactory):
             participant=read_str(row, 4, 'participant'),
         )
 
-    def create_z(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
+    def create_z(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SaleDataFileSummary(
+            position=pos,
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),
             total_sale_property_details=read_int(row, 1, 'total_sale_property_details'),
@@ -118,8 +123,9 @@ class Legacy2002Format(CurrentFormatFactory):
     def create(cls, year: int, file_path: str) -> 'Legacy2002Format':
         return Legacy2002Format(year, file_path)
 
-    def create_a(self: Self, row: List[str], variant: Optional[str]):
+    def create_a(self: Self, pos: int, row: List[str], variant: Optional[str]):
         return t.SaleRecordFile(
+            position=pos,
             year_of_sale=self.year,
             file_path=self.file_path,
             file_type=None,
@@ -128,11 +134,12 @@ class Legacy2002Format(CurrentFormatFactory):
             submitting_user_id=row[2],
         )
 
-    def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
+    def create_c(self: Self, pos: int, row: List[str], b_record: Any, variant: Optional[str]):
         if variant is None:
-            return super().create_c(row, b_record, variant)
+            return super().create_c(pos, row, b_record, variant)
         elif variant == 'missing_property_id':
             return t.SalePropertyLegalDescription(
+                position=pos,
                 parent=b_record,
                 district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
@@ -143,11 +150,12 @@ class Legacy2002Format(CurrentFormatFactory):
         else:
             raise TypeError(f'unknown variant {variant}')
 
-    def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
+    def create_d(self: Self, pos: int, row: List[str], c_record: Any, variant: Optional[str]):
         if variant is None:
-            return super().create_d(row, c_record, variant)
+            return super().create_d(pos, row, c_record, variant)
         elif variant == 'missing_property_id':
             return t.SaleParticipant(
+                position=pos,
                 parent=c_record,
                 district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
@@ -167,20 +175,22 @@ class Legacy1990Format(AbstractFormatFactory):
     def create(cls, year: int, file_path: str):
         return Legacy1990Format(year, file_path)
 
-    def create_a(self: Self, row: List[str], variant: Optional[str]):
+    def create_a(self: Self, pos: int, row: List[str], variant: Optional[str]):
         """
         Column 0 in the row will always be empty. I guess is this is
         to maintain some level of consistency with the later formats.
         """
         return t.SaleRecordFileLegacy(
+            position=pos,
             file_path=self.file_path,
             year_of_sale=self.year,
             submitting_user_id=row[1],
             date_provided=read_datetime(row, 2, 'date_provided'),
         )
 
-    def create_b(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
+    def create_b(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails1990(
+            position=pos,
             parent=a_record,
             district_code=read_int(row, 0, 'district_code'),
             source=row[1] or None,
@@ -199,17 +209,18 @@ class Legacy1990Format(AbstractFormatFactory):
             dimensions=row[14] or None,
             comp_code=row[15] or None,
             zone_code=StrCheck(max_len=4).read_optional(row, 16, 'zone_code'),
-            zone_standard='legacy_vg_2011',
+            zone_standard=read_zone_std(row, 16, 'zone_standard'),
         )
 
-    def create_c(self: Self, row: List[str], b_record: Any, variant: Optional[str]):
+    def create_c(self: Self, pos: int, row: List[str], b_record: Any, variant: Optional[str]):
         raise TypeError('c record not allowed in 1990 format')
 
-    def create_d(self: Self, row: List[str], c_record: Any, variant: Optional[str]):
+    def create_d(self: Self, pos: int, row: List[str], c_record: Any, variant: Optional[str]):
         raise TypeError('d record not allowed in 1990 format')
 
-    def create_z(self: Self, row: List[str], a_record: Any, variant: Optional[str]):
+    def create_z(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SaleDataFileSummary(
+            position=pos,
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),
             total_sale_property_details=read_int(row, 1, 'total_sale_property_details'),
@@ -271,6 +282,38 @@ class StrCheck:
             raise Exception(message)
 
         return s
+
+def read_zone_std(row: List[str], idx: int, name: str) -> t.ZoningKind | None:
+    if not row[idx]:
+        return None
+
+    legacy_zone = [
+        'A', 'B', 'C', 'D', 'E',
+        'I', 'M', 'N', 'O', 'P',
+        'R', 'S', 'T', 'U', 'V',
+        'W', 'X', 'Y', 'Z',
+    ]
+
+    col = row[idx]
+    if col in legacy_zone:
+        return 'legacy_vg_2011'
+
+    epaa_zone_prefixes = [
+        'IN', 'MU', 'RE', 'RU', 'SP',
+        'B', 'C', 'E', 'R', 'W',
+    ]
+
+    for p in epaa_zone_prefixes:
+        if len(col) != len(p)+1:
+            continue
+        if not col.startswith(p):
+            continue
+        if not col[-1].isdigit():
+            continue
+        return 'ep&a_2006'
+
+    return 'unknown'
+
 
 def read_str(row: List[str], idx: int, name: str) -> str:
     if not row[idx]:
