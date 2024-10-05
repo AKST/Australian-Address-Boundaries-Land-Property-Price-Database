@@ -69,7 +69,7 @@ if __name__ == '__main__':
     import argparse
     import resource
 
-    from lib.service.database.defaults import instance_1_config, instance_2_config
+    from lib.service.database.defaults import DB_INSTANCE_MAP
 
     parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
     parser.add_argument("--instance", type=int, required=True)
@@ -85,15 +85,9 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    if args.instance == 1:
-        db_conf = instance_1_config
-    elif args.instance == 2:
-        db_conf = instance_2_config
-    else:
-        raise ValueError('invalid instance')
-
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
+    db_conf = DB_INSTANCE_MAP[args.instance]
 
     if args.packages:
         packages = [p for p in packages_allowed if p in args.packages]

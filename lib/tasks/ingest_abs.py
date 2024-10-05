@@ -28,7 +28,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.service.io import IoService
-    from lib.service.database.defaults import instance_1_config, instance_2_config
+    from lib.service.database.defaults import DB_INSTANCE_MAP
 
     from .fetch_static_files import get_session, initialise
 
@@ -47,7 +47,5 @@ if __name__ == '__main__':
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
-    db_conf = { 1: instance_1_config, 2: instance_2_config }[args.instance]
-
-    asyncio.run(_main(db_conf, file_limit))
+    asyncio.run(_main(DB_INSTANCE_MAP[args.instance], file_limit))
 

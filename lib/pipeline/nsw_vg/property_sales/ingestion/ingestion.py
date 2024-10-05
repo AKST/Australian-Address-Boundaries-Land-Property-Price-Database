@@ -89,7 +89,6 @@ class PropertySalesIngestion:
         self._state[type(row)] = []
 
     def _dispatch(self: Self, c: IngestionTableConfig, q: List[t.BasePropertySaleFileRow]) -> None:
-        self._logger.debug(f'inserting {len(q)} for {c.table_symbol}')
         sql, columns = insert_queue(c.table_symbol, q[0])
         values = [[getattr(row, name) for name in columns] for row in q]
         task = asyncio.create_task(self._worker(sql, values, c.table_symbol))

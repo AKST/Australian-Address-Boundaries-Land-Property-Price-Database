@@ -7,7 +7,7 @@ from typing import Any, Self, Set
 
 
 from ..data import PropertySaleDatFileMetaData
-from .config import ChildMessage
+from .messages import ChildMessage
 
 @dataclass
 class NswVgPsChildStatus:
@@ -18,35 +18,29 @@ class NswVgPsChildClient:
     This instance is created on the parent process
     """
     _logger = getLogger(f'{__name__}.NswVgPsChildClient')
-    _q_child: multiprocessing.Queue[ChildMessage.Message]
+    _q_child: multiprocessing.Queue
     _p_child: multiprocessing.Process
     _workload: int = 0
-    _e_closed: asyncio.Event
 
     def __init__(self,
-                 q_child: multiprocessing.Queue[ChildMessage.Message],
+                 q_child: multiprocessing.Queue,
                  p_child: multiprocessing.Process) -> None:
         self._q_child = q_child
         self._p_child = p_child
 
     def parse(self: Self, file: PropertySaleDatFileMetaData):
+        self._workload += file.size
         self._q_child.put(ChildMessage.Parse(file))
 
-    def done(self: Self):
-        self._q_child.put(ChildMessage.Done())
+    async def wait_till_done(self: Self):
+        self._logger.debug(f'pid {self._p_child.pid} waiting to finish')
+        self._q_child.put(ChildMessage.RequestClose())
+        await asyncio.create_task(asyncio.to_thread(self._p_child.join))
+        self._logger.debug(f'pid {self._p_child.pid} finished')
 
     def kill(self: Self):
-        self._q_child.put(ChildMessage.Kill())
+        self._p_child.terminate()
 
     def status(self: Self) -> NswVgPsChildStatus:
         return NswVgPsChildStatus(queued=self._workload)
-
-    def close(self: Self):
-        self._e_closed.set()
-
-    async def wait_till_finish(self: Self):
-        t_join = asyncio.create_task(asyncio.to_thread(self._p_child.join))
-        t_event = asyncio.create_task(self._e_closed.wait())
-        tasks = { t_join, t_event }
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 

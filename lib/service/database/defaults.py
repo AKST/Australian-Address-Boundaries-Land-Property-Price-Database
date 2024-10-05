@@ -10,7 +10,7 @@ from .config import DatabaseConfig
 # system, absolutely define credentials in a
 # more confindential manner.
 
-instance_1_config = DatabaseConfig(
+DB_INSTANCE_1_CONFIG = DatabaseConfig(
     dbname='gnaf_db',
     user='postgres',
     host='localhost',
@@ -18,7 +18,7 @@ instance_1_config = DatabaseConfig(
     password='throwAwayPassword',
 )
 
-instance_2_config = DatabaseConfig(
+DB_INSTANCE_2_CONFIG = DatabaseConfig(
     dbname='gnaf_db_2',
     user='postgres',
     host='localhost',
@@ -26,3 +26,7 @@ instance_2_config = DatabaseConfig(
     password='throwAwayPassword2',
 )
 
+DB_INSTANCE_MAP = {
+    1: DB_INSTANCE_1_CONFIG,
+    2: DB_INSTANCE_2_CONFIG,
+}

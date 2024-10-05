@@ -10,23 +10,25 @@ from lib.pipeline.nsw_vg.property_sales.data import PropertySaleDatFileMetaData
 from lib.service.io import IoService
 
 from .child_client import NswVgPsChildClient
+from .config import ParentConfig
 
 T = TypeVar('T')
 
-class NswVgPsParentProc:
-    _logger = getLogger(f'{__name__}.NswVgPsParentProc')
+class NswVgPsIngestionCoordinator:
+    config: ParentConfig
+
+    _logger = getLogger(f'{__name__}.NswVgPsIngestionCoordinator')
     _children: List[NswVgPsChildClient]
-    _target_root_dir: str
     _io: IoService
     _tg: TaskGroup
 
     def __init__(self: Self,
+                 config: ParentConfig,
                  children: List[NswVgPsChildClient],
-                 target_root_dir: str,
                  task_group: TaskGroup,
                  io: IoService) -> None:
+        self.config = config
         self._children = children
-        self._target_root_dir = target_root_dir
         self._tg = task_group
         self._io = io
 
@@ -36,10 +38,11 @@ class NswVgPsParentProc:
             file = await self._t(queue.get())
             if file is None:
                 break
+
             self._find_next_child().parse(file)
 
         await asyncio.gather(q_task, *[
-            self._t(c.wait_till_finish())
+            self._t(c.wait_till_done())
             for c in self._children
         ])
 
@@ -59,9 +62,18 @@ class NswVgPsParentProc:
         tasks: List[asyncio.Task] = []
 
         async def find_files(t: NswVgTarget):
-            zip_path =  f'{self._target_root_dir}/{t.zip_dst}'
+            if not self.config.valid_publish_date(t.datetime.year):
+                self._logger.debug(f'skipping target {t}')
+                return
+
+            self._logger.debug(f'queuing files from {t}')
+            zip_path =  f'{self.config.target_root_dir}/{t.zip_dst}'
             async for path in self._io.grep_dir(zip_path, '*.DAT'):
-                tasks.append(self._t(queue_task(t, path)))
+                download_date = get_download_date(path)
+                if self.config.valid_download_date(download_date):
+                    tasks.append(self._t(queue_task(t, path)))
+                else:
+                    self._logger.debug(f'skipping file {path}')
 
         async def queue_task(t: NswVgTarget, path: str):
             if path.endswith('-checkpoint.DAT'):
@@ -71,6 +83,8 @@ class NswVgPsParentProc:
                 self._logger.debug(f'file not found, skipping {path}')
                 return
 
+            download_date = get_download_date(path)
+
             await queue.put(PropertySaleDatFileMetaData(
                 file_path=path,
                 published_year=t.datetime.year,
@@ -79,9 +93,11 @@ class NswVgPsParentProc:
             ))
 
         async def run_all() -> None:
+            self._logger.debug(f'queuing files')
             await asyncio.gather(*[find_files(t) for t in targets])
             await asyncio.gather(*tasks)
             await queue.put(None)
+            self._logger.debug(f'All files queued')
 
         return asyncio.create_task(run_all()), queue
 

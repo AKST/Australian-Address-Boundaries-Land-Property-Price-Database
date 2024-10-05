@@ -43,7 +43,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.service.io import IoService
-    from lib.service.database.defaults import instance_1_config, instance_2_config
+    from lib.service.database.defaults import DB_INSTANCE_MAP
 
     from lib.tasks.fetch_static_files import get_session, initialise
 
@@ -67,13 +67,7 @@ if __name__ == '__main__':
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
-
-    if args.instance == 1:
-        db_conf = instance_1_config
-    elif args.instance == 2:
-        db_conf = instance_2_config
-    else:
-        raise ValueError('invalid instance')
+    db_conf = DB_INSTANCE_MAP[args.instance]
 
     logger.debug(f'file limit {file_limit}')
     logger.debug(f'instance #{args.instance}')

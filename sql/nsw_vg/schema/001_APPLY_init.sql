@@ -8,4 +8,4 @@ BEGIN
 END
 $$;
 
-CREATE SCHEMA IF EXISTS nsw_vg_raw;
+CREATE SCHEMA IF NOT EXISTS nsw_vg_raw;
