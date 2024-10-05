@@ -59,9 +59,10 @@ async def _child_main(config: ChildConfig, messages: IpcQueue) -> None:
         async with asyncio.TaskGroup() as tg:
             server = NswVgPsChildServer(tg, ingestion, factory)
             server.start_ingestion()
-            while not server.done:
+            while not server.closing:
                 message = await asyncio.to_thread(messages.get)
                 await server.on_message(message)
+            await server.flush()
         logging.info('this finished has finished')
     except Exception as e:
         logging.error("this child has died")

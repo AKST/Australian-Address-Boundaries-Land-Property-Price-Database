@@ -21,7 +21,7 @@ class NswVgPsChildServer:
     q_rows: asyncio.Queue[BasePropertySaleFileRow | None]
     t_ingest: asyncio.Task | None
     t_parser: Set[asyncio.Task]
-    done = False
+    closing = False
 
     parser_factory: PropertySalesRowParserFactory
     ingestion: PropertySalesIngestion
@@ -38,9 +38,6 @@ class NswVgPsChildServer:
         self.ingestion = ingestion
 
     async def flush(self: Self):
-        if not self.done:
-            raise ValueError('cannot flush when not done')
-
         if self.t_parser:
             await asyncio.gather(*self.t_parser)
             return await self.flush()
@@ -56,7 +53,7 @@ class NswVgPsChildServer:
                 self.t_parser.add(task)
             case ChildMessage.RequestClose():
                 self.logger.debug(f'been informed there is no more work')
-                self.done = True
+                self.closing = True
                 await self.flush()
             case other:
                 self.logger.error(f'unknown message {message}')
@@ -73,20 +70,25 @@ class NswVgPsChildServer:
             task.cancel()
         if self.t_ingest is not None:
             self.t_ingest.cancel()
-        self.done = True
+        self.closing = True
         self.t_parser = set()
         self.t_ingest = None
         await self.q_rows.put(None)
 
     async def _ingest(self: Self) -> None:
-        while self.t_parser or not self.done:
-            row = await self._t(self.q_rows.get())
-            if row is None:
-                break
-
-            await self._t(self.ingestion.queue(row))
-        await self._t(self.ingestion.flush())
-        self.logger.debug(f'ending ingestion')
+        try:
+            while True:
+                row = await self._t(self.q_rows.get())
+                if row is None:
+                    break
+                await self._t(self.ingestion.queue(row))
+            await self._t(self.ingestion.flush())
+            self.logger.debug(f'ending ingestion')
+        except Exception as e:
+            self.logger.error('ingestion failed')
+            self.logger.exception(e)
+            await self.kill()
+            raise e
 
     async def _start_parser(self: Self, file: PropertySaleDatFileMetaData) -> None:
         try:
