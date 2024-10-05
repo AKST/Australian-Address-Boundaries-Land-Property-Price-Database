@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS nsw_property.zone (
   zone_id INT NOT NULL,
   UNIQUE (property_id, zone_id, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_property.property(id),
-  FOREIGN KEY (zone_id) REFERENCES nsw_environment.zone(zone_id)
+  FOREIGN KEY (zone_id) REFERENCES nsw_planning.epa_2006_zone(zone_id)
 ) inherits (meta.event);
 
 CREATE TABLE IF NOT EXISTS nsw_property.property_parcel (

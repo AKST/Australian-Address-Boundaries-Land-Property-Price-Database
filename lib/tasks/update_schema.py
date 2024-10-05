@@ -11,7 +11,7 @@ packages_allowed = [
     'meta',
     'abs',
     'nsw_lrs',
-    'nsw_environment',
+    'nsw_planning',
     'nsw_property',
     'nsw_spatial',
     'nsw_vg',

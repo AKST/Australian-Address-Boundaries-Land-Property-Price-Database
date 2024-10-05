@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     dimensions TEXT,
     comp_code TEXT,
     zone_code varchar(4),
-    zone_standard nsw_environment.zoning_standard
+    zone_standard nsw_vg.zoning_standard
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     -- is abit of overlap in data between the old and new
     -- format) can appear here in this column.
     zone_code varchar(4),
-    zone_standard nsw_environment.zoning_standard,
+    zone_standard nsw_vg.zoning_standard,
 
     nature_of_property TEXT NOT NULL,
     primary_purpose TEXT,
