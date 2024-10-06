@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 
+from .telemetry import IngestionSample
 from ..data import PropertySaleDatFileMetaData
 
+
 class ParentMessage:
+    @dataclass
     class Message:
-        pass
+        sender: int
 
     @dataclass
-    class ImDead(Message):
-        sender: int
+    class Update(Message):
+        value: IngestionSample
 
 class ChildMessage:
     class Message:

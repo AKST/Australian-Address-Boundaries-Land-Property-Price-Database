@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m pytest lib
+python -m pytest lib "$@"

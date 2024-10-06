@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import TaskGroup
 from logging import getLogger
 from typing import Any, Dict, List, Self, Set, Tuple, Type
 
@@ -24,23 +25,27 @@ class PropertySalesIngestion:
     _tasks: Set[asyncio.Task]
     _state: RowBatchState
     _db: DatabaseService
+    _tg: TaskGroup
 
     def __init__(self: Self,
                  db: DatabaseService,
+                 tg: TaskGroup,
                  config: IngestionConfig,
                  batch_size: int,
                  state: RowBatchState) -> None:
         self.batch_size = batch_size
         self._db = db
+        self._tg = tg
         self._state = state
         self._tasks = set()
         self._config = config
 
     @staticmethod
     def create(db: DatabaseService,
+               tg: TaskGroup,
                config: IngestionConfig,
                batch_size: int) -> 'PropertySalesIngestion':
-        return PropertySalesIngestion(db, config, batch_size, {
+        return PropertySalesIngestion(db, tg, config, batch_size, {
             t.SaleRecordFileLegacy: [],
             t.SalePropertyDetails1990: [],
             t.SaleRecordFile: [],
@@ -56,21 +61,25 @@ class PropertySalesIngestion:
         completed = {t for t in self._tasks if t.done()}
         self._task = self._tasks - completed
 
-    async def flush(self: Self) -> None:
+    async def flush(self: Self) -> int:
+        size = 0
         for t, queued in self._state.items():
+            size += len(queued)
             if queued:
                 table_conf = self._config.get_config(queued[0])
                 self._dispatch(table_conf, queued)
 
+
         self._state = {t: [] for t in self._state.keys()}
         await asyncio.gather(*self._tasks)
-        await self._maintain_runnning()
+        await self._maintain_running()
+        return size
 
-    async def queue(self: Self, row: t.BasePropertySaleFileRow) -> None:
-        await self._maintain_runnning()
+    async def queue(self: Self, row: t.BasePropertySaleFileRow) -> int:
+        await self._maintain_running()
 
         if isinstance(row, t.SaleDataFileSummary):
-            return
+            return 0
 
         if type(row) not in self._state:
             self._logger.error(f'key: {type(row)}')
@@ -81,27 +90,43 @@ class PropertySalesIngestion:
         queued.append(row)
 
         if len(queued) < self.batch_size:
-            return
+            return 0
 
         table_conf = self._config.get_config(row)
 
         self._dispatch(table_conf, queued)
         self._state[type(row)] = []
+        return self.batch_size
 
     def _dispatch(self: Self, c: IngestionTableConfig, q: List[t.BasePropertySaleFileRow]) -> None:
         sql, columns = insert_queue(c.table_symbol, q[0])
         values = [[getattr(row, name) for name in columns] for row in q]
-        task = asyncio.create_task(self._worker(sql, values, c.table_symbol))
+        task = self._tg.create_task(self._worker(sql, values, c.table_symbol))
         self._tasks.add(task)
 
-    async def _maintain_runnning(self) -> None:
+    async def _maintain_running(self: Self) -> None:
         completed = {t for t in self._tasks if t.done()}
         self._task = self._tasks - completed
         for t in completed:
             await t
 
-    async def _worker(self, sql: str, values: List[List[str]], name: str) -> None:
-        async with self._db.async_connect() as c, c.cursor() as cursor:
-            await cursor.executemany(sql, values)
-        self._logger.debug(f'inserted {len(values)} for {name}')
+    async def _worker(self: Self, sql: str, rows: List[List[str]], name: str):
+        try:
+            async with self._db.async_connect() as c, c.cursor() as cursor:
+                match len(rows):
+                    case 0: pass
+                    case 1: await cursor.execute(sql, rows[0])
+                    case n: await cursor.executemany(sql, rows)
+            self._logger.debug(f'inserted {len(rows)} for {name}')
+        except Exception as e:
+            self._logger.error(f'failed on "{sql}"')
+            if len(rows) > 1:
+                # `executemany` has terribel error messages so lets
+                # narrow in on whatever caused the issue
+                for row in rows:
+                    await self._worker(sql, [row], name)
+            else:
+                self._logger.error(rows)
+                self._logger.exception(e)
+                raise e
 
