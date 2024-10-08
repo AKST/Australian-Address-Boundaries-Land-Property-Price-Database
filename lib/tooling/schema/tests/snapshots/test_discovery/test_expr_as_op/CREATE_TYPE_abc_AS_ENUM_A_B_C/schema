@@ -1,0 +1,1 @@
+SchemaSyntax(operations=[Stmt.CreateType(schema_name=None, type_name='abc')])

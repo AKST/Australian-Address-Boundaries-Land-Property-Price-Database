@@ -31,20 +31,27 @@ class SchemaController:
                 await self.drop(command)
             case Command.Truncate() as command:
                 await self.truncate(command)
+            case Command.AddForeignKeys() as command:
+                await self.add_foreign_keys(command)
+            case Command.RemoveForeignKeys() as command:
+                await self.remove_foreign_keys(command)
             case other:
                 raise TypeError(f'unknown command {other}')
 
     async def create(self: Self, command: Command.Create) -> None:
         file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
 
-        if command.omit_foreign_keys:
-            raise NotImplementedError()
-
         async with self._db.async_connect() as conn, conn.cursor() as cursor:
             for file in file_list:
-                data = await self._io.f_read(file.path())
-                self.logger.debug(f'running {file.path()}')
-                await cursor.execute(data)
+                if file.contents is None:
+                    raise TypeError()
+
+                for operation in codegen.create(
+                    file.contents,
+                    command.omit_foreign_keys,
+                ):
+                    self.logger.debug(operation)
+                    await cursor.execute(operation)
 
     async def drop(self: Self, command: Command.Drop) -> None:
         file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
@@ -67,6 +74,31 @@ class SchemaController:
                     raise TypeError()
 
                 for operation in codegen.truncate(file.contents, command.cascade):
+                    self.logger.debug(operation)
+                    await cursor.execute(operation)
+
+    async def add_foreign_keys(self: Self, command: Command.AddForeignKeys) -> None:
+        file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
+
+        async with self._db.async_connect() as conn, conn.cursor() as cursor:
+            for file in file_list:
+                if file.contents is None:
+                    raise TypeError()
+
+                for operation in codegen.add_foreign_keys(file.contents):
+                    self.logger.debug(operation)
+                    await cursor.execute(operation)
+
+    async def remove_foreign_keys(self: Self, command: Command.RemoveForeignKeys) -> None:
+        file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
+
+        async with self._db.async_connect() as conn, conn.cursor() as cursor:
+            for file in file_list:
+                if file.contents is None:
+                    raise TypeError()
+
+                fk_map = await codegen.make_fk_map(file.contents, cursor)
+                for operation in codegen.remove_foreign_keys(file.contents, fk_map):
                     self.logger.debug(operation)
                     await cursor.execute(operation)
 

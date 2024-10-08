@@ -7,6 +7,8 @@ import sqlglot.expressions as sql_expr
 from typing import cast, List, Optional, Set, Self, Type
 
 from lib.service.io import IoService
+from lib.utility.concurrent import fmap
+from lib.utility.iteration import partition
 
 from .config import schema_ns
 from .type import *
@@ -90,46 +92,35 @@ class SchemaDiscovery:
                 return _FileMeta(ns, step, name)
 
     async def __f_sql_meta_data(self: Self, f: str, meta: _FileMeta, load_syn: bool) -> SqlFileMetaData:
-        contents = await self.__f_syntax(f) if load_syn else None
+        contents = await fmap(sql_as_operations, self._io.f_read(f)) if load_syn else None
         return SqlFileMetaData(self.root_dir, meta.ns, meta.step, meta.name, contents)
 
-    async def __f_syntax(self: Self, f: str) -> SchemaSyntax:
-        """
-        Produces syntax of the relevant schema and reduces their
-        surface area to something that is simple to work with.
-        """
-        def syntax(exprs: List[Expression]):
-            for expr in exprs:
-                match expr:
-                    case sql_expr.Create(kind="SCHEMA", this=schema_def):
-                        s_name = schema_def.db
-                        yield Stmt.CreateSchema(expr, s_name)
-                    case sql_expr.Create(kind="TABLE", this=schema):
-                        t_name = schema.this.this.this
-                        s_name = schema.this.db
-                        yield Stmt.CreateTable(expr, s_name, t_name)
-                    case sql_expr.Create(kind="INDEX", this=schema):
-                        t_name = schema.this.this
-                        yield Stmt.CreateIndex(expr, t_name)
-                    case sql_expr.Command(this="CREATE", expression=e):
-                        match re.findall(f'\w+', e.lower()):
-                            case ['type', s_name, t_name, 'as', *_]:
-                                yield Stmt.CreateType(expr, s_name, t_name)
-                            case ['type', t_name, 'as', *_]:
-                                yield Stmt.CreateType(expr, None, t_name)
-                            case other:
-                                raise TypeError(f'unknown command {repr(other)}')
-                    case other:
-                        raise TypeError(f'unknown {repr(other)}')
+def sql_as_operations(file_data: str) -> SchemaSyntax:
+    sql_exprs = parse_sql(file_data, read='postgres')
+    generator = [(expr, expr_as_op(expr)) for expr in sql_exprs if expr]
+    return SchemaSyntax(*partition(generator))
 
-        expr_tree_data = await self._io.f_read(f)
-        expr_tree = [t for t in parse_sql(expr_tree_data) if t]
-        return SchemaSyntax(expr_tree=expr_tree, operations=list(syntax(expr_tree)))
-
-
-
-
-
-
+def expr_as_op(expr: Expression):
+    match expr:
+        case sql_expr.Create(kind="SCHEMA", this=schema_def):
+            s_name = schema_def.db
+            return Stmt.CreateSchema(expr, s_name)
+        case sql_expr.Create(kind="TABLE", this=schema):
+            t_name = schema.this.this.this
+            s_name = schema.this.db or None
+            return Stmt.CreateTable(expr, s_name, t_name)
+        case sql_expr.Create(kind="INDEX", this=schema):
+            t_name = schema.this.this
+            return Stmt.CreateIndex(expr, t_name)
+        case sql_expr.Command(this="CREATE", expression=e):
+            match re.findall(f'\w+', e.lower()):
+                case ['type', s_name, t_name, 'as', *_]:
+                    return Stmt.CreateType(expr, s_name, t_name)
+                case ['type', t_name, 'as', *_]:
+                    return Stmt.CreateType(expr, None, t_name)
+                case other:
+                    raise TypeError(f'unknown command {repr(other)}')
+        case other:
+            raise TypeError(f'unknown {repr(other)}')
 
 

@@ -23,6 +23,10 @@ if __name__ == '__main__':
             discovery = SchemaDiscovery.create(io)
             controller = SchemaController(io, db, discovery)
             await controller.command(Command.Drop(ns='abs'))
+            await controller.command(Command.Create(ns='abs', omit_foreign_keys=True))
+            await controller.command(Command.AddForeignKeys(ns='abs'))
+            await controller.command(Command.RemoveForeignKeys(ns='abs'))
+            await controller.command(Command.Drop(ns='abs'))
             await controller.command(Command.Create(ns='abs'))
             await controller.command(Command.Truncate(ns='abs', cascade=True))
         finally:

@@ -25,6 +25,14 @@ class Command:
         omit_foreign_keys: bool = field(default=False)
 
     @dataclass
+    class AddForeignKeys(BaseCommand):
+        pass
+
+    @dataclass
+    class RemoveForeignKeys(BaseCommand):
+        pass
+
+    @dataclass
     class Drop(BaseCommand):
         cascade: bool = field(default=False)
 
