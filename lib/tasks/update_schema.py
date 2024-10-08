@@ -1,25 +1,21 @@
 from dataclasses import dataclass, field
 import logging
-from typing import List
+from typing import List, Dict
+from sys import maxsize
 
 from lib.service.database import DatabaseService
 from lib.service.io import IoService
+from lib.tooling.schema.controller import SchemaController
+from lib.tooling.schema.discovery import SchemaDiscovery
+from lib.tooling.schema.config import ns_dependency_order, schema_ns
+from lib.tooling.schema.type import *
 
 _logger = logging.getLogger(f'{__name__}.initialise_db_schema')
 
-packages_allowed = [
-    'meta',
-    'abs',
-    'nsw_lrs',
-    'nsw_planning',
-    'nsw_property',
-    'nsw_spatial',
-    'nsw_vg',
-]
-
 @dataclass
 class UpdateSchemaConfig:
-    packages: List[str] = field(default_factory=lambda: packages_allowed)
+    packages: List[SchemaNamespace]
+    range: Dict[SchemaNamespace, range | int] | int | range | None
     apply: bool = field(default=True)
     revert: bool = field(default=False)
 
@@ -29,39 +25,34 @@ async def update_schema(
     io: IoService,
 ) -> None:
     _logger.info('initalising nsw_vg db schema')
-    revert_files = [
-        file
-        for p in reversed(config.packages)
-        for file in sorted([
-            file
-            async for file in io.grep_dir(f'sql/{p}/schema', '*_REVERT.sql')
-        ], reverse=True)
-    ] if config.revert else []
+    discovery = SchemaDiscovery.create(io)
+    controller = SchemaController(io, db, discovery)
 
-    apply_files = [
-        file
-        for p in config.packages
-        for file in sorted([
-            file
-            async for file in io.grep_dir(f'sql/{p}/schema', '*_APPLY_*.sql')
-        ])
-    ] if config.apply else []
+    ordered = [p for p in ns_dependency_order if p in config.packages]
+    drop_list = reversed(ordered) if config.revert else []
+    create_list = ordered if config.apply else []
 
-    async def run_sql(file, cursor):
-        try:
-            _logger.info(f'running {file}')
-            file_body = await io.f_read(file)
-            await cursor.execute(file_body)
-        except Exception as e:
-            _logger.error(f"failed to run {file}")
-            raise e
+    def get_range(ns: SchemaNamespace) -> range | None:
+        if config.range is None:
+            return None
+        elif isinstance(config.range, int):
+            return range(config.range, config.range + 1)
+        elif isinstance(config.range, range):
+            return config.range
+        elif isinstance(config.range, dict):
+            value = config.range[ns]
+            if isinstance(value, int):
+                return range(value, value + 1)
+            elif isinstance(value, range):
+                return value
 
-    async with db.async_connect() as c, c.cursor() as cursor:
-        for file in revert_files:
-            await run_sql(file, cursor)
+    for ns in drop_list:
+        r = get_range(ns)
+        await controller.command(Command.Drop(ns=ns, range=r))
 
-        for file in apply_files:
-            await run_sql(file, cursor)
+    for ns in create_list:
+        r = get_range(ns)
+        await controller.command(Command.Create(ns=ns, range=r))
 
 
 if __name__ == '__main__':
@@ -71,9 +62,11 @@ if __name__ == '__main__':
 
     from lib.service.database.defaults import DB_INSTANCE_MAP
 
-    parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
+    parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--packages", nargs='*', default=[])
+    parser.add_argument("--packages", nargs='*', required=True)
+    parser.add_argument("--range-min", type=int, required=True)
+    parser.add_argument("--range-max", type=int, required=True)
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--enable-revert", action='store_true', default=False)
     parser.add_argument("--disable-apply", action='store_true', default=False)
@@ -90,12 +83,13 @@ if __name__ == '__main__':
     db_conf = DB_INSTANCE_MAP[args.instance]
 
     if args.packages:
-        packages = [p for p in packages_allowed if p in args.packages]
+        packages = [p for p in ns_dependency_order if p in args.packages]
     else:
-        packages = packages_allowed
+        packages = ns_dependency_order
 
     config = UpdateSchemaConfig(
         packages=packages,
+        range=range(args.range_min, args.range_max + 1),
         apply=not args.disable_apply,
         revert=args.enable_revert,
     )

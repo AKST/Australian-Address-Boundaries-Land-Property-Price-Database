@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     position bigint NOT NULL,
+    file_path TEXT,
     district_code INT NOT NULL,
     source TEXT,
     valuation_number TEXT,
@@ -25,7 +26,8 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     dimensions TEXT,
     comp_code TEXT,
     zone_code varchar(4),
-    zone_standard nsw_vg.zoning_standard
+    zone_standard nsw_vg.zoning_standard,
+    UNIQUE (file_path, position)
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
@@ -40,6 +42,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     position bigint NOT NULL,
+    file_path TEXT,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,
@@ -70,23 +73,28 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     comp_code TEXT,
     sale_code TEXT,
     interest_of_sale INT,
-    dealing_number TEXT NOT NULL
+    dealing_number TEXT NOT NULL,
+    UNIQUE (file_path, position)
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c (
     position bigint NOT NULL,
+    file_path TEXT,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,
     date_provided DATE NOT NULL,
-    property_description TEXT
+    property_description TEXT,
+    UNIQUE (file_path, position)
 );
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d (
     position bigint NOT NULL,
+    file_path TEXT,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,
     date_provided DATE NOT NULL,
-    participant nsw_vg.sale_participant NOT NULL
+    participant nsw_vg.sale_participant NOT NULL,
+    UNIQUE (file_path, position)
 );

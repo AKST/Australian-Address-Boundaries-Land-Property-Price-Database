@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 from logging import getLogger
-from typing import Self
+from typing import List, Self
 
 from lib.pipeline.nsw_vg.property_sales import data as t
 
 @dataclass
 class IngestionTableConfig:
     table: str
+    uniques: List[str] = field(default_factory=lambda: [])
     schema: str | None = field(default=None)
 
     @property

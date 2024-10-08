@@ -8,11 +8,15 @@ from lib.pipeline.nsw_vg.property_sales import data as t
 
 from .config import IngestionConfig, IngestionTableConfig
 
-def insert_queue(name: str, row: t.BasePropertySaleFileRow) -> Tuple[str, List[Any]]:
+def insert_queue(conf: IngestionTableConfig, row: t.BasePropertySaleFileRow) -> Tuple[str, List[Any]]:
     columns = row.db_columns()
     values_str = ', '.join(['%s'] * len(columns))
     column_str = ', '.join(columns)
-    query = f"INSERT INTO {name} ({column_str}) VALUES ({values_str})"
+    on_conflict = ''
+    if conf.uniques:
+        on_conflict = f"ON CONFLICT ({','.join(conf.uniques)}) DO NOTHING"
+
+    query = f"INSERT INTO {conf.table_symbol} ({column_str}) VALUES ({values_str}) {on_conflict}"
     return query, columns
 
 RowBatchState = Dict[Type[t.BasePropertySaleFileRow], List[t.BasePropertySaleFileRow]]
@@ -99,7 +103,7 @@ class PropertySalesIngestion:
         return self.batch_size
 
     def _dispatch(self: Self, c: IngestionTableConfig, q: List[t.BasePropertySaleFileRow]) -> None:
-        sql, columns = insert_queue(c.table_symbol, q[0])
+        sql, columns = insert_queue(c, q[0])
         values = [[getattr(row, name) for name in columns] for row in q]
         task = self._tg.create_task(self._worker(sql, values, c.table_symbol))
         self._tasks.add(task)

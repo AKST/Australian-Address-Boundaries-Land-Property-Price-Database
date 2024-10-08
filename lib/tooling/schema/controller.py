@@ -24,6 +24,7 @@ class SchemaController:
         self._discovery = discovery
 
     async def command(self: Self, command: Command.BaseCommand) -> None:
+        self.logger.info(command)
         match command:
             case Command.Create() as command:
                 await self.create(command)

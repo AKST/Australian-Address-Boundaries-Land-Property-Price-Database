@@ -232,6 +232,7 @@ if __name__ == '__main__':
         ),
         update=UpdateSchemaConfig(
             packages=['nsw_vg'],
+            range={ 'nsw_vg': 3 },
             apply=True,
             revert=True,
         ),
