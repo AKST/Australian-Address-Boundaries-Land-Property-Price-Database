@@ -23,14 +23,8 @@ async def ingest_all(config: IngestionConfig,
     await controller.command(Command.Create(ns='abs', omit_foreign_keys=True))
     await abs_ingestion.ingest(config)
     async with db.async_connect() as conn:
-        # I don't really know what's going on here with dzn...
-        await conn.execute("""
-            UPDATE abs.dzn as dzn
-               SET sa2_code = NULL,
-                   state_code = NULL
-             WHERE NOT EXISTS (SELECT 1 FROM abs.sa2 as sa2
-                                WHERE dzn.sa2_code = sa2.sa2_code);
-        """)
+        clean_dzn_sql = await io.f_read('./sql/abs/tasks/clean_dzn_post_ingestion.sql')
+        await conn.execute(clean_dzn_sql)
     await controller.command(Command.AddForeignKeys(ns='abs'))
 
 async def _main(config: IngestionConfig,
