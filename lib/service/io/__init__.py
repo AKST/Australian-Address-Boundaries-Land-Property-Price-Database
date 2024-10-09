@@ -3,7 +3,7 @@ import asyncio
 from dataclasses import dataclass
 import os
 from pathlib import Path
-from typing import AsyncIterator, AsyncGenerator, Tuple, List
+from typing import AsyncIterator, AsyncGenerator, Tuple, List, Optional
 from zipfile import ZipFile
 
 from lib.utility.concurrent import NullableSemaphore, iterator_thread
@@ -43,11 +43,17 @@ class IoService:
             async for item in iterator_thread(os.walk, dir_name):
                 yield item
 
-    async def f_read(self, file_path: str) -> str:
+    async def f_read(self, file_path: str, encoding: Optional[str] = None) -> str:
         async with self._semaphore:
-            async with aiofiles.open(file_path, 'r') as f:
+            async with aiofiles.open(file_path, 'r', encoding=encoding) as f:
                 data = await f.read()
         return data
+
+    async def f_read_lines(self, file_path: str, encoding: Optional[str] = None) -> AsyncGenerator[str, None]:
+        async with self._semaphore:
+            async with aiofiles.open(file_path, 'r', encoding=encoding) as f:
+                async for line in f:
+                    yield line
 
     async def f_read_slice(self, file_path: str, offset: int, length: int) -> bytes:
         async with self._semaphore:
@@ -88,6 +94,9 @@ class IoService:
 
     async def f_size(self, file_path: str) -> int:
         return await asyncio.to_thread(os.path.getsize, file_path)
+
+    async def ls_dir(self, dir_name: str) -> List[str]:
+        return await asyncio.to_thread(os.listdir, dir_name)
 
     async def is_dir(self, dir_name: str) -> bool:
         return await asyncio.to_thread(os.path.isdir, dir_name)

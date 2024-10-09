@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import Optional, Self, Literal, List, Tuple
 
 from lib.pipeline.nsw_vg.discovery import NswVgTarget
-
-ZoningKind = Literal['ep&a_2006', 'legacy_vg_2011', 'unknown']
+from lib.pipeline.nsw_vg.raw_data.zoning import ZoningKind
 
 class BasePropertySaleFileRow(abc.ABC):
     @abc.abstractmethod

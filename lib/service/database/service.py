@@ -2,27 +2,33 @@ import asyncio
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 import time
-from typing import Self
+from typing import Self, Optional
 from sqlalchemy import create_engine
 
 from .config import DatabaseConfig
 
 class DatabaseService:
     config: DatabaseConfig
+    pool_size: int
     _pool: AsyncConnectionPool
 
     def __init__(self: Self,
                  pool: AsyncConnectionPool,
+                 pool_size: int,
                  config: DatabaseConfig) -> None:
         self.config = config
+        self.pool_size = pool_size
         self._pool = pool
 
     @staticmethod
     def create(config: DatabaseConfig,
                pool_size: int) -> 'DatabaseService':
         print(config.connection_str)
-        pool = AsyncConnectionPool(config.connection_str, min_size=pool_size)
-        return DatabaseService(pool, config)
+        pool = AsyncConnectionPool(
+            config.connection_str,
+            min_size=pool_size,
+        )
+        return DatabaseService(pool, pool_size, config)
 
     async def open(self):
         await self._pool.open()
@@ -39,8 +45,8 @@ class DatabaseService:
             **self.config.kwargs,
         )
 
-    def async_connect(self: Self):
-        return self._pool.connection()
+    def async_connect(self: Self, timeout: Optional[float] = None):
+        return self._pool.connection(timeout=timeout)
 
     async def wait_till_running(self: Self, interval=5, timeout=60):
         start_time = time.time()

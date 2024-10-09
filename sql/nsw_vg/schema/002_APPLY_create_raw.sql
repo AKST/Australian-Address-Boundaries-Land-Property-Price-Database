@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
-    district_code INT,
+    district_code INT NOT NULL,
     district_name TEXT,
     property_id INT PRIMARY KEY,
     property_type TEXT,
@@ -7,10 +7,11 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     unit_number TEXT,
     house_number TEXT,
     street_name TEXT,
-    suburb_name TEXT,
+    suburb_name TEXT NOT NULL,
     postcode varchar(4),
     property_description TEXT,
     zone_code varchar(3) NOT NULL,
+    zone_standard nsw_vg.zoning_standard,
     area FLOAT,
     area_type TEXT,
     base_date_1 DATE,
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     land_value_5 BIGINT,
     authority_5 TEXT,
     basis_5 TEXT,
-    source_file_position INT NOT NULL,
     source_file_name TEXT NOT NULL,
+    source_line_number INT NOT NULL,
     source_date DATE NOT NULL
 );
