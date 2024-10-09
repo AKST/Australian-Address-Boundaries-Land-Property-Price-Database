@@ -1,50 +1,120 @@
+import asyncio
 import geopandas as gpd
 import logging
+from multiprocessing import Process
+from typing import List, Self, Type
 import pandas as pd
 
-from lib.service.database import DatabaseService
+from lib.service.database import DatabaseService, DatabaseConfig
 
-from .config import IngestionConfig
+from .config import IngestionConfig, WorkerConfig, WorkerArgs, IngestionSource
+from .constants import SCHEMA
 
-_logger = logging.getLogger(__name__)
 
-async def ingest(db: DatabaseService, config: IngestionConfig, outdir: str) -> None:
-    async with db.async_connect() as c, c.cursor() as cursor:
-        # this really won't do anything unless you need to rerun this portion of the script
-        for table in config.tables():
-            await cursor.execute(f"""
-            DO $$ BEGIN
-              IF EXISTS (
-                SELECT 1 FROM information_schema.tables
-                 WHERE table_name = '{table}' AND table_schema = '{config.schema}'
-              ) THEN
-                TRUNCATE TABLE {config.schema}.{table} RESTART IDENTITY CASCADE;
-              END IF;
-            END $$;
-            """)
+def divide_list(lst, n):
+    from itertools import islice
+    it, size, remainder = iter(lst), len(lst) // n, len(lst) % n
+    return [
+        list(islice(it, size + 1 if i < remainder else size))
+        for i in range(n)
+    ]
 
-        with open(config.create_table_script, 'r') as f:
-            await cursor.execute(f.read())
+class AbsIngestion:
+    _logger = logging.getLogger(f'{__name__}.AbsIngestion')
+    _db: DatabaseService
+    zip_dir: str
 
-    engine = db.engine()
+    def __init__(self: Self, db: DatabaseService, zip_dir: str) -> None:
+        self._db = db
+        self.zip_dir = zip_dir
 
-    for layer_name, table_name in config.layer_to_table.items():
-        column_renames = config.database_column_names_for_dataframe_columns[layer_name]
+    async def ingest(self: Self, config: IngestionConfig) -> None:
+        processes = [
+            Process(
+                target=AbsIngestionWorker.run,
+                args=(WorkerArgs(idx, ts, self.zip_dir, config.worker_config),),
+            )
+            for idx, ts in enumerate(divide_list([
+                (layer_name, ingest_source)
+                for ingest_source in config.ingest_sources
+                for layer_name in ingest_source.layer_to_table.keys()
+            ], config.worker_count))
+        ]
 
-        df = gpd.read_file(f'{outdir}/{config.gpkg_export_path}', layer=layer_name)
-        df = df.rename(columns=column_renames)
-        df = df[list(column_renames.values())]
+        for process in processes:
+            process.start()
 
-        if 'in_australia' in df:
-            df['in_australia'] = df['in_australia'] == 'AUS'
+        async with asyncio.TaskGroup() as tg:
+            await asyncio.gather(*[
+                tg.create_task(asyncio.to_thread(process.join))
+                for process in processes
+            ])
 
-        df.to_postgis(table_name,
-                      engine,
-                      schema=config.schema,
-                      if_exists='append',
-                      index=False)
+class AbsIngestionWorker:
+    _db: DatabaseService
+    _logger = logging.getLogger(f'{__name__}.AbsIngestionWorker')
+    root_dir: str
 
-        with engine.connect() as connection:
-            result = pd.read_sql(f"SELECT COUNT(*) FROM {config.schema}.{table_name}", connection)
-            _logger.info(f"Populated {config.schema}.{table_name} with {result.iloc[0, 0]}/{len(df)} rows.")
+    def __init__(self: Self,
+                 db: DatabaseService,
+                 root_dir: str):
+        self._db = db
+        self.root_dir = root_dir
+
+    async def consume(self: Self, layer_name: str, source: IngestionSource) -> None:
+        column_renames = source.database_column_names_for_dataframe_columns[layer_name]
+        table_name = source.layer_to_table[layer_name]
+        file_name = f'{self.root_dir}/{source.gpkg_export_path}'
+
+        def run_in_thread():
+            self._logger.debug(f'consuming {layer_name}')
+            df = gpd.read_file(file_name, layer=layer_name)
+            df = df.rename(columns=column_renames)
+            df = df[list(column_renames.values())]
+
+            if 'in_australia' in df:
+                df['in_australia'] = df['in_australia'] == 'AUS'
+
+            self._logger.debug(f'writing {layer_name}')
+            df.to_postgis(table_name,
+                          self._db.engine(),
+                          schema='abs',
+                          if_exists='append',
+                          index=False)
+            return len(df)
+
+        df_size = await asyncio.to_thread(run_in_thread)
+
+        async with self._db.async_connect() as conn:
+            query = f"SELECT COUNT(*) FROM {SCHEMA}.{table_name}"
+            cursor = await conn.execute(query)
+            result = await cursor.fetchone()
+            self._logger.info(f"Populated {SCHEMA}.{table_name} with {result[0]}/{df_size} rows.")
+
+    @classmethod
+    def run(cls: Type[Self], args: WorkerArgs) -> None:
+        import logging
+
+        worker_c = args.worker_config
+
+        if worker_c.log_config:
+            l_conf = worker_c.log_config
+            logging.basicConfig(level=l_conf.level,
+                                format=f'[{args.child}]{l_conf.format}',
+                                datefmt=l_conf.datefmt)
+
+        async def start():
+            db = DatabaseService.create(worker_c.db_config, worker_c.db_connections)
+            worker = AbsIngestionWorker(db, args.source_root_dir)
+            try:
+                await db.open()
+                async with asyncio.TaskGroup() as tg:
+                    await asyncio.gather(*[
+                        asyncio.create_task(worker.consume(layer_name, source))
+                        for layer_name, source in args.tasks
+                    ])
+            finally:
+                await db.close()
+
+        asyncio.run(start())
 
