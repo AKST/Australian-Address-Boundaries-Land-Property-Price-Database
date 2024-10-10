@@ -1,5 +1,7 @@
 # Read me
 
+> NOTE THE MAIN BRANCH IS NOT STABLE ATM
+
 After starting docker, and installing the dependencies, go to the `data-ingestion` notebook.
 
 ## Tests

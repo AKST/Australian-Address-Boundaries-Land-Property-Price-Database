@@ -14,7 +14,7 @@
                      house_number=None,
                      street_name="'WOOROOMA'",
                      locality_name='MOULAMEIN',
-                     postcode=2733,
+                     postcode='2733',
                      area=None,
                      area_type=None,
                      contract_date=datetime.datetime(2004, 5, 13, 0, 0),

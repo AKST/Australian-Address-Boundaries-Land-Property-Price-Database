@@ -14,7 +14,7 @@
                      house_number=None,
                      street_name='BARRABA RD',
                      locality_name='BINGARA',
-                     postcode=2404,
+                     postcode='2404',
                      area=973.597,
                      area_type='H',
                      contract_date=datetime.datetime(2010, 7, 19, 0, 0),

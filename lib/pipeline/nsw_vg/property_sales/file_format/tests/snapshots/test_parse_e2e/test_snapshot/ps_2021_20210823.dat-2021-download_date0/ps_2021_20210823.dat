@@ -14,7 +14,7 @@
                      house_number=None,
                      street_name='SQUARE WELL LANE',
                      locality_name='HILLSTON',
-                     postcode=2675,
+                     postcode='2675',
                      area=524.2,
                      area_type='H',
                      contract_date=datetime.datetime(2021, 7, 7, 0, 0),
