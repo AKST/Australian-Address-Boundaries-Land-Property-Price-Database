@@ -57,6 +57,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_b(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails(
             position=pos,
+            file_path=self.file_path,
             parent=a_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -67,7 +68,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
             house_number=row[6] or None,
             street_name=row[7],
             locality_name=row[8],
-            postcode=read_optional_int(row, 9, 'property_postcode'),
+            postcode=read_postcode(row, 9, 'property_postcode'),
             area=read_optional_float(row, 10, 'area'),
             area_type=read_area_type(row, 11, 'area_type'),
             contract_date=read_optional_date(row, 12, 'contract_date'),
@@ -87,6 +88,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_c(self: Self, pos: int, row: List[str], b_record: Any, variant: Optional[str]):
         return t.SalePropertyLegalDescription(
             position=pos,
+            file_path=self.file_path,
             parent=b_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -98,6 +100,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_d(self: Self, pos: int, row: List[str], c_record: Any, variant: Optional[str]):
         return t.SaleParticipant(
             position=pos,
+            file_path=self.file_path,
             parent=c_record,
             district_code=read_int(row, 0, 'district_code'),
             property_id=read_optional_int(row, 1, 'property_id'),
@@ -109,6 +112,7 @@ class CurrentFormatFactory(AbstractFormatFactory):
     def create_z(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SaleDataFileSummary(
             position=pos,
+            file_path=self.file_path,
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),
             total_sale_property_details=read_int(row, 1, 'total_sale_property_details'),
@@ -127,8 +131,8 @@ class Legacy2002Format(CurrentFormatFactory):
     def create_a(self: Self, pos: int, row: List[str], variant: Optional[str]):
         return t.SaleRecordFile(
             position=pos,
-            year_of_sale=self.year,
             file_path=self.file_path,
+            year_of_sale=self.year,
             file_type=None,
             district_code=read_int(row, 0, 'district_code'),
             date_provided=read_datetime(row, 1, 'date_provided'),
@@ -141,6 +145,7 @@ class Legacy2002Format(CurrentFormatFactory):
         elif variant == 'missing_property_id':
             return t.SalePropertyLegalDescription(
                 position=pos,
+                file_path=self.file_path,
                 parent=b_record,
                 district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
@@ -157,6 +162,7 @@ class Legacy2002Format(CurrentFormatFactory):
         elif variant == 'missing_property_id':
             return t.SaleParticipant(
                 position=pos,
+                file_path=self.file_path,
                 parent=c_record,
                 district_code=read_int(row, 0, 'district_code'),
                 property_id=None,
@@ -192,6 +198,7 @@ class Legacy1990Format(AbstractFormatFactory):
     def create_b(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SalePropertyDetails1990(
             position=pos,
+            file_path=self.file_path,
             parent=a_record,
             district_code=read_int(row, 0, 'district_code'),
             source=row[1] or None,
@@ -201,7 +208,7 @@ class Legacy1990Format(AbstractFormatFactory):
             house_number=row[5] or None,
             street_name=row[6] or None,
             locality_name=row[7] or None,
-            postcode=read_optional_int(row, 8, 'property_postcode'),
+            postcode=read_postcode(row, 8, 'property_postcode'),
             contract_date=read_date_pre_2002(row, 9, 'contract_date'),
             purchase_price=read_float(row, 10, 'purchase_price'),
             land_description=row[11] or None,
@@ -222,6 +229,7 @@ class Legacy1990Format(AbstractFormatFactory):
     def create_z(self: Self, pos: int, row: List[str], a_record: Any, variant: Optional[str]):
         return t.SaleDataFileSummary(
             position=pos,
+            file_path=self.file_path,
             parent=a_record,
             total_records=read_int(row, 0, 'total_records'),
             total_sale_property_details=read_int(row, 1, 'total_sale_property_details'),

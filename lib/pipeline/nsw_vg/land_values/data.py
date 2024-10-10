@@ -62,7 +62,7 @@ class RawLandValueRow:
             house_number=row['HOUSE NUMBER'] or None,
             street_name=row['STREET NAME'] or None,
             suburb_name=read_str(row, 'SUBURB NAME', 'suburb_name'),
-            postcode=StrCheck(max_len=4).read_optional(row, 'POSTCODE', 'postcode'),
+            postcode=read_postcode(row, 'POSTCODE', 'postcode'),
             property_description=row['PROPERTY DESCRIPTION'] or None,
             zone_code=StrCheck(max_len=4).read_optional(row, 'ZONE CODE', 'zone_code'),
             zone_standard=read_zone_std(row, 'ZONE CODE', 'zone_standard'),

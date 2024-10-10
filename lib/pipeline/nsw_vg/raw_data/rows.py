@@ -97,6 +97,12 @@ class StrCheck:
 
         return s
 
+def read_postcode(row: Row[K, str], idx: K, name: str) -> Optional[str]:
+    match row[idx]:
+        case None: return None
+        case other if len(other) != 4: return None
+        case other: return row[idx]
+
 def read_str(row: Row[K, str], idx: K, name: str) -> str:
     if not row[idx]:
         message = 'Failed to read STR %s @ row[%s] IN %s' % (name, idx, row)

@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
 
-    file_limit = int(soft_limit * 0.8) - args.db_pool_size
+    file_limit = int(soft_limit * 0.8)
     db_conf = DB_INSTANCE_MAP[args.instance]
 
     logger.debug(f'file limit {file_limit}')
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     async def main() -> None:
         db = DatabaseService.create(db_conf, args.db_pool_size)
-        io = IoService.create(file_limit)
+        io = IoService.create(file_limit - args.db_pool_size)
 
         async with get_session(io) as session:
             environment = await initialise(io, session)

@@ -1,3 +1,10 @@
+-- When ingesting this in events and source:
+--
+-- - legacy data
+--   - `source_date` is `source_file.date_published`
+--   - `CURRENT_DATE()` is `source_file.date_recorded`
+--   - `basis_date_N` is `event.effective_date`
+--
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
     position bigint NOT NULL,
     file_path TEXT PRIMARY KEY,
@@ -8,7 +15,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     position bigint NOT NULL,
-    file_path TEXT,
+    file_path TEXT NOT NULL,
     district_code INT NOT NULL,
     source TEXT,
     valuation_number TEXT,
@@ -42,7 +49,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     position bigint NOT NULL,
-    file_path TEXT,
+    file_path TEXT NOT NULL,
     district_code INT NOT NULL,
     property_id INT,
     sale_counter INT NOT NULL,

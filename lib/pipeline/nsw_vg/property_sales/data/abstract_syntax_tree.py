@@ -25,6 +25,7 @@ class SaleRecordFileLegacy(BasePropertySaleFileRow):
 @dataclass
 class SalePropertyDetails1990(BasePropertySaleFileRow):
     position: int
+    file_path: str = field(repr=False)
     parent: SaleRecordFileLegacy = field(repr=False)
     district_code: int
     source: Optional[str]
@@ -34,7 +35,7 @@ class SalePropertyDetails1990(BasePropertySaleFileRow):
     house_number: Optional[str]
     street_name: Optional[str]
     locality_name: Optional[str]
-    postcode: Optional[int]
+    postcode: Optional[str]
     contract_date: Optional[datetime]
     purchase_price: Optional[float]
     land_description: Optional[str]
@@ -65,6 +66,7 @@ class SaleRecordFile(BasePropertySaleFileRow):
 @dataclass
 class SalePropertyDetails(BasePropertySaleFileRow):
     position: int
+    file_path: str = field(repr=False)
     parent: SaleRecordFile = field(repr=False)
     district_code: int
     property_id: Optional[int]
@@ -75,7 +77,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
     house_number: Optional[str]
     street_name: Optional[str]
     locality_name: Optional[str]
-    postcode: Optional[int]
+    postcode: Optional[str]
     area: Optional[float]
     area_type: Optional[str]
     contract_date: Optional[datetime]
@@ -101,6 +103,7 @@ class SalePropertyDetails(BasePropertySaleFileRow):
 @dataclass
 class SalePropertyLegalDescription(BasePropertySaleFileRow):
     position: int
+    file_path: str = field(repr=False)
     parent: SalePropertyDetails = field(repr=False)
 
     district_code: int
@@ -120,6 +123,7 @@ class SalePropertyLegalDescription(BasePropertySaleFileRow):
 @dataclass
 class SaleParticipant(BasePropertySaleFileRow):
     position: int
+    file_path: str = field(repr=False)
     parent: SalePropertyLegalDescription = field(repr=False)
     district_code: int
     """
@@ -137,6 +141,7 @@ class SaleParticipant(BasePropertySaleFileRow):
 @dataclass
 class SaleDataFileSummary(BasePropertySaleFileRow):
     position: int
+    file_path: str = field(repr=False)
     parent: SaleRecordFile = field(repr=False)
     total_records: int
     total_sale_property_details: int

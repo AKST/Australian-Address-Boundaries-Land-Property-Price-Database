@@ -1,2 +1,0 @@
-DROP TABLE IF EXISTS nsw_lrs.parcel;
-DROP SCHEMA IF EXISTS nsw_lrs;

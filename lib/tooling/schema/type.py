@@ -8,8 +8,7 @@ SchemaNamespace = Literal[
     'meta',
     'nsw_lrs',
     'nsw_planning',
-    'nsw_property',
-    'nsw_spatial',
+    'nsw_gnb',
     'nsw_vg',
 ]
 

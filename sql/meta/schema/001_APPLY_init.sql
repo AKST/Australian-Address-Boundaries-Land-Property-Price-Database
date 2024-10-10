@@ -1,19 +1,46 @@
 CREATE SCHEMA IF NOT EXISTS meta;
 
+CREATE TABLE IF NOT EXISTS meta.source (
+  source_id BIGSERIAL PRIMARY KEY
+);
+
 CREATE TABLE IF NOT EXISTS meta.source_file (
   source_file_id SERIAL PRIMARY KEY,
-  file_name TEXT NOT NULL UNIQUE,
-  date_recorded DATE NOT NULL,
+  file_path TEXT NOT NULL UNIQUE,
+
+  --
+  -- This is the date in which this source file
+  -- was ingested into the database
+  --
+  date_recorded DATE,
+
+  --
+  -- This is the date in which this source was
+  -- made public OR internally recorded on the
+  -- side of the source, which ever comes first.
+  --
   date_published DATE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS meta.source (
-  source_id BIGSERIAL PRIMARY KEY,
-  src_file_id INT NOT NULL,
-  file_position int,
-
-  FOREIGN KEY (src_file_id) REFERENCES meta.source_file(source_file_id)
+CREATE TABLE IF NOT EXISTS meta.source_file_line (
+  source_id bigint NOT NULL,
+  source_file_id bigint NOT NULL,
+  source_file_line int NOT NULL,
+  UNIQUE (source_id, source_file_id),
+  FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
+  FOREIGN KEY (source_file_id) REFERENCES meta.source_file(source_file_id)
 );
+
+CREATE TABLE IF NOT EXISTS meta.source_byte_position (
+  source_id bigint NOT NULL,
+  source_file_id bigint NOT NULL,
+  source_byte_position bigint NOT NULL,
+  UNIQUE (source_id, source_file_id),
+  FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
+  FOREIGN KEY (source_file_id) REFERENCES meta.source_file(source_file_id)
+);
+
+-- CREATE VIEW
 
 -- This is a general data type to record the effective date of an
 -- observation, here are some examples:
@@ -26,9 +53,9 @@ CREATE TABLE IF NOT EXISTS meta.source (
 --      - The effective_date is the date this is recorded and known to be true.
 --
 CREATE TABLE IF NOT EXISTS meta.event (
-  id BIGSERIAL PRIMARY KEY,
-  effective_date DATE NOT NULL,
+  event_id BIGSERIAL PRIMARY KEY,
   source_id bigint NOT NULL,
+  effective_date DATE NOT NULL,
 
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
 );

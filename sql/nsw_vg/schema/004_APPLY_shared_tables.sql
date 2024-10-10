@@ -3,34 +3,26 @@
 -- boundary, some of the them are associated with
 -- local government areas but not all are.
 --
-CREATE TABLE IF NOT EXISTS nsw_vg.district (
+CREATE TABLE IF NOT EXISTS nsw_vg.valuation_district (
   district_code INT PRIMARY KEY,
-  district_name TEXT UNIQUE NOT NULL
+  district_name TEXT UNIQUE
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg.suburb (
-  suburb_id SERIAL PRIMARY KEY,
-  suburb_name TEXT NOT NULL,
-  district_code INT NOT NULL,
-  UNIQUE (suburb_name, district_code)
-);
+CREATE UNIQUE INDEX nsw_vg_valuation_district_unique_name
+    ON nsw_vg.valuation_district(district_name) WHERE district_name IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS nsw_vg.street (
-  street_id SERIAL PRIMARY KEY,
-  street_name TEXT NOT NULL,
-  district_code INT,
-  suburb_id INT,
-  postcode varchar(4),
-  UNIQUE (street_name, suburb_id, postcode)
-);
+--
+-- # Observed Zoning
+--
+-- The department of planning observes zoning
+--
+CREATE TABLE IF NOT EXISTS nsw_vg.observed_zoning (
+  property_id INT NOT NULL,
+  zone_code varchar(4) NOT NULL,
 
-CREATE TABLE IF NOT EXISTS nsw_vg.address (
-  address_id SERIAL PRIMARY KEY,
-  district_code INT NOT NULL,
-  unit_number TEXT,
-  house_number TEXT,
-  street_id INT,
-  suburb_id INT NOT NULL,
-  postcode varchar(4),
-  UNIQUE (district_code, unit_number, house_number, street_id, suburb_id, postcode)
-);
+  UNIQUE (property_id, zone_code, effective_date),
+
+  FOREIGN KEY (property_id) REFERENCES nsw_property.property(id),
+  FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
+) inherits (meta.event);
+

@@ -1,6 +1,6 @@
 import pytest
 
-from ..factories import read_int, read_optional_int, read_zone_std
+from ..rows import read_int, read_optional_int, read_zone_std
 
 @pytest.mark.parametrize("code,std", [
     ('A', 'legacy_vg_2011'),
