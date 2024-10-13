@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
   UNIQUE (property_id, effective_date)
 ) INHERITS (meta.event);
 
-CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata (
+CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   legal_description_by_strata_id BIGSERIAL PRIMARY KEY,
   legal_description TEXT NOT NULL,
   property_id INT NOT NULL,
@@ -64,6 +64,15 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
   sqm_area FLOAT NOT NULL,
 
   UNIQUE (property_id, effective_date),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) inherits (meta.event);
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.property_area_by_strata_lot (
+  property_id INT NOT NULL,
+  property_strata_lot INT NOT NULL,
+  sqm_area FLOAT NOT NULL,
+
+  UNIQUE (property_id, property_strata_lot, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
