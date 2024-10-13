@@ -16,8 +16,17 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
   property_id INT NOT NULL,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
-
   UNIQUE (property_id, effective_date)
+) INHERITS (meta.event);
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata (
+  legal_description_by_strata_id BIGSERIAL PRIMARY KEY,
+  legal_description TEXT NOT NULL,
+  property_id INT NOT NULL,
+  property_strata_lot INT,
+
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
+  UNIQUE (property_id, effective_date, strata_lot_number)
 ) INHERITS (meta.event);
 
 --
@@ -42,6 +51,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_
 CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_not_partial
   ON nsw_lrs.property_parcel_assoc(property_id, parcel_id, effective_date)
   WHERE partial = TRUE;
+
+--
+-- ## Property Area
+--
+-- I think it's possible this could change over time due
+-- to how cadastra stuff works.
+--
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
+  property_id INT NOT NULL,
+  sqm_area FLOAT NOT NULL,
+
+  UNIQUE (property_id, effective_date),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) inherits (meta.event);
 
 --
 -- ## Described Dimensions

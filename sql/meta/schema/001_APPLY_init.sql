@@ -53,10 +53,7 @@ CREATE TABLE IF NOT EXISTS meta.source_byte_position (
 --      - The effective_date is the date this is recorded and known to be true.
 --
 CREATE TABLE IF NOT EXISTS meta.event (
-  event_id BIGSERIAL PRIMARY KEY,
   source_id bigint NOT NULL,
   effective_date DATE NOT NULL,
-
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
 );
-
