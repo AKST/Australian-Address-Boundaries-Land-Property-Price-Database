@@ -16,6 +16,6 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.parcel (
   parcel_plan varchar(6),
   parcel_section varchar(2),
   parcel_lot varchar(5),
-  UNIQUE (plan, section, lot)
+  UNIQUE (parcel_plan, parcel_section, parcel_lot)
 );
 

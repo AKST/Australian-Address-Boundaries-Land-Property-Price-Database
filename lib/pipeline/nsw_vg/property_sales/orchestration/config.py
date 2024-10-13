@@ -34,6 +34,12 @@ class ParentConfig:
             case _: return True
 
 @dataclass
+class ChildLogConfig:
+    format: str
+    datefmt: str
+    debug_logs: bool = field(default=False)
+
+@dataclass
 class ChildConfig:
     file_limit: int | None
     parser_chunk_size: int
@@ -41,7 +47,7 @@ class ChildConfig:
     db_batch_size: int
     db_config: DatabaseConfig
     ingestion_config: IngestionConfig
-    debug_logs: bool = field(default=False)
+    log_config: Optional[ChildLogConfig]
 
 class ParentMessage:
     class Message:

@@ -47,16 +47,36 @@ async def update_schema(
                 return value
 
     for ns in drop_list:
-        r = get_range(ns)
-        await controller.command(Command.Drop(ns=ns, range=r, cascade=True))
+        try:
+            r = get_range(ns)
+            await controller.command(Command.Drop(ns=ns, range=r, cascade=True))
+        except Exception as e:
+            logging.error(f'failed on dropping {ns}')
+            raise e
 
     for ns in create_list:
-        r = get_range(ns)
-        await controller.command(Command.Create(ns=ns, range=r))
+        try:
+            r = get_range(ns)
+            await controller.command(Command.Create(ns=ns, range=r))
+        except Exception as e:
+            logging.error(f'failed on creating {ns}')
+            raise e
 
 async def run_script(f: str, db: DatabaseService, io: IoService) -> None:
     async with db.async_connect() as c, c.cursor() as cursor:
         await cursor.execute(await io.f_read(f))
+
+async def nuke(db: DatabaseService, io: IoService) -> None:
+    await update_schema(
+        UpdateSchemaConfig(
+            packages=ns_dependency_order,
+            range=None,
+            apply=True,
+            revert=True,
+        ),
+        db,
+        io,
+    )
 
 if __name__ == '__main__':
     import asyncio
@@ -81,6 +101,8 @@ if __name__ == '__main__':
     refine_parser.add_argument("--enable-revert", action='store_true', default=False)
     refine_parser.add_argument("--disable-apply", action='store_true', default=False)
 
+    nuke_parser = command.add_parser('nuke')
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -90,7 +112,6 @@ if __name__ == '__main__':
 
     psycopg_logger = logging.getLogger('psycopg')
     psycopg_logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
-
     psycopg_logger = logging.getLogger('psycopg.sql_logger')
     psycopg_logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
@@ -115,6 +136,7 @@ if __name__ == '__main__':
 
     f = None
 
+    # TODO make single command
     match args.command:
         case 'schema':
             if args.packages:
@@ -131,6 +153,8 @@ if __name__ == '__main__':
 
             main_logger.debug(f'config {config}')
             f = lambda db, io: update_schema(config, db, io)
+        case 'nuke':
+            f = lambda db, io: nuke(db, io)
         case 'task':
             f = lambda db, io: run_script(args.path, db, io)
         case other:

@@ -26,31 +26,9 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   property_strata_lot INT,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
-  UNIQUE (property_id, effective_date, strata_lot_number)
+  UNIQUE (property_id, effective_date, property_strata_lot)
 ) INHERITS (meta.event);
 
---
--- ## property parcel association
---
--- A property can be made up of multiple parcels as well
--- as partial parcels shared between different properties.
---
-CREATE TABLE IF NOT EXISTS nsw_lrs.property_parcel_assoc (
-  property_id INT NOT NULL,
-  parcel_id INT NOT NULL,
-  partial BOOLEAN NOT NULL,
-
-  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
-  FOREIGN KEY (parcel_id) REFERENCES nsw_lrs.parcel(parcel_id)
-) INHERITS (meta.event);
-
-CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_not_partial
-  ON nsw_lrs.property_parcel_assoc(parcel_id, effective_date)
-  WHERE partial = FALSE;
-
-CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_not_partial
-  ON nsw_lrs.property_parcel_assoc(property_id, parcel_id, effective_date)
-  WHERE partial = TRUE;
 
 --
 -- ## Property Area
@@ -90,4 +68,13 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.described_dimensions (
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
+
+--
+-- ## Notice of Sale
+--
+
+
+
+
+
 

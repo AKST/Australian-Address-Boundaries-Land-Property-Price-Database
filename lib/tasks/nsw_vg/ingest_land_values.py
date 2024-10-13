@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 import logging
 
@@ -40,14 +41,21 @@ async def ingest_land_values(
         logger.info("Dropping raw entries table")
         await empty_raw_entries(db)
 
+
+@dataclass
+class NswVgLandValueIngestionConfig2:
+    truncate_raw_earlier: bool = field(default=False)
+
 async def ingest_land_values_v2(
     db: DatabaseService,
     io: IoService,
     target: NswVgTarget,
+    config: NswVgLandValueIngestionConfig2,
 ) -> None:
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
-    await controller.command(Command.Drop(ns='nsw_vg', range=range(2, 3)))
-    await controller.command(Command.Create(ns='nsw_vg', range=range(2, 3)))
+    if config.truncate_raw_earlier:
+        await controller.command(Command.Drop(ns='nsw_vg', range=range(2, 3)))
+        await controller.command(Command.Create(ns='nsw_vg', range=range(2, 3)))
     async with asyncio.TaskGroup() as tg:
         ingest = NswVgLandValuesRawIngestion(
             asyncio.Semaphore(db.pool_size),
@@ -58,75 +66,3 @@ async def ingest_land_values_v2(
             tg,
         )
         await ingest.ingest_raw_target(target)
-
-if __name__ == '__main__':
-    import argparse
-    import asyncio
-    import resource
-
-    from lib.service.database.defaults import DB_INSTANCE_MAP
-
-    from lib.tasks.fetch_static_files import get_session, initialise
-
-    parser = argparse.ArgumentParser(description="Ingest NSW Land values")
-    parser.add_argument("--debug", action='store_true', default=False)
-    parser.add_argument("--file-limit", type=int, default=None)
-    parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--db-pool-size", type=int, default=16)
-    command = parser.add_subparsers(dest='command')
-
-    v1_parser = command.add_parser('v1')
-    v1_parser.add_argument("--keep-raw", type=bool, default=False)
-
-    v1_parser = command.add_parser('v2')
-
-    args = parser.parse_args()
-
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
-
-    logger = logging.getLogger(f'{__name__}.ingest::init')
-
-    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
-    if args.file_limit:
-        soft_limit = min(args.file_limit, hard_limit)
-
-    resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
-
-    file_limit = int(soft_limit * 0.8)
-    db_conf = DB_INSTANCE_MAP[args.instance]
-
-    logger.debug(f'file limit {file_limit}')
-    logger.debug(f'instance #{args.instance}')
-    logger.debug(f'config {db_conf}')
-
-    async def main() -> None:
-        db = DatabaseService.create(db_conf, args.db_pool_size)
-        io = IoService.create(file_limit - args.db_pool_size)
-
-        async with get_session(io) as session:
-            environment = await initialise(io, session)
-
-        try:
-            await db.open()
-            match args.command:
-                case 'v1':
-                    await ingest_land_values(
-                        NswVgLandValueIngestionConfig(
-                            keep_raw=args.keep_raw,
-                        ),
-                        db,
-                        environment.land_value.latest,
-                    )
-                case 'v2':
-                    await ingest_land_values_v2(
-                        db,
-                        io,
-                        environment.land_value.latest,
-                    )
-        finally:
-            await db.close()
-
-    asyncio.run(main())
