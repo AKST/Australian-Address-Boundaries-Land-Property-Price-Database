@@ -12,7 +12,7 @@ from lib.tooling.schema.type import Command
 from ..fetch_static_files import Environment, get_session, initialise
 from ..update_schema import update_schema, UpdateSchemaConfig
 from .ingest_property_sales import PropertySaleIngestionConfig, ingest_property_sales_rows
-from .ingest_land_values import NswVgLandValueIngestionConfig2, ingest_land_values_v2
+from .ingest_land_values import NswVgLandValueIngestionConfig, ingest_land_values
 
 ZIP_DIR = './_out_zip'
 
@@ -26,9 +26,10 @@ class NswVgIngestionDedupConfig:
 
 @dataclass
 class NswVgIngestionConfig:
-    load_raw_land_values: Optional[NswVgLandValueIngestionConfig2]
+    load_raw_land_values: Optional[NswVgLandValueIngestionConfig]
     load_raw_property_sales: Optional[PropertySaleIngestionConfig]
     deduplicate: Optional[NswVgIngestionDedupConfig]
+    load_parcels: bool
 
 async def ingest_nswvg(
     environment: Environment,
@@ -40,7 +41,7 @@ async def ingest_nswvg(
     if config.load_raw_land_values:
         lv_conf = config.load_raw_land_values
         lv_target = environment.land_value.latest
-        await ingest_land_values_v2(db, io, lv_target, lv_conf)
+        await ingest_land_values(db, io, lv_target, lv_conf)
 
     if config.load_raw_property_sales:
         ps_conf = config.load_raw_property_sales
@@ -49,6 +50,9 @@ async def ingest_nswvg(
     if config.deduplicate:
         dedup_conf = config.deduplicate
         await ingest_nswvg_deduplicate(db, io, dedup_conf)
+
+    if config.load_parcels:
+        raise NotImplementedError('load parcels not implemented')
 
 async def ingest_nswvg_deduplicate(
     db: DatabaseService,
@@ -146,6 +150,8 @@ if __name__ == '__main__':
     parser.add_argument("--dedup-run-from", type=int, default=1)
     parser.add_argument("--dedup-run-till", type=int, default=6)
 
+    parser.add_argument("--load-parcels", action='store_true', default=False)
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -161,7 +167,7 @@ if __name__ == '__main__':
 
     load_land_values = None
     if args.load_land_values:
-        load_land_values = NswVgLandValueIngestionConfig2(
+        load_land_values = NswVgLandValueIngestionConfig(
             truncate_raw_earlier=args.lv_truncate_earlier
         )
 
@@ -216,6 +222,7 @@ if __name__ == '__main__':
         load_raw_land_values=load_land_values,
         load_raw_property_sales=load_raw_property_sales,
         deduplicate=deduplicate,
+        load_parcels=args.load_parcels,
     )
 
     async def _cli_main(
