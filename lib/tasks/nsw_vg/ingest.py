@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 import logging
 
 from lib.service.clock import ClockService
@@ -19,8 +19,10 @@ ZIP_DIR = './_out_zip'
 @dataclass
 class NswVgIngestionDedupConfig:
     run_from: int
+    run_till: int
     truncate: bool = field(default=False)
     drop_raw: bool = field(default=False)
+    drop_dst_schema: bool = field(default=False)
 
 @dataclass
 class NswVgIngestionConfig:
@@ -65,26 +67,45 @@ async def ingest_nswvg_deduplicate(
     if 1 > config.run_from or len(scripts) < config.run_from:
         raise ValueError(f'dedup run from {config.run_from} is out of scope')
     else:
-        scripts = scripts[config.run_from - 1:]
+        scripts = scripts[config.run_from - 1:config.run_till]
 
-    truncations = [
-        Command.Truncate(ns='nsw_vg', cascade=True, range=range(4, 5)),
-        Command.Truncate(ns='nsw_gnb', cascade=True),
-        Command.Truncate(ns='nsw_lrs', cascade=True),
-        Command.Truncate(ns='nsw_planning', cascade=True),
-        Command.Truncate(ns='meta', cascade=True),
-    ]
+    discovery = SchemaDiscovery.create(io)
+    controller = SchemaController(io, db, discovery)
+
+    async def run_commands(commands: List[Command.BaseCommand]):
+        for c in commands:
+            await controller.command(c)
 
     if config.truncate:
-        discovery = SchemaDiscovery.create(io)
-        controller = SchemaController(io, db, discovery)
-        for command in truncations:
-            await controller.command(command)
+        await run_commands([
+            Command.Truncate(ns='nsw_vg', cascade=True, range=range(4, 5)),
+            Command.Truncate(ns='nsw_gnb', cascade=True),
+            Command.Truncate(ns='nsw_lrs', cascade=True),
+            Command.Truncate(ns='nsw_planning', cascade=True),
+            Command.Truncate(ns='meta', cascade=True),
+        ])
+
+    if config.drop_dst_schema:
+        await run_commands([
+            Command.Drop(ns='nsw_vg', range=range(4, 5)),
+            Command.Drop(ns='nsw_gnb'),
+            Command.Drop(ns='nsw_lrs'),
+            Command.Drop(ns='nsw_planning'),
+            Command.Drop(ns='meta'),
+            Command.Create(ns='meta'),
+            Command.Create(ns='nsw_planning'),
+            Command.Create(ns='nsw_lrs'),
+            Command.Create(ns='nsw_gnb'),
+            Command.Create(ns='nsw_vg', range=range(4, 5)),
+        ])
 
     async with db.async_connect() as c, c.cursor() as cursor:
         for script_path in scripts:
             logger.debug(f'running {script_path}')
             await cursor.execute(await io.f_read(script_path))
+
+    if config.drop_raw:
+        raise NotImplementedError()
 
 if __name__ == '__main__':
     import argparse
@@ -118,9 +139,11 @@ if __name__ == '__main__':
     parser.add_argument("--ps-worker-parser-chunk-size", type=int, default=8 * 2 ** 10)
 
     parser.add_argument("--dedup", action='store_true', default=False)
+    parser.add_argument("--dedup-reinitialise-destination-schema", action='store_true', default=False)
     parser.add_argument("--dedup-initial-truncate", action='store_true', default=False)
     parser.add_argument("--dedup-drop-raw", action='store_true', default=False)
     parser.add_argument("--dedup-run-from", type=int, default=1)
+    parser.add_argument("--dedup-run-till", type=int, default=5)
 
     args = parser.parse_args()
 
@@ -182,8 +205,10 @@ if __name__ == '__main__':
     if args.dedup:
         deduplicate = NswVgIngestionDedupConfig(
             run_from=args.dedup_run_from,
+            run_till=args.dedup_run_till,
             truncate=args.dedup_initial_truncate,
             drop_raw=args.dedup_drop_raw,
+            drop_dst_schema=args.dedup_reinitialise_destination_schema,
         )
 
     config = NswVgIngestionConfig(
