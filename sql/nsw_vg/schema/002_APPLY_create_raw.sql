@@ -46,3 +46,6 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
 
     UNIQUE (property_id, source_date)
 );
+
+CREATE INDEX idx_source_file_name_land_value_row
+    ON nsw_vg_raw.land_value_row(source_file_name);

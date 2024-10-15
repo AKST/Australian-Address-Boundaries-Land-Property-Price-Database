@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
     date_provided DATE NOT NULL
 );
 
+CREATE INDEX idx_file_path_ps_row_a_legacy
+    ON nsw_vg_raw.ps_row_a_legacy(file_path);
+
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     position bigint NOT NULL,
     file_path TEXT NOT NULL,
@@ -46,6 +49,9 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
     date_provided DATE NOT NULL,
     submitting_user_id TEXT NOT NULL
 );
+
+CREATE INDEX idx_file_path_ps_row_a
+    ON nsw_vg_raw.ps_row_a(file_path);
 
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     position bigint NOT NULL,

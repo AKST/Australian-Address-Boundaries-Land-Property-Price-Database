@@ -4,12 +4,13 @@
 -- local government areas but not all are.
 --
 CREATE TABLE IF NOT EXISTS nsw_vg.valuation_district (
-  district_code INT PRIMARY KEY,
-  district_name TEXT UNIQUE
+  valuation_district_code INT PRIMARY KEY,
+  valuation_district_name TEXT
 );
 
 CREATE UNIQUE INDEX nsw_vg_valuation_district_unique_name
-    ON nsw_vg.valuation_district(district_name) WHERE district_name IS NOT NULL;
+    ON nsw_vg.valuation_district(valuation_district_name)
+    WHERE valuation_district_name IS NOT NULL;
 
 --
 -- # Observed Zoning
@@ -20,9 +21,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg.observed_zoning (
   property_id INT NOT NULL,
   zone_code varchar(4) NOT NULL,
 
-  UNIQUE (property_id, zone_code, effective_date),
-
-  FOREIGN KEY (property_id) REFERENCES nsw_property.property(id),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
 ) inherits (meta.event);
 
