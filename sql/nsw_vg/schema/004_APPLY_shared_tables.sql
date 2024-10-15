@@ -56,3 +56,10 @@ CREATE TABLE IF NOT EXISTS nsw_vg.land_valuation (
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
 ) inherits (meta.event);
+
+CREATE INDEX idx_property_id_land_valuation
+    ON nsw_vg.land_valuation(property_id);
+
+CREATE INDEX idx_effective_date_land_valuation
+    ON nsw_vg.land_valuation(effective_date DESC);
+

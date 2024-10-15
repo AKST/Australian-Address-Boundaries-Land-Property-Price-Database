@@ -28,6 +28,8 @@ def create(commands: SchemaSyntax, omit_foreign_keys: bool) -> Iterator[str]:
                 yield copy.sql(dialect='postgres')
             case Stmt.CreateIndex(expr, name):
                 yield expr.sql(dialect='postgres')
+            case Stmt.CreateView(expr, schema_name, name):
+                yield expr.sql(dialect='postgres')
             case other:
                 raise TypeError(f'have not handled {other}')
 
@@ -44,6 +46,9 @@ def drop(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
                 yield f'DROP TABLE IF EXISTS {_id(schema_name, name)}{sfx}'
             case Stmt.CreateIndex(expr, name):
                 yield f'DROP INDEX IF EXISTS {name}'
+            case Stmt.CreateView(expr, schema_name, name, materialized):
+                kind = 'MATERIALIZED VIEW' if materialized else 'view'
+                yield f'DROP {kind} IF EXISTS {_id(schema_name, name)}{sfx}'
             case other:
                 raise TypeError(f'have not handled {other}')
 
@@ -59,6 +64,8 @@ def truncate(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
             case Stmt.CreateTable(expr, schema_name, name):
                 yield f'TRUNCATE TABLE {_id(schema_name, name)}{sfx}'
             case Stmt.CreateIndex(expr, name):
+                continue
+            case Stmt.CreateView(expr, schema_name, name, materialized):
                 continue
             case other:
                 raise TypeError(f'have not handled {other}')
@@ -80,6 +87,8 @@ def add_foreign_keys(contents: SchemaSyntax) -> Iterator[str]:
                     } ADD CONSTRAINT fk_{
                         col
                     } FOREIGN KEY ({col}) REFERENCES {rel}({rel_col});"
+            case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
             case other:
                 raise TypeError(f'have not handled {other}')
 
@@ -127,6 +136,8 @@ async def make_fk_map(contents: SchemaSyntax, cursor: AsyncCursor) -> FkMap:
                     for name, col, rel, rel_col in await cursor.fetchall()
                 }
                 result = await cursor.fetchall()
+            case Stmt.CreateView(expr, schema_name, name, materialized):
+                out[(Stmt.CreateView, name)] = None
             case other:
                 raise TypeError(f'have not handled {other}')
     return out
@@ -148,6 +159,8 @@ def remove_foreign_keys(contents: SchemaSyntax, table_fks: FkMap) -> Iterator[st
                     for fk in _table_foreign_keys(expr)
                     if t_fkmap and fk in t_fkmap
                 ]
+            case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
             case other:
                 raise TypeError(f'have not handled {other}')
 

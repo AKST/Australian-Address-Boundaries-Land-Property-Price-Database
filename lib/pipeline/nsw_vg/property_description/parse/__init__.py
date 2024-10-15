@@ -2,7 +2,7 @@ from typing import List, Union, Any, Tuple, Generator
 import re
 
 from lib.pipeline.nsw_vg.property_description import types as t
-from lib.pipeline.nsw_vg.property_description import grammar as g
+from ..parse import grammar as g
 
 def parse_land_parcel_ids(desc: str):
     def read_chunk(read_from, skip = 0):

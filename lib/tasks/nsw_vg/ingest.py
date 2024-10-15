@@ -60,8 +60,9 @@ async def ingest_nswvg_deduplicate(
         './sql/nsw_vg/tasks/from_raw_derive/001_districts.sql',
         './sql/nsw_vg/tasks/from_raw_derive/002_zones.sql',
         './sql/nsw_vg/tasks/from_raw_derive/003_source.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_create_addresses.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/004_property.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_addresses.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/006_populate_lrs.sql',
     ]
 
     if 1 > config.run_from or len(scripts) < config.run_from:
@@ -143,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument("--dedup-initial-truncate", action='store_true', default=False)
     parser.add_argument("--dedup-drop-raw", action='store_true', default=False)
     parser.add_argument("--dedup-run-from", type=int, default=1)
-    parser.add_argument("--dedup-run-till", type=int, default=5)
+    parser.add_argument("--dedup-run-till", type=int, default=6)
 
     args = parser.parse_args()
 

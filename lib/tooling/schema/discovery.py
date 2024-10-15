@@ -110,6 +110,14 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
         case sql_expr.Create(kind="SCHEMA", this=schema_def):
             s_name = schema_def.db
             return Stmt.CreateSchema(expr, s_name)
+        case sql_expr.Create(kind="VIEW", this=schema):
+            materialized = any((
+                p for p in expr.args['properties'].expressions
+                if isinstance(p, sql_expr.MaterializedProperty)
+            ))
+            t_name = schema.this.this
+            s_name = schema.db or None
+            return Stmt.CreateView(expr, s_name, t_name, materialized)
         case sql_expr.Create(kind="TABLE", this=schema):
             t_name = schema.this.this.this
             s_name = schema.this.db or None
