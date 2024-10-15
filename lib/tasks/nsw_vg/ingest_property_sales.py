@@ -84,7 +84,7 @@ def _child_proc_entry(
 ) -> None:
     if worker_config.log_config:
         logging.basicConfig(
-            level=logging.DEBUG if worker_config.debug_logs else logging.INFO,
+            level=logging.DEBUG if worker_config.log_config.debug_logs else logging.INFO,
             format=f'[{idx}]{worker_config.log_config.format}',
             datefmt=worker_config.log_config.datefmt)
 
