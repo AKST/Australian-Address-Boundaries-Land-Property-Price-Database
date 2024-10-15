@@ -7,66 +7,66 @@
 -- create them all at once here and clean them up below.
 
 CREATE TEMP TABLE pg_temp.sourced_raw_land_values AS
-SELECT sfl.source_id, sf.source_file_id, r.*
+SELECT sfl.source_id, fs.file_source_id, r.*
   FROM nsw_vg_raw.land_value_row as r
-  LEFT JOIN meta.source_file AS sf ON sf.file_path = r.source_file_name
+  LEFT JOIN meta.file_source AS fs ON fs.file_path = r.source_file_name
   LEFT JOIN meta.source_file_line AS sfl
          ON sfl.source_file_line = r.source_line_number
-        AND sfl.source_file_id = sf.source_file_id;
+        AND sfl.file_source_id = fs.file_source_id;
 
 CREATE INDEX idx_sourced_raw_land_values_source_date_property_id
     ON pg_temp.sourced_raw_land_values(source_date, property_id);
 
 CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_a_legacy AS
-SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
   FROM nsw_vg_raw.ps_row_a_legacy as r
-  LEFT JOIN meta.source_file AS sf USING (file_path)
+  LEFT JOIN meta.file_source AS fs USING (file_path)
   LEFT JOIN meta.source_byte_position AS sbp
          ON sbp.source_byte_position = r.position
-        AND sbp.source_file_id = sf.source_file_id;
+        AND sbp.file_source_id = fs.file_source_id;
 
-CREATE INDEX idx_sourced_raw_property_sales_a_legacy_source_file_id
-    ON pg_temp.sourced_raw_property_sales_a_legacy(source_file_id);
+CREATE INDEX idx_sourced_raw_property_sales_a_legacy_file_source_id
+    ON pg_temp.sourced_raw_property_sales_a_legacy(file_source_id);
 
 CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_b_legacy AS
-SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
   FROM nsw_vg_raw.ps_row_b_legacy as r
-  LEFT JOIN meta.source_file AS sf USING (file_path)
+  LEFT JOIN meta.file_source AS fs USING (file_path)
   LEFT JOIN meta.source_byte_position AS sbp
          ON sbp.source_byte_position = r.position
-        AND sbp.source_file_id = sf.source_file_id;
+        AND sbp.file_source_id = fs.file_source_id;
 
 CREATE INDEX idx_sourced_raw_property_sales_b_legacy_property_id
     ON pg_temp.sourced_raw_property_sales_b_legacy(property_id);
 
 CREATE TEMP VIEW pg_temp.sourced_raw_property_sales_a AS
-SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
   FROM nsw_vg_raw.ps_row_a as r
-  LEFT JOIN meta.source_file AS sf USING (file_path)
+  LEFT JOIN meta.file_source AS fs USING (file_path)
   LEFT JOIN meta.source_byte_position AS sbp
          ON sbp.source_byte_position = r.position
-        AND sbp.source_file_id = sf.source_file_id;
+        AND sbp.file_source_id = fs.file_source_id;
 
 CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_b AS
-SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
   FROM nsw_vg_raw.ps_row_b as r
-  LEFT JOIN meta.source_file AS sf USING (file_path)
+  LEFT JOIN meta.file_source AS fs USING (file_path)
   LEFT JOIN meta.source_byte_position AS sbp
          ON sbp.source_byte_position = r.position
-        AND sbp.source_file_id = sf.source_file_id;
+        AND sbp.file_source_id = fs.file_source_id;
 
 CREATE INDEX idx_sourced_raw_property_sales_b_sale_counter
     ON pg_temp.sourced_raw_property_sales_b(sale_counter);
 
 WITH sourced_raw_property_sales_c AS (
-    SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+    SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
       FROM nsw_vg_raw.ps_row_c as r
-      LEFT JOIN meta.source_file AS sf USING (file_path)
+      LEFT JOIN meta.file_source AS fs USING (file_path)
       LEFT JOIN meta.source_byte_position AS sbp
              ON sbp.source_byte_position = r.position
-            AND sbp.source_file_id = sf.source_file_id)
+            AND sbp.file_source_id = fs.file_source_id)
 SELECT
-    source_file_id,
+    file_source_id,
     sale_counter,
     property_id,
     STRING_AGG(c.property_description, '' ORDER BY c.position) AS full_property_description
@@ -75,15 +75,15 @@ SELECT
   WHERE property_description IS NOT NULL
     AND sale_counter IS NOT NULL
     AND property_id IS NOT NULL
-  GROUP BY (source_file_id, sale_counter, property_id);
+  GROUP BY (file_source_id, sale_counter, property_id);
 
 CREATE TEMP VIEW pg_temp.sourced_raw_property_sales_d AS
-SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
+SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
   FROM nsw_vg_raw.ps_row_d as r
-  LEFT JOIN meta.source_file AS sf USING (file_path)
+  LEFT JOIN meta.file_source AS fs USING (file_path)
   LEFT JOIN meta.source_byte_position AS sbp
          ON sbp.source_byte_position = r.position
-        AND sbp.source_file_id = sf.source_file_id;
+        AND sbp.file_source_id = fs.file_source_id;
 
 --
 -- ### Create Temp tables
@@ -94,7 +94,7 @@ SELECT sbp.source_id, sf.source_file_id, sf.date_published, r.*
 --
 
 WITH with_effective_date AS (
-    SELECT source_file_id, source_id, property_id, sale_counter, strata_lot_number,
+    SELECT file_source_id, source_id, property_id, sale_counter, strata_lot_number,
            COALESCE(contract_date, settlement_date, date_provided) AS effective_date,
            date_provided
       FROM pg_temp.sourced_raw_property_sales_b
@@ -113,11 +113,11 @@ SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
            date_provided DESC;
 
 WITH with_effective_date AS (
-    SELECT source_file_id, b.source_id, property_id,
+    SELECT file_source_id, b.source_id, property_id,
            COALESCE(contract_date, date_provided) AS effective_date,
            a.date_provided
       FROM pg_temp.sourced_raw_property_sales_b_legacy as b
-      LEFT JOIN pg_temp.sourced_raw_property_sales_a_legacy as a USING (source_file_id)
+      LEFT JOIN pg_temp.sourced_raw_property_sales_a_legacy as a USING (file_source_id)
       WHERE property_id IS NOT NULL)
 SELECT DISTINCT ON (effective_date, property_id)
     b_rows.*,
@@ -182,7 +182,7 @@ SELECT
     property_id,
     c.full_property_description
   FROM pg_temp.sourced_raw_property_sales_b_dates as b
-  LEFT JOIN pg_temp.consolidated_property_description_c as c USING (source_file_id, sale_counter, property_id)
+  LEFT JOIN pg_temp.consolidated_property_description_c as c USING (file_source_id, sale_counter, property_id)
   WHERE full_property_description IS NOT NULL
     AND strata_lot_number IS NULL
     AND NOT b.also_in_lv;
@@ -206,7 +206,7 @@ SELECT
     b.strata_lot_number,
     c.full_property_description
   FROM pg_temp.sourced_raw_property_sales_b_dates as b
-  LEFT JOIN pg_temp.consolidated_property_description_c as c USING (source_file_id, sale_counter, property_id)
+  LEFT JOIN pg_temp.consolidated_property_description_c as c USING (file_source_id, sale_counter, property_id)
   WHERE full_property_description IS NOT NULL
     AND strata_lot_number IS NOT NULL;
 

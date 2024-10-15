@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS meta.source (
   source_id BIGSERIAL PRIMARY KEY
 );
 
-CREATE TABLE IF NOT EXISTS meta.source_file (
-  source_file_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS meta.file_source (
+  file_source_id SERIAL PRIMARY KEY,
   file_path TEXT NOT NULL UNIQUE,
 
   --
@@ -22,23 +22,32 @@ CREATE TABLE IF NOT EXISTS meta.source_file (
   date_published DATE NOT NULL
 );
 
+CREATE INDEX idx_file_path_file_source
+    ON meta.file_source(file_path);
+
 CREATE TABLE IF NOT EXISTS meta.source_file_line (
   source_id bigint NOT NULL,
-  source_file_id bigint NOT NULL,
+  file_source_id bigint NOT NULL,
   source_file_line int NOT NULL,
-  UNIQUE (source_id, source_file_id),
+  UNIQUE (source_id, file_source_id),
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
-  FOREIGN KEY (source_file_id) REFERENCES meta.source_file(source_file_id)
+  FOREIGN KEY (file_source_id) REFERENCES meta.file_source(file_source_id)
 );
+
+CREATE INDEX idx_file_source_id_file_line_source_file_line
+    ON meta.source_file_line(file_source_id, source_file_line);
 
 CREATE TABLE IF NOT EXISTS meta.source_byte_position (
   source_id bigint NOT NULL,
-  source_file_id bigint NOT NULL,
+  file_source_id bigint NOT NULL,
   source_byte_position bigint NOT NULL,
-  UNIQUE (source_id, source_file_id),
+  UNIQUE (source_id, file_source_id),
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
-  FOREIGN KEY (source_file_id) REFERENCES meta.source_file(source_file_id)
+  FOREIGN KEY (file_source_id) REFERENCES meta.file_source(file_source_id)
 );
+
+CREATE INDEX idx_file_source_id_byte_position_source_byte_position
+    ON meta.source_byte_position(file_source_id, source_byte_position);
 
 -- CREATE VIEW
 
