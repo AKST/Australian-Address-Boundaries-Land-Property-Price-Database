@@ -52,7 +52,6 @@ async def run_controller(instruction: DockerCtrlInstruction, db: DatabaseService
 
             if instruction.drop_image:
                 image.nuke()
-            raise TypeError(f'Not implemented')
         case other:
             raise TypeError(f'Not implemented {other}')
 
@@ -75,7 +74,7 @@ if __name__ == '__main__':
     start_parser = subparsers.add_parser('start')
     start_parser.add_argument('--nuke-image', action='store_true', default=False)
     start_parser.add_argument('--nuke-container', action='store_true', default=False)
-    start_parser.add_argument('--wait_for_database', action='store_true', default=False)
+    start_parser.add_argument('--wait-for-database', action='store_true', default=False)
 
     stop_parser = subparsers.add_parser('stop')
     stop_parser.add_argument('--nuke-image', action='store_true', default=False)

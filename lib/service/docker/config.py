@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Dict, List
 
 @dataclass
 class ImageConfig:
@@ -10,5 +11,7 @@ class ImageConfig:
 class ContainerConfig:
     container_name: str
     project_name: str
+    volumes: Dict[str, Dict[str, str]]
+    command: List[str]
 
 

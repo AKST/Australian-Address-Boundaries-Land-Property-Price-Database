@@ -91,6 +91,8 @@ class DockerContainer:
                     'POSTGRES_PASSWORD': config.password,
                 },
                 ports={'5432/tcp': config.port},
+                volumes=self.config.volumes,
+                command=self.config.command,
                 detach=True,
             )
 
