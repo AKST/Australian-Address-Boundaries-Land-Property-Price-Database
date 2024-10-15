@@ -92,15 +92,20 @@ class SchemaDiscovery:
                 return _FileMeta(ns, step, name)
 
     async def __f_sql_meta_data(self: Self, f: str, meta: _FileMeta, load_syn: bool) -> SqlFileMetaData:
-        contents = await fmap(sql_as_operations, self._io.f_read(f)) if load_syn else None
-        return SqlFileMetaData(self.root_dir, meta.ns, meta.step, meta.name, contents)
+        try:
+            contents = await fmap(sql_as_operations, self._io.f_read(f)) if load_syn else None
+            return SqlFileMetaData(self.root_dir, meta.ns, meta.step, meta.name, contents)
+        except Exception as e:
+            self.logger.error(f'failed on {f}')
+            raise e
 
 def sql_as_operations(file_data: str) -> SchemaSyntax:
     sql_exprs = parse_sql(file_data, read='postgres')
-    generator = [(expr, expr_as_op(expr)) for expr in sql_exprs if expr]
-    return SchemaSyntax(*partition(generator))
+    generator_a = ((expr, expr_as_op(expr)) for expr in sql_exprs if expr)
+    generator_b = [(expr, op) for expr, op in generator_a if op is not None]
+    return SchemaSyntax(*partition(generator_b))
 
-def expr_as_op(expr: Expression):
+def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
     match expr:
         case sql_expr.Create(kind="SCHEMA", this=schema_def):
             s_name = schema_def.db
@@ -120,6 +125,9 @@ def expr_as_op(expr: Expression):
                     return Stmt.CreateType(expr, None, t_name)
                 case other:
                     raise TypeError(f'unknown command {repr(other)}')
+        case sql_expr.Semicolon():
+            # this typically means a comment
+            return None
         case other:
             raise TypeError(f'unknown {repr(other)}')
 

@@ -65,7 +65,7 @@ class Stmt:
 @dataclass
 class SchemaSyntax:
     expr_tree: List[Expression] = field(repr=False)
-    operations: List[Stmt]
+    operations: List[Stmt.Op]
 
 @dataclass
 class SqlFileMetaData:
