@@ -12,16 +12,47 @@ CREATE UNIQUE INDEX nsw_vg_valuation_district_unique_name
     ON nsw_vg.valuation_district(valuation_district_name)
     WHERE valuation_district_name IS NOT NULL;
 
---
--- # Observed Zoning
---
--- The department of planning observes zoning
---
-CREATE TABLE IF NOT EXISTS nsw_vg.observed_zoning (
+CREATE TABLE IF NOT EXISTS nsw_vg.land_valuation (
+  valuation_id SERIAL PRIMARY KEY,
+  valuation_district_code INT NOT NULL,
   property_id INT NOT NULL,
-  zone_code varchar(4) NOT NULL,
 
+  --
+  -- This is the date at which this basis was setup to
+  -- valuate the property, not to be comfused with the
+  -- date the land valuation for the property occured.
+  --
+  valuation_base_date DATE NOT NULL,
+
+  --
+  -- The valuation method as outlined in the valuation
+  -- act, read more here:
+  --
+  --   https://legislation.nsw.gov.au/view/whole/html/inforce/current/act-1916-002
+  --
+  -- This is almost never null, however I have found
+  -- one occasion where this has occurred.
+  --
+  valuation_basis varchar(10),
+
+  --
+  -- The basis in which the valuation was done. This column
+  -- points to the portion of the land valuation act which
+  -- specifies under which instrument the land valuation was
+  -- initiated.
+  --
+  --   https://legislation.nsw.gov.au/view/whole/html/inforce/current/act-1916-002
+  --
+  valuation_authority varchar(9),
+
+  --
+  -- This is the zoning at the time of valuation
+  --
+  zone_code varchar(4),
+
+  land_value float NOT NULL,
+
+  UNIQUE (effective_date, valuation_base_date, property_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
 ) inherits (meta.event);
-

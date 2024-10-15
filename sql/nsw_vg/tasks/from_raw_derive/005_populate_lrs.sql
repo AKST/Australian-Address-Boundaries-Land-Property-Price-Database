@@ -286,6 +286,57 @@ SELECT source_id, effective_date, property_id, dimensions
   WHERE property_id IS NOT NULL
     AND dimensions IS NOT NULL;
 
+--
+-- ### Ingest Land values
+--
+INSERT INTO nsw_vg.land_valuation(
+    source_id,
+    effective_date,
+    valuation_district_code,
+    property_id,
+    valuation_base_date,
+    valuation_basis,
+    valuation_authority,
+    zone_code,
+    land_value)
+SELECT lv_ids.source_id,
+       lv_ids.source_date,
+       lv_ids.district_code,
+       lv_ids.property_id,
+       lv_entries.base_date_1,
+       lv_entries.basis_1,
+       lv_entries.authority_1,
+       CASE
+         WHEN lv_ids.zone_standard = 'ep&a_2006' THEN lv_ids.zone_code
+         ELSE NULL
+       END,
+       lv_entries.land_value_1
+  FROM (
+      SELECT source_id, source_date, property_id, zone_code, zone_standard, district_code
+        FROM pg_temp.sourced_raw_land_values
+  ) as lv_ids
+  LEFT JOIN (
+    SELECT property_id, source_id, base_date_1, basis_1, authority_1, land_value_1
+      FROM pg_temp.sourced_raw_land_values
+      WHERE land_value_1 IS NOT NULL
+    UNION ALL
+    SELECT property_id, source_id, base_date_2, basis_2, authority_2, land_value_2
+      FROM pg_temp.sourced_raw_land_values
+      WHERE land_value_2 IS NOT NULL
+    UNION ALL
+    SELECT property_id, source_id, base_date_3, basis_3, authority_3, land_value_3
+      FROM pg_temp.sourced_raw_land_values
+      WHERE land_value_3 IS NOT NULL
+    UNION ALL
+    SELECT property_id, source_id, base_date_4, basis_4, authority_4, land_value_4
+      FROM pg_temp.sourced_raw_land_values
+      WHERE land_value_4 IS NOT NULL
+    UNION ALL
+    SELECT property_id, source_id, base_date_5, basis_5, authority_5, land_value_5
+      FROM pg_temp.sourced_raw_land_values
+      WHERE land_value_5 IS NOT NULL
+  ) AS lv_entries USING (property_id, source_id);
+
 DROP FUNCTION pg_temp.sqm_area;
 DROP TABLE pg_temp.sourced_raw_property_sales_b_dates_legacy;
 DROP TABLE pg_temp.sourced_raw_property_sales_b_dates;
