@@ -1,3 +1,6 @@
+SET parallel_setup_cost = 0;
+SET parallel_tuple_cost = 0;
+
 --
 -- # Establish sources
 --
