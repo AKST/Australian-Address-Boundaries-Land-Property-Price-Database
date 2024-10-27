@@ -10,7 +10,7 @@ from lib.tooling.schema.discovery import SchemaDiscovery
 from lib.tooling.schema.type import Command
 
 from ..fetch_static_files import Environment, get_session, initialise
-from ..update_schema import update_schema, UpdateSchemaConfig
+from ..schema.update import update_schema, UpdateSchemaConfig
 from .ingest_property_sales import PropertySaleIngestionConfig, ingest_property_sales_rows
 from .ingest_land_values import NswVgLandValueIngestionConfig, ingest_land_values
 
