@@ -7,6 +7,7 @@ from ..data import PropertySaleDatFileMetaData
 from ..ingestion.config import IngestionConfig
 
 
+# TODO RENAME
 @dataclass
 class ParentConfig:
     target_root_dir: str

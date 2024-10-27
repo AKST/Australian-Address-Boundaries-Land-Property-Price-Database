@@ -3,6 +3,7 @@ from typing import List
 
 from lib.service.database import DatabaseService
 from lib.tooling.schema.config import schema_ns
+from lib.tooling.schema.type import SchemaNamespace
 
 class Application:
     def __init__(self, db: DatabaseService) -> None:
@@ -23,7 +24,7 @@ class Application:
             """)
             return [it[0] for it in await cursor.fetchall()]
 
-async def count(db_conf, packages: List[str]):
+async def run_count_for_schemas(db_conf, packages: List[SchemaNamespace]):
     db = DatabaseService.create(db_conf, 1)
     app = Application(db)
     logger = logging.getLogger(f'{__name__}.count')
@@ -55,5 +56,6 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     db_conf = DB_INSTANCE_MAP[args.instance]
-    asyncio.run(count(db_conf, args.packages))
+    packages = [s for s in schema_ns if s in args.packages]
+    asyncio.run(run_count_for_schemas(db_conf, packages))
 
