@@ -28,7 +28,7 @@ class IngestConfig:
     docker_container_config: ContainerConfig
 
 
-async def run(config: IngestConfig):
+async def ingest_all(config: IngestConfig):
     io_service = IoService.create(None)
 
     async with get_session(io_service) as session:
@@ -155,4 +155,4 @@ if __name__ == '__main__':
         docker_container_config=INSTANCE_CONTAINER_CONF_MAP[args.instance],
     )
 
-    asyncio.run(run(config))
+    asyncio.run(ingest_all(config))
