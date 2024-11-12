@@ -14,7 +14,7 @@ DB_INSTANCE_1_CONFIG = DatabaseConfig(
     dbname='gnaf_db',
     user='postgres',
     host='localhost',
-    port=5432,
+    port=5434,
     password='throwAwayPassword',
 )
 

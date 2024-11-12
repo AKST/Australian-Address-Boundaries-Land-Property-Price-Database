@@ -19,11 +19,12 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
   UNIQUE (property_id, effective_date)
 ) INHERITS (meta.event);
 
+
 CREATE INDEX idx_property_id_legal_description
     ON nsw_lrs.legal_description(property_id);
-
 CREATE INDEX idx_effective_date_legal_description
     ON nsw_lrs.legal_description(effective_date DESC);
+
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   legal_description_by_strata_id BIGSERIAL PRIMARY KEY,
@@ -35,11 +36,12 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   UNIQUE (property_id, effective_date, property_strata_lot)
 ) INHERITS (meta.event);
 
+
 CREATE INDEX idx_property_id_legal_description_by_strata_lot
     ON nsw_lrs.legal_description_by_strata_lot(property_id);
-
 CREATE INDEX idx_effective_date_legal_description_by_strata_lot
     ON nsw_lrs.legal_description_by_strata_lot(effective_date DESC);
+
 
 --
 -- ## Property Area

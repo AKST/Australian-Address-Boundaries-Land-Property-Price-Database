@@ -40,8 +40,9 @@ async def ingest_all(config: IngestConfig):
 
     container = docker_service.create_container(image, config.docker_container_config)
     container.clean()
-    container.prepare(db_service_config)
+    container.prepare(config.db_config)
     container.start()
+    db_service_config = config.db_config
     db_service = DatabaseService.create(db_service_config, 32)
 
     await db_service.wait_till_running()
@@ -141,7 +142,6 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    db_service_config = DB_INSTANCE_MAP[args.instance]
     docker_image_conf = INSTANCE_IMAGE_CONF_MAP[args.instance]
     docker_container_conf = INSTANCE_CONTAINER_CONF_MAP[args.instance]
 
