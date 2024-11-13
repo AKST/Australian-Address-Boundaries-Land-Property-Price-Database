@@ -10,6 +10,8 @@ from lib.pipeline.gnaf.constants import data_gov_au_gnaf_information_page
 from lib.service.http import CacheHeader
 from lib.service.static_environment import Target
 
+from .config import GnafPublicationTarget
+
 _sql_dir_path = 'G-NAF/Extras/GNAF_TableCreation_Scripts'
 
 def _find_subdirectory(directory, subdirectory_name):
@@ -20,7 +22,7 @@ def _find_subdirectory(directory, subdirectory_name):
     return None
 
 @dataclass
-class GnafPublicationTarget(Target):
+class GnafPublicationTargetImpl(GnafPublicationTarget):
     _psv_dir: Optional[str] = field(default=None)
 
     @property
@@ -73,7 +75,7 @@ class GnafPublicationDiscovery:
 
         if link is not None:
             name = link['href'].split('/')[-1] # type: ignore
-            self.publication = GnafPublicationTarget(
+            self.publication = GnafPublicationTargetImpl(
                 url=link['href'], # type: ignore
                 web_dst=name,
                 zip_dst=name.split('.')[0],

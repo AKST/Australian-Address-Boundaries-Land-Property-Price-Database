@@ -5,14 +5,15 @@ from threading import Lock
 from typing import List, Dict, Set
 
 from .discovery import GnafPublicationTarget
+from .config import GnafConfig
 
 
 DepMap = Dict[str, Set[str]]
 
 
-def create_list_of_target_files(target: GnafPublicationTarget) -> Set[str]:
-    authority_files = glob.glob(f'{target.psv_dir}/Authority Code/*.psv')
-    standard_prefix = f'{target.psv_dir}/Standard'
+def create_list_of_target_files(config: GnafConfig) -> Set[str]:
+    authority_files = glob.glob(f'{config.target.psv_dir}/Authority Code/*.psv')
+    standard_prefix = f'{config.target.psv_dir}/Standard'
     standard_files = [
         f'{standard_prefix}/{s}_{t}_psv.psv'
         for t in [
@@ -24,7 +25,7 @@ def create_list_of_target_files(target: GnafPublicationTarget) -> Set[str]:
             'ADDRESS_MESH_BLOCK_2016', 'ADDRESS_MESH_BLOCK_2021',
             'PRIMARY_SECONDARY',
         ]
-        for s in ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'OT', 'ACT']
+        for s in config.states
     ]
     return { *authority_files, *standard_files }
 
@@ -79,10 +80,10 @@ class GnafDataIngestionScheduler:
                         self._all_files.remove(f)
 
     @staticmethod
-    def create(target: GnafPublicationTarget):
-        files = create_list_of_target_files(target)
+    def create(config: GnafConfig):
+        files = create_list_of_target_files(config)
         queue: deque[str] = deque()
-        deps = { k: set(v) for k, v in create_dependency_graph(target).items() }
+        deps = { k: set(v) for k, v in create_dependency_graph(config).items() }
         lock = Lock()
         queue.extend((
             f
@@ -92,9 +93,9 @@ class GnafDataIngestionScheduler:
 
         return GnafDataIngestionScheduler(lock, queue, files, deps)
 
-def create_dependency_graph(target: GnafPublicationTarget) -> Dict[str, Set[str]]:
-    standard_prefix = f'{target.psv_dir}/Standard'
-    authority_files = glob.glob(f'{target.psv_dir}/Authority Code/*.psv')
+def create_dependency_graph(config: GnafConfig) -> Dict[str, Set[str]]:
+    standard_prefix = f'{config.target.psv_dir}/Standard'
+    authority_files = glob.glob(f'{config.target.psv_dir}/Authority Code/*.psv')
 
     return { f: set() for f in authority_files } | {
         f'{p}/{s}_{t}_psv.psv': { f'{p}/{s}_{d}_psv.psv' for d in ds } | set(authority_files)
@@ -120,7 +121,7 @@ def create_dependency_graph(target: GnafPublicationTarget) -> Dict[str, Set[str]
             'ADDRESS_MESH_BLOCK_2021': ['ADDRESS_DETAIL', 'MB_2021'],
             'PRIMARY_SECONDARY': ['ADDRESS_DETAIL'],
         }).items()
-        for s in ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'OT', 'ACT']
+        for s in config.states
         for p in [standard_prefix]
     }
 

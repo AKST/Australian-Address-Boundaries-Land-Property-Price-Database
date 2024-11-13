@@ -1,10 +1,13 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 import logging
-from typing import Optional
+from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
 import lib.pipeline.nsw_vg.property_sales.orchestration.config as nswvg_psi_conf
 from lib.pipeline.abs.defaults import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
+from lib.pipeline.gnaf.config import GnafConfig, GnafState
+from lib.pipeline.gnaf.defaults import GNAF_STATE_INSTANCE_MAP
 from lib.pipeline.gnaf.init_schema import init_target_schema
 from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG
 from lib.service.clock import ClockService
@@ -24,6 +27,8 @@ from lib.tooling.schema.config import ns_dependency_order
 class IngestConfig:
     io_file_limit: Optional[int]
     db_config: DatabaseConfig
+    gnaf_states: Set[GnafState]
+    nswvg_psi_publish_min: Optional[int]
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig
 
@@ -104,7 +109,7 @@ async def ingest_all(config: IngestConfig):
                 ),
                 parent_config=nswvg_psi_conf.ParentConfig(
                     target_root_dir='./_out_zip',
-                    publish_min=None,
+                    publish_min=config.nswvg_psi_publish_min,
                     publish_max=None,
                     download_min=None,
                     download_max=None,
@@ -118,7 +123,10 @@ async def ingest_all(config: IngestConfig):
         ),
     )
 
-    await ingest_gnaf(environment.gnaf.publication, db_service)
+    await ingest_gnaf(
+        GnafConfig(environment.gnaf.publication, config.gnaf_states),
+        db_service,
+    )
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)
 
@@ -148,9 +156,16 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
+    NSWVG_MIN_PUB_YEAR = {
+        1: None,
+        2: datetime.now().year,
+    }
+
     config = IngestConfig(
         io_file_limit=file_limit,
         db_config=DB_INSTANCE_MAP[args.instance],
+        gnaf_states=GNAF_STATE_INSTANCE_MAP[args.instance],
+        nswvg_psi_publish_min=NSWVG_MIN_PUB_YEAR[args.instance],
         docker_image_config=INSTANCE_IMAGE_CONF_MAP[args.instance],
         docker_container_config=INSTANCE_CONTAINER_CONF_MAP[args.instance],
     )

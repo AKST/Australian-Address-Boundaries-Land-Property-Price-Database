@@ -9,6 +9,7 @@ from typing import List, Dict, Set, Any
 
 from lib.service.database import DatabaseService
 
+from .config import GnafConfig
 from .discovery import GnafPublicationTarget
 from .scheduler import GnafDataIngestionScheduler
 
@@ -18,8 +19,8 @@ _BATCH_SIZE: float = 64000 / _WORKER_COUNT # idk what I'm doing here tbh.
 
 _logger = logging.getLogger(__name__)
 
-def ingest(target: GnafPublicationTarget, db: DatabaseService):
-    scheduler = GnafDataIngestionScheduler.create(target)
+def ingest(config: GnafConfig, db: DatabaseService):
+    scheduler = GnafDataIngestionScheduler.create(config)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=_WORKER_COUNT) as executor:
         futures = [executor.submit(worker, scheduler, db) for _ in range(_WORKER_COUNT)]

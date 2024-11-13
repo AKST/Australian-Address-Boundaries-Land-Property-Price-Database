@@ -1,8 +1,7 @@
-from lib.pipeline.gnaf.ingestion import ingest
-from lib.pipeline.gnaf.discovery import GnafPublicationTarget
+from lib.pipeline.gnaf import defaults, ingest, GnafConfig
 from lib.service.database import DatabaseService
 
-async def ingest_gnaf(target: GnafPublicationTarget, db: DatabaseService) -> None:
+async def ingest_gnaf(config: GnafConfig, db: DatabaseService) -> None:
     """
     Note while the body of this isn't async (yet), I made the
     function async as a matter of establishing a stable
@@ -10,7 +9,7 @@ async def ingest_gnaf(target: GnafPublicationTarget, db: DatabaseService) -> Non
     having to chase up where it's being called (mostly the
     note books).
     """
-    ingest(target, db)
+    ingest(config, db)
 
 if __name__ == '__main__':
     import asyncio
@@ -35,6 +34,7 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
     db_conf = DB_INSTANCE_MAP[args.instance]
+    gnaf_states = defaults.GNAF_STATE_INSTANCE_MAP[args.instance]
 
     async def main() -> None:
         db = DatabaseService.create(db_conf, 32)
@@ -45,6 +45,7 @@ if __name__ == '__main__':
         if env.gnaf.publication is None:
             raise ValueError('no gnaf publication')
 
-        await ingest_gnaf(env.gnaf.publication, db)
+        config = GnafConfig(env.gnaf.publication, gnaf_states)
+        await ingest_gnaf(config, db)
 
     asyncio.run(main())

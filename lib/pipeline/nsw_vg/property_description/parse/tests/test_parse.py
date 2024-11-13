@@ -7,6 +7,7 @@ from ..parse import parse_land_parcel_ids
 from ..parse import parse_property_description
 
 @pytest.mark.parametrize("desc,remains,expected_items", [
+    ('123//313', '', [LandParcel(id='123//313')]),
     ('123/313', '', [LandParcel(id='123/313')]),
     ('PT 123/313', '', [LandParcel(id='123/313', part=True)]),
     ('123/as/313', '', [LandParcel(id='123/as/313')]),
