@@ -151,6 +151,16 @@ SELECT source_id, source_date, property_id, property_description
 -- strata plans.
 --
 
+INSERT INTO nsw_lrs.archived_legal_description(source_id, effective_date, property_id, legal_description)
+SELECT
+    source_id,
+    dates.effective_date,
+    property_id,
+    b.land_description
+  FROM pg_temp.sourced_raw_property_sales_b_dates_legacy as dates
+  LEFT JOIN pg_temp.sourced_raw_property_sales_b_legacy as b USING (source_id, property_id)
+  WHERE b.land_description IS NOT NULL;
+
 INSERT INTO nsw_lrs.legal_description(
   source_id,
   effective_date,
@@ -166,17 +176,6 @@ SELECT
   WHERE full_property_description IS NOT NULL
     AND strata_lot_number IS NULL
     AND NOT b.also_in_lv;
-
-INSERT INTO nsw_lrs.legal_description(source_id, effective_date, property_id, legal_description)
-SELECT
-    source_id,
-    dates.effective_date,
-    property_id,
-    b.land_description
-  FROM pg_temp.sourced_raw_property_sales_b_dates_legacy as dates
-  LEFT JOIN pg_temp.sourced_raw_property_sales_b_legacy as b USING (source_id, property_id)
-  WHERE b.land_description IS NOT NULL
-    AND NOT dates.also_in_modern;
 
 INSERT INTO nsw_lrs.legal_description_by_strata_lot(source_id, effective_date, property_id, property_strata_lot, legal_description)
 SELECT

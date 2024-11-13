@@ -19,6 +19,15 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
   UNIQUE (property_id, effective_date)
 ) INHERITS (meta.event);
 
+CREATE TABLE IF NOT EXISTS nsw_lrs.archived_legal_description (
+  legal_description_id BIGSERIAL PRIMARY KEY,
+  legal_description TEXT NOT NULL,
+  property_id INT NOT NULL,
+
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
+  UNIQUE (property_id, effective_date)
+) INHERITS (meta.event);
+
 
 CREATE INDEX idx_property_id_legal_description
     ON nsw_lrs.legal_description(property_id);

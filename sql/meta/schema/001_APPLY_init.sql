@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS meta.file_source (
 CREATE INDEX idx_file_path_file_source
     ON meta.file_source(file_path);
 
+CREATE INDEX idx_date_published_file_source
+    ON meta.file_source(date_published);
+
 CREATE TABLE IF NOT EXISTS meta.source_file_line (
   source_id bigint NOT NULL,
   file_source_id bigint NOT NULL,
