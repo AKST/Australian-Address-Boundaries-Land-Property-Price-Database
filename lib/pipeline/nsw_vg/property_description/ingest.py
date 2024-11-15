@@ -85,7 +85,7 @@ async def chunk_quatile(db: DatabaseService, table_name: str, q: Quantile) -> No
                 SELECT source_id, legal_description, property_id, effective_date
                   FROM pg_temp.{temp_table_name}
                   LEFT JOIN nsw_lrs.legal_description USING (legal_description_id)
-                  LEFT JOIN meta.source_file_line USING (source_id)
+                  LEFT JOIN meta.source_file USING (source_id)
                   LEFT JOIN meta.file_source USING (file_source_id)
                   LIMIT {limit} OFFSET {offset}
             """)
@@ -106,6 +106,7 @@ async def chunk_quatile(db: DatabaseService, table_name: str, q: Quantile) -> No
                         (parcel.id, parcel.plan, parcel.section, parcel.lot)
                         for parcel in property_desc.parcels.all
                     ])
+                    await conn.commit()
 
                     await cursor.executemany("""
                         INSERT INTO nsw_lrs.property_parcel_assoc(

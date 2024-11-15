@@ -94,6 +94,49 @@ def test_land_parcel_ids(desc, remains, expected_items):
     ('PT 200/713995 HCP9014/2', 'HCP9014/2', [
         LandParcel(id='200/713995', part=True),
     ]),
+    ('1/804780 PM2005/000756', 'PM2005/000756', [
+        LandParcel(id='1/804780'),
+    ]),
+    ('179/755241 Perpetual Lease 1935/1', '', [
+        t.PerpetualLease('1935/1'),
+        LandParcel(id='179/755241'),
+    ]),
+    (
+        # TODO figure out what this is
+        'PT 10/1142773 and lease - Waterways Authority 3313',
+        'and lease - Waterways Authority 3313',
+        [LandParcel(id='10/1142773', part=True)],
+    ),
+    ('10/10846 NSW Maritime 1000/1197', '', [
+        t.NswMaritime('1000/1197'),
+        LandParcel(id='10/10846'),
+    ]),
+    (
+        '257, 258/722505 259, 260, 261/722511 262, 263/722516 1, 2, 3/728619 1, 2/728620 23, 25, 26, 36, 80, 81, 82, 83, 84, 90, 92, 94, 95, 97, 98, 251/756472 Licence over 258/722505, 260, 261/722511, 263/722516 Licence 396466',
+        'Licence over 258/722505, 260, 261/722511, 263/722516 ',
+        [
+            t.CrownLandLicense('396466'),
+            LandParcel(id='257/722505'),
+            LandParcel(id='258/722505'),
+            LandParcel(id='259/722511'),
+            LandParcel(id='260/722511'),
+            LandParcel(id='261/722511'),
+            LandParcel(id='262/722516'),
+            LandParcel(id='263/722516'),
+            LandParcel(id='1/728619'),
+            LandParcel(id='2/728619'),
+            LandParcel(id='3/728619'),
+            LandParcel(id='1/728620'),
+            LandParcel(id='2/728620'),
+            *[
+                LandParcel(id=f'{lot}/756472')
+                for lot in [
+                    23, 25, 26, 36, 80, 81, 82, 83,
+                    84, 90, 92, 94, 95, 97, 98, 251,
+                ]
+            ],
+        ],
+    ),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         t.RailwayLandLease('65/430/2470'),
         LandParcel(id='2/1109126', part=True),

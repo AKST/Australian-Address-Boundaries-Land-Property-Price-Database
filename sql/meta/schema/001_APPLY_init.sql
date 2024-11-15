@@ -28,26 +28,29 @@ CREATE INDEX idx_file_path_file_source
 CREATE INDEX idx_date_published_file_source
     ON meta.file_source(date_published);
 
-CREATE TABLE IF NOT EXISTS meta.source_file_line (
+
+CREATE TABLE IF NOT EXISTS meta.source_file (
   source_id bigint NOT NULL,
   file_source_id bigint NOT NULL,
+  UNIQUE (source_id, file_source_id)
+);
+
+CREATE TABLE IF NOT EXISTS meta.source_file_line (
   source_file_line int NOT NULL,
   UNIQUE (source_id, file_source_id),
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
   FOREIGN KEY (file_source_id) REFERENCES meta.file_source(file_source_id)
-);
+) INHERITS (meta.source_file);
 
 CREATE INDEX idx_file_source_id_file_line_source_file_line
     ON meta.source_file_line(file_source_id, source_file_line);
 
 CREATE TABLE IF NOT EXISTS meta.source_byte_position (
-  source_id bigint NOT NULL,
-  file_source_id bigint NOT NULL,
   source_byte_position bigint NOT NULL,
   UNIQUE (source_id, file_source_id),
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id),
   FOREIGN KEY (file_source_id) REFERENCES meta.file_source(file_source_id)
-);
+) INHERITS (meta.source_file);
 
 CREATE INDEX idx_file_source_id_byte_position_source_byte_position
     ON meta.source_byte_position(file_source_id, source_byte_position);

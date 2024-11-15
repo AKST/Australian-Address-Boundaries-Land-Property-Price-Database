@@ -32,6 +32,7 @@ sanitize_patterns: List[CleanupPattern] = [
 sanitize_pre_parcels_patterns = [
     CleanupPattern(re.compile(r' \('), r' $$$$ ('),
     CleanupPattern(re.compile(r' HCP([\w+/]+)'), r' $$$$ HCP\1'),
+    CleanupPattern(re.compile(r' PM([\w+/]+)'), r' $$$$ PM\1'),
     CleanupPattern(re.compile(r'(PTARC)(\w+)'), r'\1 \2'),
 ]
 
@@ -45,7 +46,7 @@ id_patterns = [
 
 
     IdPattern(re=re.compile(r'Public Reserve\s+(\w+)'), Const=t.PublicReserve),
-    IdPattern(re=re.compile(r'Perpetual Lease\s+(\w+)'), Const=t.PerpetualLease),
+    IdPattern(re=re.compile(r'Perpetual Lease\s+([\w/]+)'), Const=t.PerpetualLease),
 
 
     # there doesn't appear to be such a thing as a mining permit
@@ -62,9 +63,9 @@ id_patterns = [
     IdPattern(re=re.compile(r'Forest Permit\s+(\w+)'), Const=t.ForestPermit),
     IdPattern(re=re.compile(r'Enclosure Permit\s+([\w/]+)'), Const=t.EnclosurePermit),
     IdPattern(re=re.compile(r'Non-Irrigable Purchase\s+(\w+)'), Const=t.NonIrrigablePurchase),
-    IdPattern(re=re.compile(r'NSW Maritime\s+(\w+)'), Const=t.NswMaritime),
+    IdPattern(re=re.compile(r'NSW Maritime\s+([\w/]+)'), Const=t.NswMaritime),
     IdPattern(re=re.compile(r'Housing PRN\s+(\w+)'), Const=t.HousingPRN),
-    IdPattern(re=re.compile(r'Licence\s+(\w+)'), Const=t.CrownLandLicense),
+    IdPattern(re=re.compile(r'Licence\s+(\d+)'), Const=t.CrownLandLicense),
     IdPattern(re=re.compile(r'BUS DEPOT LEASE\s+(\w+)'), Const=t.BusDepotLease),
 
     # IdPattern(re=re.compile(r'STATE HERITAGE REGISTRAR\s+(\w+)', re.IGNORECASE), Const=StateHeritageRegister),
