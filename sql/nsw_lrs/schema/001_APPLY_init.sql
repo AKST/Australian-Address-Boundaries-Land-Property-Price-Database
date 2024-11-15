@@ -12,10 +12,10 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property (
 );
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.parcel (
-  parcel_id BIGSERIAL PRIMARY KEY,
-  parcel_plan varchar(6),
-  parcel_section varchar(2),
-  parcel_lot varchar(5),
+  parcel_id varchar(20) PRIMARY KEY,
+  parcel_plan varchar(9) NOT NULL,
+  parcel_section varchar(4),
+  parcel_lot varchar(5) NOT NULL,
   UNIQUE (parcel_plan, parcel_section, parcel_lot)
 );
 

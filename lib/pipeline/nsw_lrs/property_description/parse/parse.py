@@ -1,8 +1,37 @@
-from typing import List, Union, Any, Tuple, Generator
+from typing import Self, List, Union, Any, Tuple, Generator, Literal
+from logging import getLogger
 import re
 
-from lib.pipeline.nsw_vg.property_description import types as t
-from ..parse import grammar as g
+from . import types as t
+from . import grammar as g
+from .. import data
+from ..builder import PropertyDescriptionBuilder
+
+logger = getLogger(__name__)
+
+VALID_PARCEL_ID_CHARS = re.compile(r'^[a-zA-Z0-9/]+$')
+
+def parse_parcel(parcel_id: str) -> data.LandParcel:
+    parcel_id = parcel_id.replace('//', '/')
+
+    if '//' in parcel_id:
+        raise ValueError('valid to sanitize parcel')
+
+    match parcel_id.split('/'):
+        case ['', *rest]:
+            raise ValueError(f'invalid lot, {parcel_id}')
+        case [lot, '', plan]:
+            raise ValueError(f'invalid section, {parcel_id}')
+        case [lot, '']:
+            raise ValueError(f'invalid plan, {parcel_id}')
+        case [lot, sec, '']:
+            raise ValueError(f'invalid plan, {parcel_id}')
+        case [lot, sec, plan]:
+            return data.LandParcel(parcel_id, lot, sec, plan)
+        case [lot, plan]:
+            return data.LandParcel(parcel_id, lot, None, plan)
+
+    raise ValueError(f'invalid parcel, {parcel_id}')
 
 def parse_land_parcel_ids(desc: str):
     def read_chunk(read_from, skip = 0):
@@ -32,7 +61,7 @@ def parse_land_parcel_ids(desc: str):
             chunk = read_chunk(read_from, skip=0)
             # print(read_from, desc[read_from:], chunk, f"'{read_chunk(read_from, skip=1)}'")
 
-            if '/' in chunk:
+            if '/' in chunk and VALID_PARCEL_ID_CHARS.match(chunk):
                 yield t.LandParcel(id=chunk, part=False)
                 read_from = move_cursor(read_from, 1)
                 continue
@@ -85,6 +114,9 @@ def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]
     description = re.sub(r'\s+', ' ', description)
     parsed_items: List[t.ParseItem] = []
 
+    for s_pattern in g.sanitize_patterns:
+        description = s_pattern.re.sub(s_pattern.out, description)
+
     for i_pattern in g.ignore_pre_patterns:
         description = i_pattern.sub('', description)
 
@@ -113,8 +145,40 @@ def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]
     for i_pattern in g.ignore_post_patterns:
         description = i_pattern.sub('', description)
 
+    for s_pattern in g.sanitize_pre_parcels_patterns:
+        description = s_pattern.re.sub(s_pattern.out, description)
+
     description = re.sub(r'\s+', ' ', description)
     description, land_parcels = parse_land_parcel_ids(description)
-    description = re.sub(r'(\s+|\.)+', '', description)
     parsed_items.extend(land_parcels)
+
+    for s_pattern in g.sanitize_post_parcels_patterns:
+        description = s_pattern.re.sub(s_pattern.out, description)
+
     return description, parsed_items
+
+def parse_property_description_data(desc: str) -> data.PropertyDescription:
+    builder = PropertyDescriptionBuilder()
+    desc_out, items = parse_property_description(desc)
+
+    try:
+        for item in items:
+            match item:
+                case t.LandParcel(parcel_id, partial):
+                    parcel = parse_parcel(parcel_id)
+                    if re.search(r'\W', parcel.lot):
+                        raise ValueError(f'weird lot, {parcel.id}')
+                    if parcel.section and re.search(r'\W', parcel.section):
+                        raise ValueError(f'weird section, {parcel.id}')
+                    if re.search(r'\W', parcel.plan):
+                        raise ValueError(f'weird plan, {parcel.plan}')
+                    builder.add_parcel(parcel, partial)
+                case t.EnclosurePermit(id):
+                    builder.add_permit('enclosure', id)
+
+        return builder.create(desc)
+    except Exception as e:
+        logger.error(f'failed with "{desc}"')
+        logger.error(f'remains "{desc_out}"')
+        logger.error(f'items "{items}"')
+        raise e

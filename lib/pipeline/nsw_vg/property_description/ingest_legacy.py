@@ -3,9 +3,7 @@ from logging import getLogger
 from typing import Self, List
 
 from lib.service.database import DatabaseService
-from .parse import parse_land_parcel_ids
-from .types import LandParcel
-
+from lib.pipeline.nsw_lrs.property_description.parse import parse_land_parcel_ids, types
 
 # TODO implement properly #42
 async def process_property_description(db: DatabaseService) -> None:
@@ -14,7 +12,7 @@ async def process_property_description(db: DatabaseService) -> None:
         with open('sql/nsw_lv_schema_3_property_description_meta_data.sql', 'r') as f:
             await cursor.execute(f.read())
 
-    def land_parcels(desc: str) -> List[LandParcel]:
+    def land_parcels(desc: str) -> List[types.LandParcel]:
         desc, parcels = parse_land_parcel_ids(desc)
         return parcels
 

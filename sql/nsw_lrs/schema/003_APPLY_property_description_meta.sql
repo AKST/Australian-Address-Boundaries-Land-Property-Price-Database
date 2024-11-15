@@ -14,7 +14,7 @@
 --
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_parcel_assoc (
   property_id INT NOT NULL,
-  parcel_id INT NOT NULL,
+  parcel_id varchar(20) NOT NULL,
   partial BOOLEAN NOT NULL,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
@@ -25,6 +25,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_
   ON nsw_lrs.property_parcel_assoc(parcel_id, effective_date)
   WHERE partial = FALSE;
 
-CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_not_partial
+CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_partial
   ON nsw_lrs.property_parcel_assoc(property_id, parcel_id, effective_date)
   WHERE partial = TRUE;

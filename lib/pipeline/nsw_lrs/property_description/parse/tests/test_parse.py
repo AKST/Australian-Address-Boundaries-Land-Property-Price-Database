@@ -1,10 +1,26 @@
 import pytest
+from pprint import pformat
 
-from lib.pipeline.nsw_vg.property_description import types as t
-from lib.pipeline.nsw_vg.property_description.types import LandParcel
-
+from lib.pipeline.nsw_lrs.property_description import data
+from .. import types as t
+from ..types import LandParcel
+from ..parse import parse_parcel
 from ..parse import parse_land_parcel_ids
 from ..parse import parse_property_description
+from ..parse import parse_property_description_data
+
+@pytest.mark.parametrize("name,desc", [
+    ('001-mixed-parcels', 'B/100895 6, PT 20/755520'),
+])
+def test_parse_property_description_data(snapshot, name, desc):
+    data = parse_property_description_data(desc)
+    snapshot.assert_match(pformat(data), name)
+
+@pytest.mark.parametrize("p_in,p_out", [
+    ('B/12313', data.LandParcel('B/12313', 'B', None, '12313'))
+])
+def test_parse_parcel(snapshot, p_in, p_out):
+    assert parse_parcel(p_in) == p_out
 
 @pytest.mark.parametrize("desc,remains,expected_items", [
     ('123//313', '', [LandParcel(id='123//313')]),
@@ -38,6 +54,10 @@ def test_land_parcel_ids(desc, remains, expected_items):
     assert out_items == expected_items
 
 @pytest.mark.parametrize("desc,remains,expected_items", [
+    ('6/G/12312 Permissive Occupancy 67/15', '', [
+        t.PermissiveOccupancy('67/15'),
+        LandParcel(id='6/G/12312'),
+    ]),
     ('650/751743 Non-Irrigable Purchase 15', '', [
         t.NonIrrigablePurchase('15'),
         LandParcel(id='650/751743'),
@@ -68,8 +88,33 @@ def test_land_parcel_ids(desc, remains, expected_items):
         t.WesternLandLease('14457'),
         LandParcel(id='98/1066289'),
     ]),
+    ('25/7511 95.19/CRK', '95.19/CRK', [
+        LandParcel(id='25/7511'),
+    ]),
+    ('PT 200/713995 HCP9014/2', 'HCP9014/2', [
+        LandParcel(id='200/713995', part=True),
+    ]),
+    ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
+        t.RailwayLandLease('65/430/2470'),
+        LandParcel(id='2/1109126', part=True),
+    ]),
+    (
+        '47, 50, 71, 116/756843 1/804117 102/1210073 1/1291983 (47,50,71,116/756843,102/1210073 being part of Cambalong Wildlife Refuge) Enclosure Permit 561155',
+        '(47,50,71,116/756843,102/1210073 being part of Cambalong Wildlife Refuge) ',
+        [
+            t.EnclosurePermit('561155'),
+            LandParcel(id='47/756843'),
+            LandParcel(id='50/756843'),
+            LandParcel(id='71/756843'),
+            LandParcel(id='116/756843'),
+            LandParcel(id='1/804117'),
+            LandParcel(id='102/1210073'),
+            LandParcel(id='1/1291983'),
+        ],
+    )
 ])
 def test_parse_property_description(desc, remains, expected_items):
     out_remains, out_items = parse_property_description(desc)
     assert out_remains == remains
     assert out_items == expected_items
+

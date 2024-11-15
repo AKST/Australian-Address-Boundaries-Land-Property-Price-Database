@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Union, Any, Optional
 import re
 
-from lib.pipeline.nsw_vg.property_description import types as t
+from . import types as t
 
 @dataclass
 class IdPattern:
@@ -21,6 +21,24 @@ class FlagPattern:
     re: Any
     Const: Any
 
+@dataclass
+class CleanupPattern:
+    re: Any
+    out: str
+
+sanitize_patterns: List[CleanupPattern] = [
+]
+
+sanitize_pre_parcels_patterns = [
+    CleanupPattern(re.compile(r' \('), r' $$$$ ('),
+    CleanupPattern(re.compile(r' HCP([\w+/]+)'), r' $$$$ HCP\1'),
+    CleanupPattern(re.compile(r'(PTARC)(\w+)'), r'\1 \2'),
+]
+
+sanitize_post_parcels_patterns = [
+    CleanupPattern(re.compile(r'\$\$\$\$ '), r''),
+]
+
 id_patterns = [
     IdPattern(re=re.compile(r'Wind Farm\s+(\w+)'), Const=t.WindFarm),
     IdPattern(re=re.compile(r"Consolidated Mining Lease\s+(\w+)"), Const=t.ConsolidatedMiningLease),
@@ -37,11 +55,12 @@ id_patterns = [
     IdPattern(re=re.compile(r'Telstra Site Number\s+(\w+)'), Const=t.TelstraSite),
     IdPattern(re=re.compile(r'Mineral Claim\s+(\w+)'), Const=t.MineralClaim),
     IdPattern(re=re.compile(r'Western Land Lease\s+(\w+)'), Const=t.WesternLandLease),
+    IdPattern(re=re.compile(r'Railway Land Lease\s+(\w+/[\w/]+)'), Const=t.RailwayLandLease),
     IdPattern(re=re.compile(r'Railway Land Lease\s+(\w+(\.\w+)?)'), Const=t.RailwayLandLease),
     IdPattern(re=re.compile(r'Stock Watering Place\s+(\w+)'), Const=t.StockWaterPlaceLease),
-    IdPattern(re=re.compile(r'Special Lease\s+(\w+)'), Const=t.SpecialLease),
+    IdPattern(re=re.compile(r'Special Lease\s+([\w/]+)'), Const=t.SpecialLease),
     IdPattern(re=re.compile(r'Forest Permit\s+(\w+)'), Const=t.ForestPermit),
-    IdPattern(re=re.compile(r'Enclosure Permit\s+(\w+)'), Const=t.EnclosurePermit),
+    IdPattern(re=re.compile(r'Enclosure Permit\s+([\w/]+)'), Const=t.EnclosurePermit),
     IdPattern(re=re.compile(r'Non-Irrigable Purchase\s+(\w+)'), Const=t.NonIrrigablePurchase),
     IdPattern(re=re.compile(r'NSW Maritime\s+(\w+)'), Const=t.NswMaritime),
     IdPattern(re=re.compile(r'Housing PRN\s+(\w+)'), Const=t.HousingPRN),
@@ -50,14 +69,14 @@ id_patterns = [
 
     # IdPattern(re=re.compile(r'STATE HERITAGE REGISTRAR\s+(\w+)', re.IGNORECASE), Const=StateHeritageRegister),
     IdPattern(re=re.compile(r'State Heritage Listing No\s+(\w+)', re.IGNORECASE), Const=t.StateHeritageRegister),
-    IdPattern(re=re.compile(r'Permissive Occupancy\s+(\w+)'), Const=t.PermissiveOccupancy),
+    IdPattern(re=re.compile(r'Permissive Occupancy\s+([\w/]+)'), Const=t.PermissiveOccupancy),
     IdPattern(re=re.compile(r'RAILCORP\. FILE:\s+(\w+)', re.IGNORECASE), Const=t.RailcorpFile),
     IdPattern(re=re.compile(r'Domestic Waterfront Occupancy\s+(\w+)'), Const=t.DomesticWaterfrontOccupation),
 
     # I am guessing these are the same things
-    IdPattern(re=re.compile(r'Occupation Permit PB\s+(\w+)'), Const=t.OccupancyPermit),
-    IdPattern(re=re.compile(r'Occupation Permit\s+(\w+)'), Const=t.OccupancyPermit),
-    IdPattern(re=re.compile(r'Occupancy Permit\s+(\w+)'), Const=t.OccupancyPermit),
+    IdPattern(re=re.compile(r'Occupation Permit PB\s+([\w/]+)'), Const=t.OccupancyPermit),
+    IdPattern(re=re.compile(r'Occupation Permit\s+([\w/]+)'), Const=t.OccupancyPermit),
+    IdPattern(re=re.compile(r'Occupancy Permit\s+([\w/]+)'), Const=t.OccupancyPermit),
 ]
 
 named_group_patterns = [
