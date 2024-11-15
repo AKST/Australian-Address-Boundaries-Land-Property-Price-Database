@@ -106,7 +106,7 @@ async def ingest_nswvg_deduplicate(
 
     async with db.async_connect() as c, c.cursor() as cursor:
         for script_path in scripts:
-            logger.debug(f'running {script_path}')
+            logger.info(f'running {script_path}')
             await cursor.execute(await io.f_read(script_path))
 
     if config.drop_raw:

@@ -30,11 +30,16 @@ async def run_count_for_schemas(db_conf, packages: List[SchemaNamespace]):
     logger = logging.getLogger(f'{__name__}.count')
 
     logger.info('# Row Count')
-    for pkg in packages:
+    for pkg in [schema for pkg in packages for schema in package_schemas(pkg)]:
         tables = await app.tables(pkg)
         for tlb in tables:
             count = await app.count(pkg, tlb)
             logger.info(f' - "{pkg}.{tlb}" {count} rows')
+
+def package_schemas(package: SchemaNamespace) -> List[str]:
+    match package:
+        case 'nsw_vg': return ['nsw_vg', 'nsw_vg_raw']
+        case other: return [other]
 
 if __name__ == '__main__':
     import asyncio

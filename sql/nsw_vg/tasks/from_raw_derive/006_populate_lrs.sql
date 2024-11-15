@@ -138,8 +138,13 @@ SELECT DISTINCT ON (effective_date, property_id)
 -- There should only be one entry per property_id.
 --
 
-INSERT INTO nsw_lrs.legal_description(source_id, effective_date, property_id, legal_description)
-SELECT source_id, source_date, property_id, property_description
+INSERT INTO nsw_lrs.legal_description(
+  source_id,
+  effective_date,
+  property_id,
+  legal_description,
+  legal_description_kind)
+SELECT source_id, source_date, property_id, property_description, '> 2004-08-17'
   FROM pg_temp.sourced_raw_land_values WHERE property_description IS NOT NULL;
 
 --
@@ -165,25 +170,40 @@ INSERT INTO nsw_lrs.legal_description(
   source_id,
   effective_date,
   property_id,
-  legal_description)
+  legal_description,
+  legal_description_kind)
 SELECT
     b.source_id,
     b.effective_date,
     property_id,
-    c.full_property_description
+    c.full_property_description,
+    (case
+      when b.effective_date > '2004-08-17' then '> 2004-08-17'
+      else 'initial'
+    end)::nsw_lrs.legal_description_kind
   FROM pg_temp.sourced_raw_property_sales_b_dates as b
   LEFT JOIN pg_temp.consolidated_property_description_c as c USING (file_source_id, sale_counter, property_id)
   WHERE full_property_description IS NOT NULL
     AND strata_lot_number IS NULL
     AND NOT b.also_in_lv;
 
-INSERT INTO nsw_lrs.legal_description_by_strata_lot(source_id, effective_date, property_id, property_strata_lot, legal_description)
+INSERT INTO nsw_lrs.legal_description_by_strata_lot(
+  source_id,
+  effective_date,
+  property_id,
+  property_strata_lot,
+  legal_description,
+  legal_description_kind)
 SELECT
     b.source_id,
     b.effective_date,
     property_id,
     b.strata_lot_number,
-    c.full_property_description
+    c.full_property_description,
+    (case
+      when b.effective_date > '2004-08-17' then '> 2004-08-17'
+      else 'initial'
+    end)::nsw_lrs.legal_description_kind
   FROM pg_temp.sourced_raw_property_sales_b_dates as b
   LEFT JOIN pg_temp.consolidated_property_description_c as c USING (file_source_id, sale_counter, property_id)
   WHERE full_property_description IS NOT NULL

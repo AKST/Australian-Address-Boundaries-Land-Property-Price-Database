@@ -10,9 +10,12 @@
 --
 -- Representing this as an event allows capture of this information over time.
 
+CREATE TYPE nsw_lrs.legal_description_kind AS ENUM ('initial', '> 2004-08-17');
+
 CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
   legal_description_id BIGSERIAL PRIMARY KEY,
   legal_description TEXT NOT NULL,
+  legal_description_kind nsw_lrs.legal_description_kind NOT NULL,
   property_id INT NOT NULL,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
@@ -38,6 +41,7 @@ CREATE INDEX idx_effective_date_legal_description
 CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   legal_description_by_strata_id BIGSERIAL PRIMARY KEY,
   legal_description TEXT NOT NULL,
+  legal_description_kind nsw_lrs.legal_description_kind NOT NULL,
   property_id INT NOT NULL,
   property_strata_lot INT,
 
