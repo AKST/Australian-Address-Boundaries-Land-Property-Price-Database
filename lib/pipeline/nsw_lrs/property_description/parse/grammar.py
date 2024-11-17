@@ -134,12 +134,12 @@ named_group_patterns = [
         Const=t.MineralLease,
     ),
     NamePattern(
-        re=re.compile(r'Lease Number\s+(?P<id_a>\w+) TO (?P<id_b>\w+)'),
+        re=re.compile(r'Lease Number\s+(?P<id_a>[\w/]+) TO (?P<id_b>[\w/]+)'),
         id_names=['id_a', 'id_b'],
         Const=t.LeaseNumber,
     ),
     NamePattern(
-        re=re.compile(r'Lease Number\s+(?P<id_a>\w+)( - (?P<id_b>\w+))?'),
+        re=re.compile(r'Lease Number\s+(?P<id_a>[\w/]+)( - (?P<id_b>[\w/]+))?'),
         id_names=['id_a', 'id_b'],
         Const=t.LeaseNumber,
     ),

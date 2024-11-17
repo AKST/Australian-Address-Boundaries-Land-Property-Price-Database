@@ -137,6 +137,9 @@ def test_land_parcel_ids(desc, remains, expected_items):
             ],
         ],
     ),
+    ('41/753705 Lease Number 10 - 30', '', [t.LeaseNumber('10', '30'), LandParcel(id='41/753705')]),
+    ('41/753705 Lease Number 10 TO 30', '', [t.LeaseNumber('10', '30'), LandParcel(id='41/753705')]),
+    ('41/753705 Lease Number 10/30', '', [t.LeaseNumber('10/30', None), LandParcel(id='41/753705')]),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         t.RailwayLandLease('65/430/2470'),
         LandParcel(id='2/1109126', part=True),
