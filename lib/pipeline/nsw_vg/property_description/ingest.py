@@ -87,44 +87,51 @@ class PropertyDescriptionIngestion:
                       LIMIT {limit} OFFSET {offset}
                 """)
 
-                for source, description, property, effective_date in await cursor.fetchall():
-                    property_desc = parse_property_description_data(description)
+                rows = [
+                    (
+                        source,
+                        parse_property_description_data(description),
+                        property,
+                        effective_date,
+                    )
+                    for source, description, property, effective_date in await cursor.fetchall()
+                ]
 
-                    try:
-                        await cursor.executemany("""
-                            INSERT INTO nsw_lrs.parcel (
-                                parcel_id,
-                                parcel_plan,
-                                parcel_section,
-                                parcel_lot)
-                            VALUES (%s, %s, %s, %s)
-                            ON CONFLICT (parcel_id) DO NOTHING;
-                        """, [
-                            (parcel.id, parcel.plan, parcel.section, parcel.lot)
-                            for parcel in property_desc.parcels.all
-                        ])
-                        await conn.commit()
+                try:
+                    await cursor.executemany("""
+                        INSERT INTO nsw_lrs.parcel (
+                            parcel_id,
+                            parcel_plan,
+                            parcel_section,
+                            parcel_lot)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (parcel_id) DO NOTHING;
+                    """, [
+                        (parcel.id, parcel.plan, parcel.section, parcel.lot)
+                        for source, property_desc, property, effective_date in rows
+                        for parcel in property_desc.parcels.all
+                    ])
+                    await conn.commit()
 
-                        await cursor.executemany("""
-                            INSERT INTO nsw_lrs.property_parcel_assoc(
-                                source_id,
-                                effective_date,
-                                property_id,
-                                parcel_id,
-                                partial)
-                            VALUES (%s, %s, %s, %s, %s)
-                            ON CONFLICT DO NOTHING
-                        """, [
-                            (source, effective_date, property, parcel_id, partial)
-                            for parcel_id, partial in [
-                                *((p.id, True) for p in property_desc.parcels.partial),
-                                *((p.id, False) for p in property_desc.parcels.complete),
-                            ]
-                        ])
-
-                    except Exception as e:
-                        _logger.error(f'chunk_quatile, failed with {description}')
-                        raise e
+                    await cursor.executemany("""
+                        INSERT INTO nsw_lrs.property_parcel_assoc(
+                            source_id,
+                            effective_date,
+                            property_id,
+                            parcel_id,
+                            partial)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                    """, [
+                        (source, effective_date, property, parcel_id, partial)
+                        for source, property_desc, property, effective_date in rows
+                        for parcel_id, partial in [
+                            *((p.id, True) for p in property_desc.parcels.partial),
+                            *((p.id, False) for p in property_desc.parcels.complete),
+                        ]
+                    ])
+                except Exception as e:
+                    raise e
 
             self._logger.info(f"[{i}] {temp_table_name}: DONE")
             await conn.commit()

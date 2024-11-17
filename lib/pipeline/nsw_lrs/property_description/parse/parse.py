@@ -40,10 +40,19 @@ def parse_land_parcel_ids(desc: str):
     return parser.remains, parcels
 
 def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]]:
-    description = re.sub(r'\s+', ' ', description)
     parsed_items: List[t.ParseItem] = []
 
     for s_pattern in g.sanitize_patterns:
+        description = s_pattern.re.sub(s_pattern.out, description)
+
+    for s_pattern in g.sanitize_pre_parcels_patterns:
+        description = s_pattern.re.sub(s_pattern.out, description)
+
+    description = re.sub(r'\s+', ' ', description)
+    description, land_parcels = parse_land_parcel_ids(description)
+    parsed_items.extend(land_parcels)
+
+    for s_pattern in g.sanitize_post_parcels_patterns:
         description = s_pattern.re.sub(s_pattern.out, description)
 
     for i_pattern in g.ignore_pre_patterns:
@@ -74,15 +83,8 @@ def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]
     for i_pattern in g.ignore_post_patterns:
         description = i_pattern.sub('', description)
 
-    for s_pattern in g.sanitize_pre_parcels_patterns:
-        description = s_pattern.re.sub(s_pattern.out, description)
-
     description = re.sub(r'\s+', ' ', description)
-    description, land_parcels = parse_land_parcel_ids(description)
-    parsed_items.extend(land_parcels)
-
-    for s_pattern in g.sanitize_post_parcels_patterns:
-        description = s_pattern.re.sub(s_pattern.out, description)
+    description = '' if description == ' ' else description
 
     return description, parsed_items
 
