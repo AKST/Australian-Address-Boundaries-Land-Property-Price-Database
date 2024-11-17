@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 @dataclass
 class ImageConfig:
@@ -13,5 +13,6 @@ class ContainerConfig:
     project_name: str
     volumes: Dict[str, Dict[str, str]]
     command: List[str]
+    shared_memory: Optional[str]
 
 
