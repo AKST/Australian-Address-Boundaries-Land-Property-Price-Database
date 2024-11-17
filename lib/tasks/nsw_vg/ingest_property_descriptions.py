@@ -1,19 +1,24 @@
+from dataclasses import dataclass, field
 from lib.pipeline.nsw_vg.property_description.ingest import process_property_description
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 
+@dataclass
+class NswVgLegalDescriptionIngestionConfig:
+    workers: int
+
 async def ingest_property_description(
         db: DatabaseService,
         io: IoService,
-        workers) -> None:
-    await process_property_description(db, io, workers=workers)
+        config: NswVgLegalDescriptionIngestionConfig) -> None:
+    await process_property_description(db, io, workers=config.workers)
 
-async def cli_main(config: DatabaseConfig,
+async def cli_main(db_config: DatabaseConfig,
                    file_limit: int,
-                   workers: int) -> None:
-    io = IoService.create(file_limit - workers)
-    db_service = DatabaseService.create(config, workers)
-    await ingest_property_description(db_service, io, workers)
+                   config: NswVgLegalDescriptionIngestionConfig) -> None:
+    io = IoService.create(file_limit - config.workers)
+    db_service = DatabaseService.create(db_config, config.workers)
+    await ingest_property_description(db_service, io, config)
 
 
 if __name__ == '__main__':
@@ -42,7 +47,9 @@ if __name__ == '__main__':
     asyncio.run(cli_main(
         DB_INSTANCE_MAP[args.instance],
         file_limit,
-        args.workers,
+        NswVgLegalDescriptionIngestionConfig(
+            workers=args.workers,
+        ),
     ))
 
 

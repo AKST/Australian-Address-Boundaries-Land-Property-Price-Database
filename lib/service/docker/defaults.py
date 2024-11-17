@@ -36,7 +36,7 @@ INSTANCE_1_CONTAINER_CONF = ContainerConfig(
     project_name=_docker_project_label,
     volumes=VOLUME_MOUNT,
     command=COMMAND_ON_RUN,
-    shared_memory='128mb',
+    shared_memory='256mb',
 )
 
 INSTANCE_2_CONTAINER_CONF = ContainerConfig(
@@ -44,7 +44,7 @@ INSTANCE_2_CONTAINER_CONF = ContainerConfig(
     project_name=_docker_project_label,
     volumes=VOLUME_MOUNT,
     command=COMMAND_ON_RUN,
-    shared_memory='128mb',
+    shared_memory='256mb',
 )
 
 INSTANCE_CONTAINER_CONF_MAP: Dict[int, ContainerConfig] = {

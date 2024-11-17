@@ -11,6 +11,7 @@ from lib.tooling.schema.type import Command
 
 from ..fetch_static_files import Environment, get_session, initialise
 from ..schema.update import update_schema, UpdateSchemaConfig
+from .ingest_property_descriptions import ingest_property_description, NswVgLegalDescriptionIngestionConfig
 from .ingest_property_sales import PropertySaleIngestionConfig, ingest_property_sales_rows
 from .ingest_land_values import NswVgLandValueIngestionConfig, ingest_land_values
 
@@ -29,7 +30,9 @@ class NswVgIngestionConfig:
     load_raw_land_values: Optional[NswVgLandValueIngestionConfig]
     load_raw_property_sales: Optional[PropertySaleIngestionConfig]
     deduplicate: Optional[NswVgIngestionDedupConfig]
-    load_parcels: bool
+    property_descriptions: Optional[NswVgLegalDescriptionIngestionConfig]
+
+_logger = logging.getLogger(__name__)
 
 async def ingest_nswvg(
     environment: Environment,
@@ -51,8 +54,12 @@ async def ingest_nswvg(
         dedup_conf = config.deduplicate
         await ingest_nswvg_deduplicate(db, io, dedup_conf)
 
-    if config.load_parcels:
-        raise NotImplementedError('load parcels not implemented')
+    if config.property_descriptions:
+        try:
+            await ingest_property_description(db, io, config.property_descriptions)
+        except Exception as e:
+            _logger.exception(e)
+            _logger.error('failed to ingest all property descriptions')
 
 async def ingest_nswvg_deduplicate(
     db: DatabaseService,
@@ -143,6 +150,8 @@ if __name__ == '__main__':
     parser.add_argument("--ps-worker-db-batch-size", type=int, default=50)
     parser.add_argument("--ps-worker-parser-chunk-size", type=int, default=8 * 2 ** 10)
 
+    parser.add_argument("--nswlrs-propdesc-workers", type=int, default=1)
+
     parser.add_argument("--dedup", action='store_true', default=False)
     parser.add_argument("--dedup-reinitialise-destination-schema", action='store_true', default=False)
     parser.add_argument("--dedup-initial-truncate", action='store_true', default=False)
@@ -218,11 +227,15 @@ if __name__ == '__main__':
             drop_dst_schema=args.dedup_reinitialise_destination_schema,
         )
 
+    property_description_config = NswVgLegalDescriptionIngestionConfig(
+        workers=args.nswlrs_propdesc_workers
+    )
+
     config = NswVgIngestionConfig(
         load_raw_land_values=load_land_values,
         load_raw_property_sales=load_raw_property_sales,
         deduplicate=deduplicate,
-        load_parcels=args.load_parcels,
+        property_descriptions=property_description_config,
     )
 
     async def _cli_main(

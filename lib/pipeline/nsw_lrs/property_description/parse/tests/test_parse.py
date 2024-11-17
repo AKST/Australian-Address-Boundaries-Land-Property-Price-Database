@@ -140,6 +140,23 @@ def test_land_parcel_ids(desc, remains, expected_items):
     ('41/753705 Lease Number 10 - 30', '', [t.LeaseNumber('10', '30'), LandParcel(id='41/753705')]),
     ('41/753705 Lease Number 10 TO 30', '', [t.LeaseNumber('10', '30'), LandParcel(id='41/753705')]),
     ('41/753705 Lease Number 10/30', '', [t.LeaseNumber('10/30', None), LandParcel(id='41/753705')]),
+    (
+        '1/252283 6, 31/755497 25/755511 93, 102, /755532',
+        '',
+        [
+            LandParcel(id='1/252283'),
+            LandParcel(id='6/755497'),
+            LandParcel(id='31/755497'),
+            LandParcel(id='25/755511'),
+            LandParcel(id='93/755532'),
+            LandParcel(id='102/755532'),
+        ]
+    ),
+    (
+        '/13586 PH WAMMERA PT DP 13586 MEJUM STATE FOREST NO 378',
+        '/13586 PH WAMMERA PT DP 13586 MEJUM STATE FOREST NO 378',
+        [],
+    ),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         t.RailwayLandLease('65/430/2470'),
         LandParcel(id='2/1109126', part=True),

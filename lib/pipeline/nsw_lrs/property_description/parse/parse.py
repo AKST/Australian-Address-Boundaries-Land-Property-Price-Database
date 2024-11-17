@@ -61,7 +61,7 @@ def parse_land_parcel_ids(desc: str):
             chunk = read_chunk(read_from, skip=0)
             # print(read_from, desc[read_from:], chunk, f"'{read_chunk(read_from, skip=1)}'")
 
-            if '/' in chunk and VALID_PARCEL_ID_CHARS.match(chunk):
+            if '/' in chunk[1:] and VALID_PARCEL_ID_CHARS.match(chunk):
                 yield t.LandParcel(id=chunk, part=False)
                 read_from = move_cursor(read_from, 1)
                 continue
@@ -90,7 +90,8 @@ def parse_land_parcel_ids(desc: str):
                     read_from = move_cursor(read_from, 1)
                     continue
                 elif '/' in chunk:
-                    lots.append((part, chunk[:chunk.find('/')]))
+                    if chunk[0] != '/':
+                        lots.append((part, chunk[:chunk.find('/')]))
                     plan = chunk[chunk.find('/'):]
                     read_from = move_cursor(read_from, 1)
                     break

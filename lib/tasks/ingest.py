@@ -19,6 +19,7 @@ from lib.tasks.ingest_gnaf import ingest_gnaf
 from lib.tasks.ingest_abs import ingest_all as ingest_abs
 from lib.tasks.nsw_vg.ingest import ingest_nswvg, NswVgIngestionConfig, NswVgIngestionDedupConfig, NswVgLandValueIngestionConfig
 from lib.tasks.nsw_vg.ingest_property_sales import PropertySaleIngestionConfig
+from lib.tasks.nsw_vg.ingest_property_descriptions import NswVgLegalDescriptionIngestionConfig
 from lib.tasks.schema.count import run_count_for_schemas
 from lib.tasks.schema.update import update_schema, UpdateSchemaConfig
 from lib.tooling.schema.config import ns_dependency_order
@@ -119,7 +120,9 @@ async def ingest_all(config: IngestConfig):
                 run_from=1,
                 run_till=6,
             ),
-            load_parcels=False,
+            property_descriptions=NswVgLegalDescriptionIngestionConfig(
+                workers=8
+            ),
         ),
     )
 
