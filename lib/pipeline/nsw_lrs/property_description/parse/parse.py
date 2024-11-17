@@ -1,9 +1,10 @@
-from typing import Self, List, Union, Any, Tuple, Generator, Literal
+from typing import Self, List, Set, Union, Any, Tuple, Generator, Literal
 from logging import getLogger
 import re
 
 from . import types as t
 from . import grammar as g
+from .parcel_parser import ParcelsParser
 from .. import data
 from ..builder import PropertyDescriptionBuilder
 
@@ -34,82 +35,9 @@ def parse_parcel(parcel_id: str) -> data.LandParcel:
     raise ValueError(f'invalid parcel, {parcel_id}')
 
 def parse_land_parcel_ids(desc: str):
-    def read_chunk(read_from, skip = 0):
-        copy = desc[read_from:]
-        while skip > 0:
-            copy = copy[copy.find(' ') + 1:]
-            skip -= 1
-        if copy.find(' ') == -1:
-            return copy
-        else:
-            return copy[:copy.find(' ')]
-
-    def move_cursor(read_from, skip = 0):
-        while skip > 0:
-            if desc[read_from:].find(' ') == -1:
-                return len(desc)
-
-            read_from = read_from + desc[read_from:].find(' ') + 1
-            skip -= 1
-        return read_from
-
-    def impl() -> Generator[t.LandParcel, None, str]:
-        read_from = 0
-        chunk = None
-
-        while read_from < len(desc):
-            chunk = read_chunk(read_from, skip=0)
-            # print(read_from, desc[read_from:], chunk, f"'{read_chunk(read_from, skip=1)}'")
-
-            if '/' in chunk[1:] and VALID_PARCEL_ID_CHARS.match(chunk):
-                yield t.LandParcel(id=chunk, part=False)
-                read_from = move_cursor(read_from, 1)
-                continue
-
-            if 'PT' == chunk and '/' in read_chunk(read_from, skip=1):
-                yield t.LandParcel(id=read_chunk(read_from, skip=1), part=True)
-                read_from = move_cursor(read_from, 2)
-                continue
-
-            if 'PT' != chunk and not chunk.endswith(','):
-                return desc[read_from:]
-
-            lots = []
-            plan = ''
-            while True:
-                chunk = read_chunk(read_from)
-                part = False
-
-                if chunk == 'PT':
-                    part = True
-                    read_from = move_cursor(read_from, 1)
-                    chunk = read_chunk(read_from)
-
-                if chunk.endswith(','):
-                    lots.append((part, chunk[:-1]))
-                    read_from = move_cursor(read_from, 1)
-                    continue
-                elif '/' in chunk:
-                    if chunk[0] != '/':
-                        lots.append((part, chunk[:chunk.find('/')]))
-                    plan = chunk[chunk.find('/'):]
-                    read_from = move_cursor(read_from, 1)
-                    break
-                else:
-                    return desc[read_from:]
-
-            for part, lot in lots:
-                yield t.LandParcel(id=f'{lot}{plan}', part=part)
-        return desc[read_from:]
-
-    land_parcels: List[t.LandParcel] = []
-    gen = impl()
-
-    try:
-        while True:
-            land_parcels.append(next(gen))
-    except StopIteration as e:
-        return e.value, land_parcels
+    parser = ParcelsParser(desc)
+    parcels = list(parser.read_parcels())
+    return parser.remains, parcels
 
 def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]]:
     description = re.sub(r'\s+', ' ', description)
@@ -167,12 +95,6 @@ def parse_property_description_data(desc: str) -> data.PropertyDescription:
             match item:
                 case t.LandParcel(parcel_id, partial):
                     parcel = parse_parcel(parcel_id)
-                    if re.search(r'\W', parcel.lot):
-                        raise ValueError(f'weird lot, {parcel.id}')
-                    if parcel.section and re.search(r'\W', parcel.section):
-                        raise ValueError(f'weird section, {parcel.id}')
-                    if re.search(r'\W', parcel.plan):
-                        raise ValueError(f'weird plan, {parcel.plan}')
                     builder.add_parcel(parcel, partial)
                 case t.EnclosurePermit(id):
                     builder.add_permit('enclosure', id)

@@ -121,7 +121,7 @@ async def ingest_all(config: IngestConfig):
                 run_till=6,
             ),
             property_descriptions=NswVgLegalDescriptionIngestionConfig(
-                workers=8
+                workers=8,
             ),
         ),
     )

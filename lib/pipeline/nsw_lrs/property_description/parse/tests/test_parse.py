@@ -141,6 +141,20 @@ def test_land_parcel_ids(desc, remains, expected_items):
     ('41/753705 Lease Number 10 TO 30', '', [t.LeaseNumber('10', '30'), LandParcel(id='41/753705')]),
     ('41/753705 Lease Number 10/30', '', [t.LeaseNumber('10/30', None), LandParcel(id='41/753705')]),
     (
+        '1/153580 1/198265 1/882247 1/883337 1/1007215 12, 13, 14/1139461 1/882247, 1/883337 and 1/1007215 COAL ONLY',
+        '1/882247, 1/883337 and 1/1007215 COAL ONLY',
+        [
+            LandParcel(id='1/153580'),
+            LandParcel(id='1/198265'),
+            LandParcel(id='1/882247'),
+            LandParcel(id='1/883337'),
+            LandParcel(id='1/1007215'),
+            LandParcel(id='12/1139461'),
+            LandParcel(id='13/1139461'),
+            LandParcel(id='14/1139461'),
+        ]
+    ),
+    (
         '1/252283 6, 31/755497 25/755511 93, 102, /755532',
         '',
         [
