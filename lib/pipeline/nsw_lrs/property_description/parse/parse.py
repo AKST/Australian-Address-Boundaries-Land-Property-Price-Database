@@ -4,35 +4,11 @@ import re
 
 from . import types as t
 from . import grammar as g
-from .parcel_parser import ParcelsParser
+from .parcel_parser import ParcelsParser, parse_parcel_data
 from .. import data
 from ..builder import PropertyDescriptionBuilder
 
 logger = getLogger(__name__)
-
-VALID_PARCEL_ID_CHARS = re.compile(r'^[a-zA-Z0-9/]+$')
-
-def parse_parcel(parcel_id: str) -> data.LandParcel:
-    parcel_id = parcel_id.replace('//', '/')
-
-    if '//' in parcel_id:
-        raise ValueError('valid to sanitize parcel')
-
-    match parcel_id.split('/'):
-        case ['', *rest]:
-            raise ValueError(f'invalid lot, {parcel_id}')
-        case [lot, '', plan]:
-            raise ValueError(f'invalid section, {parcel_id}')
-        case [lot, '']:
-            raise ValueError(f'invalid plan, {parcel_id}')
-        case [lot, sec, '']:
-            raise ValueError(f'invalid plan, {parcel_id}')
-        case [lot, sec, plan]:
-            return data.LandParcel(parcel_id, lot, sec, plan)
-        case [lot, plan]:
-            return data.LandParcel(parcel_id, lot, None, plan)
-
-    raise ValueError(f'invalid parcel, {parcel_id}')
 
 def parse_land_parcel_ids(desc: str):
     parser = ParcelsParser(desc)
@@ -96,7 +72,7 @@ def parse_property_description_data(desc: str) -> data.PropertyDescription:
         for item in items:
             match item:
                 case t.LandParcel(parcel_id, partial):
-                    parcel = parse_parcel(parcel_id)
+                    parcel = parse_parcel_data(parcel_id)
                     builder.add_parcel(parcel, partial)
                 case t.EnclosurePermit(id):
                     builder.add_permit('enclosure', id)

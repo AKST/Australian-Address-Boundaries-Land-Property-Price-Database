@@ -4,7 +4,6 @@ from pprint import pformat
 from lib.pipeline.nsw_lrs.property_description import data
 from .. import types as t
 from ..types import LandParcel
-from ..parse import parse_parcel
 from ..parse import parse_land_parcel_ids
 from ..parse import parse_property_description
 from ..parse import parse_property_description_data
@@ -15,12 +14,6 @@ from ..parse import parse_property_description_data
 def test_parse_property_description_data(snapshot, name, desc):
     data = parse_property_description_data(desc)
     snapshot.assert_match(pformat(data), name)
-
-@pytest.mark.parametrize("p_in,p_out", [
-    ('B/12313', data.LandParcel('B/12313', 'B', None, '12313'))
-])
-def test_parse_parcel(snapshot, p_in, p_out):
-    assert parse_parcel(p_in) == p_out
 
 @pytest.mark.parametrize("desc,remains,expected_items", [
     ('123//313', '', [LandParcel(id='123//313')]),
@@ -90,6 +83,9 @@ def test_land_parcel_ids(desc, remains, expected_items):
     ]),
     ('25/7511 95.19/CRK', '95.19/CRK', [
         LandParcel(id='25/7511'),
+    ]),
+    ('1329/748788 PTARC/ARC20', 'PTARC/ARC20', [
+        LandParcel(id='1329/748788'),
     ]),
     ('PT 200/713995 HCP9014/2', 'HCP9014/2', [
         LandParcel(id='200/713995', part=True),

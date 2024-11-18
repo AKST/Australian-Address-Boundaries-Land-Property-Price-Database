@@ -2,12 +2,19 @@ from typing import Generator, List, Optional, Self, Set, Tuple
 import re
 
 from .types import LandParcel
+from .. import data
 
 VALID_PARCEL_ID_CHARS = re.compile(r'^[a-zA-Z0-9/]+$')
 VALID_LOT_ID_CHARS = re.compile(r'^[a-zA-Z0-9]+$')
 
+VALID_PARCEL_ID = re.compile(r'^\w+/(?:\w+/|/)?(SP)?\d+$')
+
+VALID_PLAN_ID = re.compile(r'^(SP)?\d+$')
+VALID_SECTION_ID = re.compile(r'^\w+$')
+VALID_LOT_ID = re.compile(r'^\w+$')
+
 def _valid_parcel(chunk: str) -> bool:
-    return bool(VALID_PARCEL_ID_CHARS.match(chunk)) \
+    return bool(VALID_PARCEL_ID.match(chunk)) \
        and '/' in chunk[1:] \
        and 1 <= chunk.count('/') <= 2
 
@@ -17,6 +24,34 @@ def _valid_parcel_partial(chunk: str) -> bool:
 
 def _valid_parcel_lot(chunk: str) -> bool:
     return bool(VALID_LOT_ID_CHARS.match(chunk[:-1])) and chunk.endswith(',')
+
+def parse_parcel_data(parcel_id: str) -> data.LandParcel:
+    match parcel_id.count('/'):
+        case 1:
+            clean_id = parcel_id
+            parcel_id = parcel_id.replace('/', '//')
+        case 2:
+            clean_id = parcel_id.replace('//', '/')
+        case other:
+            raise ValueError('too many slashes, {parcel_id}')
+
+    match parcel_id.split('/'):
+        case [lot, sec, plan] if not plan or len(plan) > 9 or not VALID_PLAN_ID.match(plan):
+            raise ValueError(f'invalid plan, {parcel_id}')
+
+        case [lot, sec, plan] if not lot or len(lot) > 5 or not VALID_LOT_ID.match(lot):
+            raise ValueError(f'invalid section, {parcel_id}')
+
+        case [lot, sec, plan] if sec and (len(sec) > 4 or not VALID_SECTION_ID.match(sec)):
+            raise ValueError(f'invalid section, {parcel_id}')
+
+        case [lot, '', plan]:
+            return data.LandParcel(clean_id, lot, None, plan)
+
+        case [lot, sec, plan]:
+            return data.LandParcel(clean_id, lot, sec, plan)
+
+    raise ValueError(f'invalid parcel, {parcel_id}')
 
 class ParcelsParser:
     _stop = False
