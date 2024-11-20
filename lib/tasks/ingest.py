@@ -33,7 +33,6 @@ class IngestConfig:
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig
 
-
 async def ingest_all(config: IngestConfig):
     io_service = IoService.create(None)
 
@@ -120,9 +119,12 @@ async def ingest_all(config: IngestConfig):
                 run_from=1,
                 run_till=6,
             ),
-            property_descriptions=NswVgLegalDescriptionIngestionConfig(
-                workers=8,
-            ),
+            property_descriptions=None,
+            # property_descriptions=NswVgLegalDescriptionIngestionConfig(
+            #     workers=6,
+            #     sub_workers=10,
+            #     child_debug=False,
+            # ),
         ),
     )
 
