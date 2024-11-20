@@ -95,7 +95,7 @@ SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
 
 WITH with_effective_date AS (
     SELECT file_source_id, source_id, property_id, sale_counter, strata_lot_number,
-           COALESCE(contract_date, settlement_date, date_provided) AS effective_date,
+           COALESCE(settlement_date, contract_date, date_provided) AS effective_date,
            date_provided
       FROM pg_temp.sourced_raw_property_sales_b
       WHERE sale_counter IS NOT NULL)

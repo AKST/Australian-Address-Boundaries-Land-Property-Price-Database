@@ -18,7 +18,14 @@ geographic, planning, land and property data.
    ```
    python -m lib.tasks.ingest --instance 1
    ```
+
 It may take an hour or so, but you'll see logs as you go.
+
+### Connecting to the database
+
+You will find the [credentials to local instance of the database here][pg_creds].
+
+[pg_creds]: https://github.com/AKST/Australian-Address-Boundaries-Land-Property-Price-Database/blob/main/lib/service/database/defaults.py#L13
 
 ## Data Sources
 
