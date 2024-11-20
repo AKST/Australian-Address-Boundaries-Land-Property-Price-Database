@@ -119,12 +119,11 @@ async def ingest_all(config: IngestConfig):
                 run_from=1,
                 run_till=6,
             ),
-            property_descriptions=None,
-            # property_descriptions=NswVgLegalDescriptionIngestionConfig(
-            #     workers=6,
-            #     sub_workers=10,
-            #     child_debug=False,
-            # ),
+            property_descriptions=NswVgLegalDescriptionIngestionConfig(
+                workers=6,
+                sub_workers=10,
+                child_debug=False,
+            ),
         ),
     )
 

@@ -1,32 +1,50 @@
 # Read me
 
-> NOTE THE MAIN BRANCH IS NOT STABLE ATM
+Significantly lower the barrier to working with NSW
+geographic, planning, land and property data.
 
-After starting docker, and installing the dependencies, go to the `data-ingestion` notebook.
+## Getting Started
 
-## Tests
+1. Install and start [docker](https://www.docker.com).
+2. Create your [virtual environment](https://docs.python.org/3/library/venv.html) and then install
+3. Install the dependencies
+   ```
+   # I'm sorry I know there are more modern ways of
+   # handling dependencies in python but I haven't
+   # gotten around to learning them yet.
+   pip install -r requirements.txt
+   ```
+4. Run the following within the virtual env
+   ```
+   python -m lib.tasks.ingest --instance 1
+   ```
+It may take an hour or so, but you'll see logs as you go.
 
-```
-./scripts/check_tests.sh
-```
-
-## Data used
+## Data Sources
 
 - [Abs Shapefiles][Abs boundaries]
 - [Geoscape Geocoded National Address File][gnaf]
 - [NSW Valuer General land prices][nswvglv]
 - [NSW Valuer General property sales][nswvgps]
+- [NSW Spatial Services GIS data][nswssgis]
 
 [Abs boundaries]: https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files
 [gnaf]: https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf
 [nswvglv]: https://www.valuergeneral.nsw.gov.au/land_value_summaries/lv.php
 [nswvgps]: https://valuation.property.nsw.gov.au/embed/propertySalesInformation
+[nswssgis]: https://portal.spatial.nsw.gov.au/server/rest/services
 
 ### Disclaimer
 
 Please respect the respective terms of use of the different dataset provided.
 
-## General Structure
+Especially once you either publish visualisations using the data or start
+using it for business reasons, you should understand what the terms of use
+are.
+
+## Contributing
+
+### General Structure
 
 - `lib` this is where all reusable code between notebooks are
 - `sql` this may suprise you but this is where I store SQL.
@@ -39,31 +57,23 @@ Please respect the respective terms of use of the different dataset provided.
   significantly less human readable (files with UUID names).
   - The main usecase is minimizing API calls to GIS servers
 
+### Tests
+
+```
+./scripts/check_tests.sh
+```
+
+### Types
+
+```
+./scripts/check_types.sh
+```
+
 ## Questions
 
-### Why are there 2 data ingestion notebooks?
-I am too lazy to use version control. In fact the main reason why it's in
-version control is mostly to share what I got with others less so version
-control, I literally just go `git add . && git commit -m 'idk stuff'` once a
-week. Actually prior to making this a repo this was a directory in a larger
-project with hundreds of other small data projects.
-
 ### What are the note books starting with `pg_`
+
 Those are mostly for experimenting, in particular experimenting with data to
 find how to best ingest it into the database, or figuring out how the general
 data structure and how to use that data.
 
-### What's the implication of the license
-It's a standard MIT license, basically I don't care what you do with this code,
-modify it as you please, use it to make money for yourself, just don't sue me
-if you misuse and it causes you some kind of harm.
-
-I will have zero claim over any work done with the aid of this project, and
-I won't be entitled to any shout out or thanks for any assistance this project
-may offer the user in any of their endevours.
-
-Basically I'm sharing this to make increase access to this kind of information,
-as I know I personally found it hard to process half the datasets this database
-consumed.
-
-Why add? Just basic projection from liability.
