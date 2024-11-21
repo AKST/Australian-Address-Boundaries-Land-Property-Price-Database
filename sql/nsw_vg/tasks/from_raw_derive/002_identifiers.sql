@@ -14,3 +14,8 @@ SELECT * FROM
      WHERE zone_standard = 'ep&a_2006') as t
    ON CONFLICT (zone_code) DO NOTHING;
 
+INSERT INTO nsw_lrs.primary_purpose(primary_purpose)
+SELECT DISTINCT primary_purpose
+  FROM nsw_vg_raw.ps_row_b
+  ON CONFLICT (primary_purpose) DO NOTHING;
+

@@ -51,7 +51,6 @@ INSERT INTO nsw_vg.land_valuation(
     valuation_base_date,
     valuation_basis,
     valuation_authority,
-    zone_code,
     land_value)
 SELECT lv_ids.source_id,
        lv_ids.source_date,
@@ -60,10 +59,6 @@ SELECT lv_ids.source_id,
        lv_entries.base_date_1,
        lv_entries.basis_1,
        lv_entries.authority_1,
-       CASE
-         WHEN lv_ids.zone_standard = 'ep&a_2006' THEN lv_ids.zone_code
-         ELSE NULL
-       END,
        lv_entries.land_value_1
   FROM (
       SELECT source_id, source_date, property_id, zone_code, zone_standard, district_code
@@ -90,6 +85,18 @@ SELECT lv_ids.source_id,
       FROM pg_temp.sourced_raw_land_values
       WHERE land_value_5 IS NOT NULL
   ) AS lv_entries USING (property_id, source_id);
+
+INSERT INTO nsw_lrs.zone_observation(
+    source_id,
+    effective_date,
+    property_id,
+    zone_code)
+SELECT source_id,
+       source_date,
+       property_id,
+       zone_code
+  FROM pg_temp.sourced_raw_land_values
+  WHERE zone_standard = 'ep&a_2006';
 
 DROP TABLE pg_temp.sourced_raw_land_values;
 
@@ -231,6 +238,27 @@ SELECT DISTINCT ON (date_published, property_id, strata_lot_number)
        AND strata_lot_number IS NOT NULL
        AND property_id IS NOT NULL;
 
+--
+-- ## Zones
+--
+
+INSERT INTO nsw_lrs.zone_observation(
+    source_id,
+    effective_date,
+    property_id,
+    zone_code)
+SELECT DISTINCT ON (date_published, property_id, zone_code)
+       source_id,
+       date_published,
+       property_id,
+       zone_code
+  FROM pg_temp.sourced_raw_property_sales_b
+  WHERE zone_standard = 'ep&a_2006'
+    AND strata_lot_number IS NULL;
+--
+-- ## Clean up
+--
+
 DROP TABLE pg_temp.sourced_raw_property_sales_b;
 DROP VIEW pg_temp.sourced_raw_property_sales_a;
 
@@ -289,5 +317,6 @@ SELECT source_id, date_published, property_id, dimensions
 
 DROP TABLE pg_temp.sourced_raw_property_sales_b_legacy;
 DROP TABLE pg_temp.sourced_raw_property_sales_a_legacy;
+DROP FUNCTION pg_temp.sqm_area;
 
 

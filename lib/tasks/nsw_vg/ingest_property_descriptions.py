@@ -1,7 +1,8 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from multiprocessing import Semaphore, Process
+from multiprocessing import Process
+from multiprocessing.synchronize import Semaphore
 from typing import Callable
 
 from lib.pipeline.nsw_vg.property_description.ingest import PropertyDescriptionIngestionParent
@@ -15,20 +16,19 @@ class NswVgLegalDescriptionIngestionConfig:
     workers: int
     sub_workers: int
     child_debug: bool
+    db_config: DatabaseConfig
 
-async def cli_main(db_config: DatabaseConfig,
-                   config: NswVgLegalDescriptionIngestionConfig) -> None:
-    db_service = DatabaseService.create(db_config, config.workers)
-    await ingest_property_description(db_config, db_service, config)
+async def cli_main(config: NswVgLegalDescriptionIngestionConfig) -> None:
+    db_service = DatabaseService.create(config.db_config, config.workers)
+    await ingest_property_description(db_service, config)
 
 async def ingest_property_description(
-        db_config: DatabaseConfig,
         db: DatabaseService,
         config: NswVgLegalDescriptionIngestionConfig) -> None:
     semaphore = Semaphore(1)
     spawn_child_with_worker_config = lambda w_config: \
         Process(target=spawn_child,
-                args=(w_config, semaphore, config.child_debug, db_config))
+                args=(w_config, semaphore, config.child_debug, config.db_config))
     pool = QuantileWorkerPool(semaphore, spawn_child_with_worker_config)
     parent = PropertyDescriptionIngestionParent(db, pool)
     await parent.ingest(config.workers, config.sub_workers)
@@ -64,8 +64,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     asyncio.run(cli_main(
-        DB_INSTANCE_MAP[args.instance],
         NswVgLegalDescriptionIngestionConfig(
+            db_config=DB_INSTANCE_MAP[args.instance],
             workers=args.workers,
             sub_workers=args.sub_workers,
             child_debug=args.debug_child,

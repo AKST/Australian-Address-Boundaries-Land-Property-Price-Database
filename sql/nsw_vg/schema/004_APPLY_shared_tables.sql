@@ -45,16 +45,10 @@ CREATE TABLE IF NOT EXISTS nsw_vg.land_valuation (
   --
   valuation_authority varchar(9),
 
-  --
-  -- This is the zoning at the time of valuation
-  --
-  zone_code varchar(4),
-
   land_value float NOT NULL,
 
   UNIQUE (effective_date, valuation_base_date, property_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
-  FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
 ) inherits (meta.event);
 
 CREATE INDEX idx_property_id_land_valuation

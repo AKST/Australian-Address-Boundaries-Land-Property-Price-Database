@@ -93,6 +93,36 @@ CREATE INDEX idx_effective_date_property_area_by_strata_lot
     ON nsw_lrs.property_area_by_strata_lot(effective_date DESC);
 
 --
+-- ## Primary Purpose
+--
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.primary_purpose(
+  primary_purpose_id SERIAL PRIMARY KEY,
+  primary_purpose varchar(20) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
+  primary_purpose_id INT NOT NULL,
+  property_id INT NOT NULL,
+  strata_lot_no INT,
+  UNIQUE (property_id, effective_date, strata_lot_no)
+) inherits (meta.event);
+
+--
+-- ## Record of Zone
+--
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.zone_observation(
+  property_id INT NOT NULL,
+  zone_code varchar(4) NOT NULL,
+  UNIQUE (property_id, effective_date),
+  FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
+) inherits (meta.event);
+
+CREATE INDEX idx_effecitve_date_zone_observation
+    ON nsw_lrs.zone_observation(effective_date DESC);
+
+--
 -- ## Described Dimensions
 --
 -- These are descriptions of dimensions, mostly found

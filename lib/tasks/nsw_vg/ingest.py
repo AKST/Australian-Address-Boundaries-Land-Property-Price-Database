@@ -56,7 +56,7 @@ async def ingest_nswvg(
 
     if config.property_descriptions:
         try:
-            await ingest_property_description(db, io, config.property_descriptions)
+            await ingest_property_description(db, config.property_descriptions)
         except Exception as e:
             _logger.exception(e)
             _logger.error('failed to ingest all property descriptions')
@@ -69,7 +69,7 @@ async def ingest_nswvg_deduplicate(
     logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
     scripts = [
         './sql/nsw_vg/tasks/from_raw_derive/001_districts.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/002_zones.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/002_identifiers.sql',
         './sql/nsw_vg/tasks/from_raw_derive/003_source.sql',
         './sql/nsw_vg/tasks/from_raw_derive/004_property.sql',
         './sql/nsw_vg/tasks/from_raw_derive/005_addresses.sql',
