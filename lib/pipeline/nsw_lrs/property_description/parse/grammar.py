@@ -34,7 +34,7 @@ sanitize_pre_parcels_patterns = [
     CleanupPattern(re.compile(r' HCP([\w+/]+)'), r' $$$$ HCP\1'),
     CleanupPattern(re.compile(r' PM([\w+/]+)'), r' $$$$ PM\1'),
     CleanupPattern(re.compile(r'(PTARC)/(\w+)'), r' $$$$ \1/\2'),
-    CleanupPattern(re.compile(r'(PTARC)(\w+)'), r'\1 \2'),
+    CleanupPattern(re.compile(r'(PTARC)(\w+)'), r' $$$$ \1 \2'),
 ]
 
 sanitize_post_parcels_patterns = [

@@ -150,7 +150,10 @@ if __name__ == '__main__':
     parser.add_argument("--ps-worker-db-batch-size", type=int, default=50)
     parser.add_argument("--ps-worker-parser-chunk-size", type=int, default=8 * 2 ** 10)
 
+    parser.add_argument("--nswlrs-propdesc", action='store_true', default=False)
     parser.add_argument("--nswlrs-propdesc-workers", type=int, default=1)
+    parser.add_argument("--nswlrs-propdesc-subworkers", type=int, default=1)
+    parser.add_argument("--nswlrs-propdesc-child-debug", action='store_true', default=False)
 
     parser.add_argument("--dedup", action='store_true', default=False)
     parser.add_argument("--dedup-reinitialise-destination-schema", action='store_true', default=False)
@@ -227,9 +230,13 @@ if __name__ == '__main__':
             drop_dst_schema=args.dedup_reinitialise_destination_schema,
         )
 
-    property_description_config = NswVgLegalDescriptionIngestionConfig(
-        workers=args.nswlrs_propdesc_workers
-    )
+    property_description_config = None
+    if args.nswlrs_propdesc:
+        property_description_config = NswVgLegalDescriptionIngestionConfig(
+            child_debug=args.nswlrs_propdesc_child_debug,
+            workers=args.nswlrs_propdesc_workers,
+            sub_workers=args.nswlrs_propdesc_subworkers,
+        )
 
     config = NswVgIngestionConfig(
         load_raw_land_values=load_land_values,

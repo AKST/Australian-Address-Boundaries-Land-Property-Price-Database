@@ -71,12 +71,6 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
-CREATE INDEX idx_property_id_property_area
-    ON nsw_lrs.property_area(property_id);
-
-CREATE INDEX idx_effective_date_property_area
-    ON nsw_lrs.property_area(effective_date DESC);
-
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_area_by_strata_lot (
   property_id INT NOT NULL,
   property_strata_lot INT NOT NULL,
@@ -85,6 +79,12 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area_by_strata_lot (
   UNIQUE (property_id, property_strata_lot, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
+
+CREATE INDEX idx_property_id_property_area
+    ON nsw_lrs.property_area(property_id);
+
+CREATE INDEX idx_effective_date_property_area
+    ON nsw_lrs.property_area(effective_date DESC);
 
 CREATE INDEX idx_property_id_property_area_by_strata_lot
     ON nsw_lrs.property_area_by_strata_lot(property_id);
