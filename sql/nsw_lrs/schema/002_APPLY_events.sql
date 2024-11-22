@@ -115,8 +115,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
 CREATE TABLE IF NOT EXISTS nsw_lrs.zone_observation(
   property_id INT NOT NULL,
   zone_code varchar(4) NOT NULL,
-  UNIQUE (property_id, effective_date),
-  FOREIGN KEY (zone_code) REFERENCES nsw_planning.epa_2006_zone(zone_code)
+  UNIQUE (property_id, effective_date)
 ) inherits (meta.event);
 
 CREATE INDEX idx_effecitve_date_zone_observation

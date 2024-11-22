@@ -10,7 +10,7 @@ from .discovery import SchemaDiscovery
 from .type import *
 
 class SchemaController:
-    logger = getLogger(f'{__name__}.SchemaController')
+    _logger = getLogger(f'{__name__}.SchemaController')
     _io: IoService
     _db: DatabaseService
     _discovery: SchemaDiscovery
@@ -24,7 +24,7 @@ class SchemaController:
         self._discovery = discovery
 
     async def command(self: Self, command: Command.BaseCommand) -> None:
-        self.logger.info(command)
+        self._logger.info(command)
         match command:
             case Command.Create() as command:
                 await self.create(command)
@@ -51,8 +51,12 @@ class SchemaController:
                     file.contents,
                     command.omit_foreign_keys,
                 ):
-                    self.logger.debug(operation)
-                    await cursor.execute(operation)
+                    self._logger.debug(operation)
+                    try:
+                        await cursor.execute(operation)
+                    except Exception as e:
+                        self._logger.error(f"failed on {operation}")
+                        raise e
 
     async def drop(self: Self, command: Command.Drop) -> None:
         file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
@@ -63,7 +67,7 @@ class SchemaController:
                     raise TypeError()
 
                 for operation in codegen.drop(file.contents, command.cascade):
-                    self.logger.debug(operation)
+                    self._logger.debug(operation)
                     await cursor.execute(operation)
 
     async def truncate(self: Self, command: Command.Truncate) -> None:
@@ -75,7 +79,7 @@ class SchemaController:
                     raise TypeError()
 
                 for operation in codegen.truncate(file.contents, command.cascade):
-                    self.logger.debug(operation)
+                    self._logger.debug(operation)
                     await cursor.execute(operation)
 
     async def add_foreign_keys(self: Self, command: Command.AddForeignKeys) -> None:
@@ -87,7 +91,7 @@ class SchemaController:
                     raise TypeError()
 
                 for operation in codegen.add_foreign_keys(file.contents):
-                    self.logger.debug(operation)
+                    self._logger.debug(operation)
                     await cursor.execute(operation)
 
     async def remove_foreign_keys(self: Self, command: Command.RemoveForeignKeys) -> None:
@@ -100,6 +104,6 @@ class SchemaController:
 
                 fk_map = await codegen.make_fk_map(file.contents, cursor)
                 for operation in codegen.remove_foreign_keys(file.contents, fk_map):
-                    self.logger.debug(operation)
+                    self._logger.debug(operation)
                     await cursor.execute(operation)
 

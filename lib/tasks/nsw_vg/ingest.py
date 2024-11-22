@@ -68,12 +68,11 @@ async def ingest_nswvg_deduplicate(
 ):
     logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
     scripts = [
-        './sql/nsw_vg/tasks/from_raw_derive/001_districts.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/002_identifiers.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/003_source.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_property.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_addresses.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/006_populate_lrs.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/001_identifiers.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/004_addresses.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs.sql',
     ]
 
     if 1 > config.run_from or len(scripts) < config.run_from:
@@ -115,6 +114,8 @@ async def ingest_nswvg_deduplicate(
         for script_path in scripts:
             logger.info(f'running {script_path}')
             await cursor.execute(await io.f_read(script_path))
+
+    logger.info('finished deduplicating')
 
     if config.drop_raw:
         raise NotImplementedError()

@@ -123,6 +123,7 @@ async def ingest_all(config: IngestConfig):
                 workers=6,
                 sub_workers=10,
                 child_debug=False,
+                db_config=db_service_config,
             ),
         ),
     )

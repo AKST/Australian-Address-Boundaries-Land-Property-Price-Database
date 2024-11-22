@@ -5,6 +5,7 @@
 --   - `basis_date_N` is `event.effective_date`
 --
 CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
+    land_value_row_id BIGSERIAL PRIMARY KEY,
     district_code INT NOT NULL,
     district_name TEXT,
     property_id INT NOT NULL,
@@ -47,5 +48,18 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     UNIQUE (property_id, source_date)
 );
 
+CREATE INDEX idx_land_value_row_id_name_land_value_row
+    ON nsw_vg_raw.land_value_row(land_value_row_id);
 CREATE INDEX idx_source_file_name_land_value_row
     ON nsw_vg_raw.land_value_row(source_file_name);
+
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row_source(
+    land_value_row_id bigint UNIQUE NOT NULL,
+    source_id bigint UNIQUE NOT NULL,
+    FOREIGN KEY (land_value_row_id) REFERENCES nsw_vg_raw.land_value_row(land_value_row_id),
+    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
+);
+
+CREATE INDEX idx_land_value_row_source_a ON nsw_vg_raw.land_value_row_source(land_value_row_id);
+CREATE INDEX idx_land_value_row_source_b ON nsw_vg_raw.land_value_row_source(source_id);
+
