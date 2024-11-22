@@ -15,12 +15,9 @@ $$ LANGUAGE sql;
 --
 
 CREATE TEMP TABLE pg_temp.sourced_raw_land_values AS
-SELECT sfl.source_id, fs.file_source_id, r.*
+SELECT source_id, r.*
   FROM nsw_vg_raw.land_value_row as r
-  LEFT JOIN meta.file_source AS fs ON fs.file_path = r.source_file_name
-  LEFT JOIN meta.source_file_line AS sfl
-         ON sfl.source_file_line = r.source_line_number
-        AND sfl.file_source_id = fs.file_source_id;
+  LEFT JOIN nsw_vg_raw.land_value_row_source USING (land_value_row_id);
 
 CREATE INDEX idx_sourced_raw_land_values_source_date_property_id
     ON pg_temp.sourced_raw_land_values(source_date, property_id);
@@ -36,7 +33,8 @@ INSERT INTO nsw_lrs.legal_description(
   legal_description,
   legal_description_kind)
 SELECT source_id, source_date, property_id, property_description, '> 2004-08-17'
-  FROM pg_temp.sourced_raw_land_values WHERE property_description IS NOT NULL;
+  FROM pg_temp.sourced_raw_land_values
+  WHERE property_description IS NOT NULL;
 
 INSERT INTO nsw_lrs.property_area(source_id, effective_date, property_id, sqm_area)
 SELECT source_id, source_date, property_id, pg_temp.sqm_area(area, area_type)
@@ -106,21 +104,11 @@ DROP TABLE pg_temp.sourced_raw_land_values;
 -- ## Init Temp tables
 --
 
-CREATE TEMP VIEW pg_temp.sourced_raw_property_sales_a AS
-SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
-  FROM nsw_vg_raw.ps_row_a as r
-  LEFT JOIN meta.file_source AS fs USING (file_path)
-  LEFT JOIN meta.source_byte_position AS sbp
-         ON sbp.source_byte_position = r.position
-        AND sbp.file_source_id = fs.file_source_id;
-
 CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_b AS
-SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
+SELECT source_id, file_source_id, r.*
   FROM nsw_vg_raw.ps_row_b as r
-  LEFT JOIN meta.file_source AS fs USING (file_path)
-  LEFT JOIN meta.source_byte_position AS sbp
-         ON sbp.source_byte_position = r.position
-        AND sbp.file_source_id = fs.file_source_id;
+  LEFT JOIN nsw_vg_raw.ps_row_b_source USING (ps_row_b_id)
+  LEFT JOIN meta.source_file USING (source_id);
 
 CREATE INDEX idx_sourced_raw_property_sales_b_sale_counter
     ON pg_temp.sourced_raw_property_sales_b(sale_counter);
@@ -130,12 +118,10 @@ CREATE INDEX idx_sourced_raw_property_sales_b_sale_counter
 --
 
 WITH sourced_raw_property_sales_c AS (
-    SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
+    SELECT source_id, file_source_id, r.*
       FROM nsw_vg_raw.ps_row_c as r
-      LEFT JOIN meta.file_source AS fs USING (file_path)
-      LEFT JOIN meta.source_byte_position AS sbp
-             ON sbp.source_byte_position = r.position
-            AND sbp.file_source_id = fs.file_source_id)
+      LEFT JOIN nsw_vg_raw.ps_row_c_source USING (ps_row_c_id)
+      LEFT JOIN meta.source_file AS fs USING (source_id))
 SELECT
     MIN(c.source_id) as source_id,
     MIN(c.date_provided) as date_provided,
@@ -210,9 +196,9 @@ INSERT INTO nsw_lrs.property_area(
     effective_date,
     property_id,
     sqm_area)
-SELECT DISTINCT ON (date_published, property_id)
+SELECT DISTINCT ON (date_provided, property_id)
     source_id,
-    date_published,
+    date_provided,
     property_id,
     pg_temp.sqm_area(area, area_type)
   FROM pg_temp.sourced_raw_property_sales_b
@@ -227,9 +213,9 @@ INSERT INTO nsw_lrs.property_area_by_strata_lot(
     property_id,
     property_strata_lot,
     sqm_area)
-SELECT DISTINCT ON (date_published, property_id, strata_lot_number)
+SELECT DISTINCT ON (date_provided, property_id, strata_lot_number)
     source_id,
-    date_published,
+    date_provided,
     property_id,
     strata_lot_number,
     pg_temp.sqm_area(area, area_type)
@@ -247,9 +233,9 @@ INSERT INTO nsw_lrs.zone_observation(
     effective_date,
     property_id,
     zone_code)
-SELECT DISTINCT ON (date_published, property_id, zone_code)
+SELECT DISTINCT ON (date_provided, property_id, zone_code)
        source_id,
-       date_published,
+       date_provided,
        property_id,
        zone_code
   FROM pg_temp.sourced_raw_property_sales_b
@@ -260,7 +246,6 @@ SELECT DISTINCT ON (date_published, property_id, zone_code)
 --
 
 DROP TABLE pg_temp.sourced_raw_property_sales_b;
-DROP VIEW pg_temp.sourced_raw_property_sales_a;
 
 --
 -- # Ingest Legacy Property Sales Information
@@ -268,27 +253,15 @@ DROP VIEW pg_temp.sourced_raw_property_sales_a;
 -- ## Init Temp tables
 --
 
-CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_a_legacy AS
-SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
-  FROM nsw_vg_raw.ps_row_a_legacy as r
-  LEFT JOIN meta.file_source AS fs USING (file_path)
-  LEFT JOIN meta.source_byte_position AS sbp
-         ON sbp.source_byte_position = r.position
-        AND sbp.file_source_id = fs.file_source_id;
-
 CREATE TEMP TABLE pg_temp.sourced_raw_property_sales_b_legacy AS
-SELECT sbp.source_id, fs.file_source_id, fs.date_published, r.*
+SELECT source_id, file_source_id, date_published, r.*
   FROM nsw_vg_raw.ps_row_b_legacy as r
-  LEFT JOIN meta.file_source AS fs USING (file_path)
-  LEFT JOIN meta.source_byte_position AS sbp
-         ON sbp.source_byte_position = r.position
-        AND sbp.file_source_id = fs.file_source_id;
+  LEFT JOIN nsw_vg_raw.ps_row_b_legacy_source USING (ps_row_b_legacy_id)
+  LEFT JOIN meta.source_file USING (source_id)
+  LEFT JOIN meta.file_source USING (file_source_id);
 
 CREATE INDEX idx_sourced_raw_property_sales_b_legacy_property_id
     ON pg_temp.sourced_raw_property_sales_b_legacy(property_id);
-
-CREATE INDEX idx_sourced_raw_property_sales_a_legacy_file_source_id
-    ON pg_temp.sourced_raw_property_sales_a_legacy(file_source_id);
 
 --
 -- ## Ingest Legacy PSI from sourced tables
@@ -316,7 +289,6 @@ SELECT source_id, date_published, property_id, dimensions
     AND dimensions IS NOT NULL;
 
 DROP TABLE pg_temp.sourced_raw_property_sales_b_legacy;
-DROP TABLE pg_temp.sourced_raw_property_sales_a_legacy;
 DROP FUNCTION pg_temp.sqm_area;
 
 

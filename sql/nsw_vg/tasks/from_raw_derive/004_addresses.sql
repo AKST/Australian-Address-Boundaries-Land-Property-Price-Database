@@ -1,4 +1,9 @@
 --
+-- NOTE THIS WILL EVENTUALLY BE REPLACED ONCE A MORE
+-- RELIABLE SOURCE OF ADDRESS INFORMATION BECOMES
+-- AVAILABLE TO LINK TO Valuations & Sales DATA. THE
+-- DATA FROM THE BULK VALUATIONS & PSI IS PRETTY BAD.
+--
 -- # Ingest into General Naming board
 --
 -- ## Establish Street & Suburb Names

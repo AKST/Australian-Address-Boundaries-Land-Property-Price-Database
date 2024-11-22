@@ -1,8 +1,8 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from multiprocessing import Process
-from multiprocessing.synchronize import Semaphore
+from multiprocessing import Process, Semaphore
+from multiprocessing.synchronize import Semaphore as SemaphoreT
 from typing import Callable
 
 from lib.pipeline.nsw_vg.property_description.ingest import PropertyDescriptionIngestionParent
@@ -33,8 +33,8 @@ async def ingest_property_description(
     parent = PropertyDescriptionIngestionParent(db, pool)
     await parent.ingest(config.workers, config.sub_workers)
 
-def spawn_child(config: WorkerProcessConfig, semaphore: Semaphore, child_debug: bool, db_config: DatabaseConfig):
-    async def child_runtime(config: WorkerProcessConfig, semaphore: Semaphore, db_config: DatabaseConfig):
+def spawn_child(config: WorkerProcessConfig, semaphore: SemaphoreT, child_debug: bool, db_config: DatabaseConfig):
+    async def child_runtime(config: WorkerProcessConfig, semaphore: SemaphoreT, db_config: DatabaseConfig):
         logging.basicConfig(
             level=logging.DEBUG if child_debug else logging.INFO,
             format=f'[{config.child_no}][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
