@@ -64,7 +64,7 @@ def parse_property_description(description: str) -> Tuple[str, List[t.ParseItem]
 
     return description, parsed_items
 
-def parse_property_description_data(desc: str) -> data.PropertyDescription:
+def parse_property_description_data(desc: str) -> Tuple[data.PropertyDescription, str]:
     builder = PropertyDescriptionBuilder()
     desc_out, items = parse_property_description(desc)
 
@@ -77,7 +77,7 @@ def parse_property_description_data(desc: str) -> data.PropertyDescription:
                 case t.EnclosurePermit(id):
                     builder.add_permit('enclosure', id)
 
-        return builder.create(desc)
+        return builder.create(desc), desc_out
     except Exception as e:
         logger.error(f'failed with "{desc}"')
         logger.error(f'remains "{desc_out}"')

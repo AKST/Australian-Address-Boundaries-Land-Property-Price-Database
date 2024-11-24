@@ -182,6 +182,18 @@ def test_land_parcel_ids(desc, remains, expected_items):
             LandParcel(id='100/1101535', part=True),
         ],
     ),
+    (
+        '1, 2, 3, CP/SP 23170 1/80500 1/325917 LOT 1 DP 80500 & LOT 1 DP 325917 (BEING LOTS 1/3 SP 23170)',
+        'LOT 1 DP 80500 & LOT 1 DP 325917 (BEING LOTS 1/3 SP 23170)',
+        [
+            LandParcel(id='1/SP23170'),
+            LandParcel(id='2/SP23170'),
+            LandParcel(id='3/SP23170'),
+            LandParcel(id='CP/SP23170'),
+            LandParcel(id='1/80500'),
+            LandParcel(id='1/325917'),
+        ],
+    ),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         LandParcel(id='2/1109126', part=True),
         t.RailwayLandLease('65/430/2470'),

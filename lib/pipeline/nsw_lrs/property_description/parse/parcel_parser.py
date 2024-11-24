@@ -10,8 +10,17 @@ VALID_LOT_ID_CHARS = re.compile(r'^[a-zA-Z0-9]+$')
 VALID_PARCEL_ID = re.compile(r'^\w+/(?:\w+/|/)?(SP)?\d+$')
 
 VALID_PLAN_ID = re.compile(r'^(SP)?\d+$')
+VALID_SP_PLAN_TAIL = re.compile(r'^\d+$')
 VALID_SECTION_ID = re.compile(r'^\w+$')
 VALID_LOT_ID = re.compile(r'^\w+$')
+
+def _incomplete_strata_parcel(chunk: str) -> bool:
+    match chunk:
+        case 'CP/SP':
+            return True
+        case 'CP//SP':
+            return True
+    return False
 
 def _valid_parcel(chunk: str) -> bool:
     if not bool(VALID_PARCEL_ID.match(chunk)):
@@ -25,8 +34,7 @@ def _valid_parcel(chunk: str) -> bool:
         case 2:
             lot, sec, plan = chunk.split('/')
             return _valid_parcel_lot(lot)
-        case other:
-            return False
+    return False
 
 def _valid_parcel_partial(chunk: str) -> bool:
     return bool(VALID_PARCEL_ID_CHARS.match(chunk)) \
@@ -127,6 +135,14 @@ class ParcelsParser:
             if _valid_parcel_trailing_lot(chunk):
                 lots.append((part, chunk[:-1]))
                 self._move_cursor(1)
+            elif _incomplete_strata_parcel(chunk):
+                next_chunk = self._read_chunk(1)
+                if not next_chunk.isnumeric():
+                    return None
+                lots.append((part, chunk[:chunk.find('/')]))
+                plan = chunk[chunk.find('/'):] + next_chunk
+                self._move_cursor(2)
+                return plan, lots
             elif _valid_parcel_partial(chunk) and lots:
                 if chunk[0] != '/':
                     lots.append((part, chunk[:chunk.find('/')]))

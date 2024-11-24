@@ -146,15 +146,33 @@ class PropertyDescriptionIngestionChild:
                           table_name: str,
                           offset: int,
                           limit: int) -> None:
-        await cursor.execute(f"""
-            SELECT source_id, legal_description, property_id, effective_date
-              FROM pg_temp.{table_name}
-              LIMIT {limit} OFFSET {offset}
-        """)
+        try:
+            await cursor.execute(f"""
+                SELECT source_id,
+                       legal_description,
+                       legal_description_id,
+                       property_id,
+                       effective_date
+                  FROM pg_temp.{table_name}
+                  LIMIT {limit} OFFSET {offset}
+            """)
+        except Exception as e:
+            self._logger.error(e)
+            raise e
 
         rows = [
-            (r[0], parse_property_description_data(r[1]), r[2], r[3])
+            (r[0], *parse_property_description_data(r[1]), r[2], r[3], r[4])
             for r in await cursor.fetchall()
+        ]
+
+        remains = [
+            (remains, legal_description_id)
+            for _, _, remains, legal_description_id, _, _ in rows
+            if remains
+        ]
+        row_data = [
+            (source, property_desc, property, effective_date)
+            for source, property_desc, _, _, property, effective_date in rows
         ]
 
         try:
@@ -168,7 +186,7 @@ class PropertyDescriptionIngestionChild:
                 ON CONFLICT (parcel_id) DO NOTHING;
             """, [
                 (parcel.id, parcel.plan, parcel.section, parcel.lot)
-                for source, property_desc, property, effective_date in rows
+                for source, property_desc, property, effective_date in row_data
                 for parcel in property_desc.parcels.all
             ])
             await conn.commit()
@@ -184,13 +202,22 @@ class PropertyDescriptionIngestionChild:
                 ON CONFLICT DO NOTHING
             """, [
                 (source, effective_date, property, parcel_id, partial)
-                for source, property_desc, property, effective_date in rows
+                for source, property_desc, property, effective_date in row_data
                 for parcel_id, partial in [
                     *((p.id, True) for p in property_desc.parcels.partial),
                     *((p.id, False) for p in property_desc.parcels.complete),
                 ]
             ])
+            if remains:
+                await cursor.executemany("""
+                    INSERT INTO nsw_lrs.legal_description_remains(
+                        legal_description_remains,
+                        legal_description_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                """, remains)
         except Exception as e:
+            self._logger.error(e)
             raise e
         await conn.commit()
 
@@ -205,7 +232,11 @@ class PropertyDescriptionIngestionChild:
             SET session_replication_role = 'replica';
 
             CREATE TEMP TABLE pg_temp.{temp_table_name} AS
-            SELECT source_id, legal_description, property_id, effective_date
+            SELECT source_id,
+                   legal_description,
+                   legal_description_id,
+                   property_id,
+                   effective_date
               FROM nsw_lrs.legal_description
               LEFT JOIN meta.source_byte_position USING (source_id)
               LEFT JOIN meta.file_source USING (file_source_id)
