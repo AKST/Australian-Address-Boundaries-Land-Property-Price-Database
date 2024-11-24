@@ -11,6 +11,11 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property (
   property_id INT PRIMARY KEY
 );
 
+CREATE TABLE IF NOT EXISTS nsw_lrs.primary_purpose(
+  primary_purpose_id SERIAL PRIMARY KEY,
+  primary_purpose varchar(20) UNIQUE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS nsw_lrs.parcel (
   parcel_id varchar(20) PRIMARY KEY,
   parcel_plan varchar(9) NOT NULL,

@@ -103,6 +103,19 @@ SELECT source_id,
   FROM pg_temp.sourced_raw_land_values
   WHERE zone_standard = 'ep&a_2006';
 
+INSERT INTO nsw_lrs.property_under_strata_plan(
+    source_id,
+    effective_date,
+    property_id,
+    under_strata_plan)
+SELECT DISTINCT ON (effective_date, property_id)
+    source_id,
+    effective_date,
+    property_id,
+    (property_type = 'UNDERSP') as under_strata_plan
+  FROM pg_temp.sourced_raw_land_values
+  WHERE property_type IS NOT NULL;
+
 DROP TABLE pg_temp.sourced_raw_land_values;
 
 --
@@ -259,6 +272,27 @@ SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
   WHERE pg_temp.sqm_area(area, area_type) IS NOT NULL
        AND strata_lot_number IS NOT NULL
        AND property_id IS NOT NULL;
+
+--
+-- ## Ingest Primary Purpose
+--
+
+INSERT INTO nsw_lrs.property_primary_purpose(
+    source_id,
+    effective_date,
+    primary_purpose_id,
+    property_id,
+    strata_lot_no)
+SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
+    source_id,
+    effective_date,
+    primary_purpose_id,
+    property_id,
+    strata_lot_number
+  FROM pg_temp.sourced_raw_property_sales_b b
+  LEFT JOIN nsw_lrs.primary_purpose USING (primary_purpose)
+  WHERE b.primary_purpose IS NOT NULL
+    AND property_id IS NOT NULL;
 
 --
 -- ## Zones

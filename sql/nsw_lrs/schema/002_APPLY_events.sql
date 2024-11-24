@@ -93,19 +93,27 @@ CREATE INDEX idx_effective_date_property_area_by_strata_lot
     ON nsw_lrs.property_area_by_strata_lot(effective_date DESC);
 
 --
--- ## Primary Purpose
+-- ## Has Strata Plan
 --
 
-CREATE TABLE IF NOT EXISTS nsw_lrs.primary_purpose(
-  primary_purpose_id SERIAL PRIMARY KEY,
-  primary_purpose varchar(20) UNIQUE NOT NULL
-);
+CREATE TABLE IF NOT EXISTS nsw_lrs.property_under_strata_plan(
+  property_id INT NOT NULL,
+  under_strata_plan BOOL NOT NULL,
+  UNIQUE (property_id, effective_date),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) inherits (meta.event);
+
+--
+-- ## Primary Purpose
+--
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
   primary_purpose_id INT NOT NULL,
   property_id INT NOT NULL,
   strata_lot_no INT,
-  UNIQUE (property_id, effective_date, strata_lot_no)
+  UNIQUE (property_id, effective_date, strata_lot_no),
+  FOREIGN KEY (primary_purpose_id) REFERENCES nsw_lrs.primary_purpose(primary_purpose_id),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
 --
@@ -115,7 +123,8 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
 CREATE TABLE IF NOT EXISTS nsw_lrs.zone_observation(
   property_id INT NOT NULL,
   zone_code varchar(4) NOT NULL,
-  UNIQUE (property_id, effective_date)
+  UNIQUE (property_id, effective_date),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
 CREATE INDEX idx_effecitve_date_zone_observation
