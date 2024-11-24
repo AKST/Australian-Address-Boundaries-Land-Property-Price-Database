@@ -167,6 +167,21 @@ def test_land_parcel_ids(desc, remains, expected_items):
         '/13586 PH WAMMERA PT DP 13586 MEJUM STATE FOREST NO 378',
         [],
     ),
+    (
+        'Y/387072 Boatshed, Landing/Platform (Area 220.1m2)  Permissive Occupancy 59/80',
+        'Boatshed, Landing/Platform (Area 220.1m2) ',
+        [
+            LandParcel(id='Y/387072'),
+            t.PermissiveOccupancy('59/80'),
+        ],
+    ),
+    (
+        'PT 100/1101535 Previously2/514545 14/17 & pt 18/830834 & pt 245/793459',
+        'Previously2/514545 14/17 & pt 18/830834 & pt 245/793459',
+        [
+            LandParcel(id='100/1101535', part=True),
+        ],
+    ),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         LandParcel(id='2/1109126', part=True),
         t.RailwayLandLease('65/430/2470'),

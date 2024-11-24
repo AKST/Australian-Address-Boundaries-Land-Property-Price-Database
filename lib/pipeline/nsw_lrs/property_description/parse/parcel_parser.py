@@ -14,16 +14,29 @@ VALID_SECTION_ID = re.compile(r'^\w+$')
 VALID_LOT_ID = re.compile(r'^\w+$')
 
 def _valid_parcel(chunk: str) -> bool:
-    return bool(VALID_PARCEL_ID.match(chunk)) \
-       and '/' in chunk[1:] \
-       and 1 <= chunk.count('/') <= 2
+    if not bool(VALID_PARCEL_ID.match(chunk)):
+        return False
+    match chunk.count('/'):
+        case 0:
+            return False
+        case 1:
+            lot, plan = chunk.split('/')
+            return _valid_parcel_lot(lot)
+        case 2:
+            lot, sec, plan = chunk.split('/')
+            return _valid_parcel_lot(lot)
+        case other:
+            return False
 
 def _valid_parcel_partial(chunk: str) -> bool:
     return bool(VALID_PARCEL_ID_CHARS.match(chunk)) \
        and 1 <= chunk.count('/') <= 2
 
 def _valid_parcel_lot(chunk: str) -> bool:
-    return bool(VALID_LOT_ID_CHARS.match(chunk[:-1])) and chunk.endswith(',')
+    return bool(VALID_LOT_ID_CHARS.match(chunk)) and len(chunk) <= 5
+
+def _valid_parcel_trailing_lot(chunk: str) -> bool:
+    return chunk.endswith(',') and _valid_parcel_lot(chunk[:-1])
 
 def parse_parcel_data(parcel_id: str) -> data.LandParcel:
     match parcel_id.count('/'):
@@ -111,7 +124,7 @@ class ParcelsParser:
                 self._move_cursor(1)
                 chunk = self._read_chunk()
 
-            if _valid_parcel_lot(chunk):
+            if _valid_parcel_trailing_lot(chunk):
                 lots.append((part, chunk[:-1]))
                 self._move_cursor(1)
             elif _valid_parcel_partial(chunk) and lots:

@@ -28,3 +28,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_
 CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_partial
   ON nsw_lrs.property_parcel_assoc(property_id, parcel_id, effective_date)
   WHERE partial = TRUE;
+
+--
+-- This is the remains after processing the property description.
+--
+CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_remains (
+  legal_description_id bigint NOT NULL,
+  legal_description_remains TEXT NOT NULL,
+);
