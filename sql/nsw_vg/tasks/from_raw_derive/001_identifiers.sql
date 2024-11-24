@@ -21,6 +21,7 @@ SELECT * FROM
 INSERT INTO nsw_lrs.primary_purpose(primary_purpose)
 SELECT DISTINCT primary_purpose
   FROM nsw_vg_raw.ps_row_b
+  WHERE primary_purpose IS NOT NULL
   ON CONFLICT (primary_purpose) DO NOTHING;
 
 --
