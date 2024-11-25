@@ -72,7 +72,11 @@ async def ingest_nswvg_deduplicate(
         './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
         './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
         './sql/nsw_vg/tasks/from_raw_derive/004_addresses.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/004_ingest_psi_pre_2001.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/005_cleanup.sql',
     ]
 
     if 1 > config.run_from or len(scripts) < config.run_from:
@@ -161,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument("--dedup-initial-truncate", action='store_true', default=False)
     parser.add_argument("--dedup-drop-raw", action='store_true', default=False)
     parser.add_argument("--dedup-run-from", type=int, default=1)
-    parser.add_argument("--dedup-run-till", type=int, default=6)
+    parser.add_argument("--dedup-run-till", type=int, default=9)
 
     parser.add_argument("--load-parcels", action='store_true', default=False)
 
@@ -234,6 +238,7 @@ if __name__ == '__main__':
     property_description_config = None
     if args.nswlrs_propdesc:
         property_description_config = NswVgLegalDescriptionIngestionConfig(
+            db_config=DB_INSTANCE_MAP[args.instance],
             child_debug=args.nswlrs_propdesc_child_debug,
             workers=args.nswlrs_propdesc_workers,
             sub_workers=args.nswlrs_propdesc_subworkers,
