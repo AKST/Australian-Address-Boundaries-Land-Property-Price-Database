@@ -224,7 +224,7 @@ if __name__ == '__main__':
     if args.nswlrs_propdesc:
         property_description_config = NswVgTaskConfig.PropDescIngest(
             db_config=DB_INSTANCE_MAP[args.instance],
-            child_debug=args.nswlrs_propdesc_child_debug,
+            worker_debug=args.nswlrs_propdesc_child_debug,
             workers=args.nswlrs_propdesc_workers,
             sub_workers=args.nswlrs_propdesc_subworkers,
         )

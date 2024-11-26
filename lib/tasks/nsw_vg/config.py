@@ -6,9 +6,9 @@ from lib.service.database import DatabaseConfig
 class NswVgTaskConfig:
     @dataclass
     class PropDescIngest:
+        worker_debug: bool
         workers: int
         sub_workers: int
-        child_debug: bool
         db_config: DatabaseConfig
 
     @dataclass

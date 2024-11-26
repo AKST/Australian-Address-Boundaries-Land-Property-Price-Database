@@ -5,10 +5,7 @@ from multiprocessing import Process, Semaphore
 from multiprocessing.synchronize import Semaphore as SemaphoreT
 from typing import Callable
 
-from lib.pipeline.nsw_vg.property_description.ingest import PropertyDescriptionIngestionParent
-from lib.pipeline.nsw_vg.property_description.ingest import PropertyDescriptionIngestionChild
-from lib.pipeline.nsw_vg.property_description.ingest import QuantileWorkerPool
-from lib.pipeline.nsw_vg.property_description.ingest import WorkerProcessConfig
+from lib.pipeline.nsw_vg.property_description import *
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.tasks.nsw_vg.config import NswVgTaskConfig
 
@@ -20,24 +17,24 @@ async def ingest_property_description(
         db: DatabaseService,
         config: NswVgTaskConfig.PropDescIngest) -> None:
     semaphore = Semaphore(1)
-    spawn_child_with_worker_config = lambda w_config: \
-        Process(target=spawn_child,
-                args=(w_config, semaphore, config.child_debug, config.db_config))
-    pool = QuantileWorkerPool(semaphore, spawn_child_with_worker_config)
-    parent = PropertyDescriptionIngestionParent(db, pool)
+    spawn_worker_with_worker_config = lambda w_config: \
+        Process(target=spawn_worker,
+                args=(w_config, semaphore, config.worker_debug, config.db_config))
+    pool = PropDescIngestionWorkerPool(semaphore, spawn_worker_with_worker_config)
+    parent = PropDescIngestionSupervisor(db, pool)
     await parent.ingest(config.workers, config.sub_workers)
 
-def spawn_child(config: WorkerProcessConfig, semaphore: SemaphoreT, child_debug: bool, db_config: DatabaseConfig):
-    async def child_runtime(config: WorkerProcessConfig, semaphore: SemaphoreT, db_config: DatabaseConfig):
+def spawn_worker(config: WorkerProcessConfig, semaphore: SemaphoreT, worker_debug: bool, db_config: DatabaseConfig):
+    async def worker_runtime(config: WorkerProcessConfig, semaphore: SemaphoreT, db_config: DatabaseConfig):
         logging.basicConfig(
-            level=logging.DEBUG if child_debug else logging.INFO,
-            format=f'[{config.child_no}][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
+            level=logging.DEBUG if worker_debug else logging.INFO,
+            format=f'[{config.worker_no}][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S')
 
         db = DatabaseService.create(db_config, len(config.quantiles))
-        child = PropertyDescriptionIngestionChild(semaphore, db)
-        await child.ingest(config.quantiles)
-    asyncio.run(child_runtime(config, semaphore, db_config))
+        worker = PropDescIngestionWorker(semaphore, db)
+        await worker.ingest(config.quantiles)
+    asyncio.run(worker_runtime(config, semaphore, db_config))
 
 if __name__ == '__main__':
     import argparse
@@ -45,7 +42,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
-    parser.add_argument("--debug-child", action='store_true', default=False)
+    parser.add_argument("--debug-worker", action='store_true', default=False)
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--workers", type=int, required=True)
     parser.add_argument("--sub_workers", type=int, required=True)
@@ -59,10 +56,10 @@ if __name__ == '__main__':
 
     asyncio.run(cli_main(
         NswVgTaskConfig.PropDescIngest(
-            db_config=DB_INSTANCE_MAP[args.instance],
+            worker_debug=args.debug_worker,
             workers=args.workers,
             sub_workers=args.sub_workers,
-            child_debug=args.debug_child,
+            db_config=DB_INSTANCE_MAP[args.instance],
         ),
     ))
 

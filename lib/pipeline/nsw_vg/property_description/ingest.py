@@ -18,11 +18,11 @@ class QuantileRange:
 
 @dataclass
 class WorkerProcessConfig:
-    child_no: int
+    worker_no: int
     quantiles: List[QuantileRange]
 
 @dataclass
-class QuantileWorkerClient:
+class _WorkerClient:
     proc: Process
 
     async def join(self: Self) -> None:
@@ -30,9 +30,9 @@ class QuantileWorkerClient:
 
 SpawnWorkerFn = Callable[[WorkerProcessConfig], Process]
 
-class QuantileWorkerPool:
-    _logger = getLogger(f'{__name__}.QuantileWorkerPool')
-    _pool: Dict[int, QuantileWorkerClient]
+class PropDescIngestionWorkerPool:
+    _logger = getLogger(f'{__name__}.PropDescIngestionWorkerPool')
+    _pool: Dict[int, _WorkerClient]
     _semaphore: MpSemaphore
     _spawn_worker_fn: SpawnWorkerFn
 
@@ -43,10 +43,10 @@ class QuantileWorkerPool:
         self._semaphore = semaphore
         self._spawn_worker_fn = spawn_worker_fn
 
-    def spawn(self: Self, child_no: int, quantiles: List[QuantileRange]) -> None:
-        child_conf = WorkerProcessConfig(child_no=child_no, quantiles=quantiles)
-        process = self._spawn_worker_fn(child_conf)
-        self._pool[child_no] = QuantileWorkerClient(process)
+    def spawn(self: Self, worker_no: int, quantiles: List[QuantileRange]) -> None:
+        worker_conf = WorkerProcessConfig(worker_no=worker_no, quantiles=quantiles)
+        process = self._spawn_worker_fn(worker_conf)
+        self._pool[worker_no] = _WorkerClient(process)
         process.start()
 
     async def join_all(self: Self) -> None:
@@ -56,12 +56,12 @@ class QuantileWorkerPool:
                 for process in self._pool.values()
             ])
 
-class PropertyDescriptionIngestionParent:
-    _logger = getLogger(f'{__name__}.PropertyDescriptionIngestionParent')
+class PropDescIngestionSupervisor:
+    _logger = getLogger(f'{__name__}.PropDescIngestionSupervisor')
     _db: DatabaseService
-    _worker_pool: QuantileWorkerPool
+    _worker_pool: PropDescIngestionWorkerPool
 
-    def __init__(self: Self, db: DatabaseService, pool: QuantileWorkerPool) -> None:
+    def __init__(self: Self, db: DatabaseService, pool: PropDescIngestionWorkerPool) -> None:
         self._db = db
         self._worker_pool = pool
 
@@ -73,7 +73,7 @@ class PropertyDescriptionIngestionParent:
             self._logger.debug(f"spawning {q_id}")
             self._worker_pool.spawn(q_id, quantile)
 
-        self._logger.debug(f"Awaiting children")
+        self._logger.debug(f"Awaiting workers")
         await self._worker_pool.join_all()
         self._logger.debug(f"Done")
 
@@ -104,8 +104,8 @@ class PropertyDescriptionIngestionParent:
                 for i in range(workers)
             }
 
-class PropertyDescriptionIngestionChild:
-    _logger = getLogger(f'{__name__}.PropertyDescriptionIngestionChild')
+class PropDescIngestionWorker:
+    _logger = getLogger(f'{__name__}.PropDescIngestionWorker')
     _semaphore: MpSemaphore
     _db: DatabaseService
 

@@ -119,9 +119,9 @@ async def ingest_all(config: IngestConfig):
                 run_till=6,
             ),
             property_descriptions=NswVgTaskConfig.PropDescIngest(
+                worker_debug=False,
                 workers=6,
                 sub_workers=10,
-                child_debug=False,
                 db_config=db_service_config,
             ),
         ),
