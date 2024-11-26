@@ -43,10 +43,10 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_by_strata_lot (
   legal_description TEXT NOT NULL,
   legal_description_kind nsw_lrs.legal_description_kind NOT NULL,
   property_id INT NOT NULL,
-  property_strata_lot INT,
+  strata_lot_number INT,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
-  UNIQUE (property_id, effective_date, property_strata_lot)
+  UNIQUE (property_id, effective_date, strata_lot_number)
 ) INHERITS (meta.event);
 
 
@@ -73,10 +73,10 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_area_by_strata_lot (
   property_id INT NOT NULL,
-  property_strata_lot INT NOT NULL,
+  strata_lot_number INT NOT NULL,
   sqm_area FLOAT NOT NULL,
 
-  UNIQUE (property_id, property_strata_lot, effective_date),
+  UNIQUE (property_id, strata_lot_number, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
@@ -111,9 +111,9 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_under_strata_plan(
 CREATE TABLE IF NOT EXISTS nsw_lrs.nature_of_property(
   property_id INT NOT NULL,
   nature_of_property nsw_lrs.property_nature NOT NULL,
-  strata_lot_no INT,
+  strata_lot_number INT,
 
-  UNIQUE (property_id, effective_date, strata_lot_no),
+  UNIQUE (property_id, effective_date, strata_lot_number),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
@@ -124,9 +124,9 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.nature_of_property(
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
   primary_purpose_id INT NOT NULL,
   property_id INT NOT NULL,
-  strata_lot_no INT,
+  strata_lot_number INT,
 
-  UNIQUE (property_id, effective_date, strata_lot_no),
+  UNIQUE (property_id, effective_date, strata_lot_number),
   FOREIGN KEY (primary_purpose_id) REFERENCES nsw_lrs.primary_purpose(primary_purpose_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);

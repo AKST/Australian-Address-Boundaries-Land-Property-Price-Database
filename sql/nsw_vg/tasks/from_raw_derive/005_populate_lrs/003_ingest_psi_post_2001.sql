@@ -92,7 +92,7 @@ INSERT INTO nsw_lrs.legal_description_by_strata_lot(
   source_id,
   effective_date,
   property_id,
-  property_strata_lot,
+  strata_lot_number,
   legal_description,
   legal_description_kind)
 SELECT DISTINCT ON (effective_date, property_id, strata_lot_number, full_property_description)
@@ -134,7 +134,7 @@ INSERT INTO nsw_lrs.property_area_by_strata_lot(
     source_id,
     effective_date,
     property_id,
-    property_strata_lot,
+    strata_lot_number,
     sqm_area)
 SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
     source_id,
@@ -156,7 +156,7 @@ INSERT INTO nsw_lrs.property_primary_purpose(
     effective_date,
     primary_purpose_id,
     property_id,
-    strata_lot_no)
+    strata_lot_number)
 SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
     source_id,
     effective_date,
@@ -177,7 +177,7 @@ INSERT INTO nsw_lrs.nature_of_property(
     effective_date,
     property_id,
     nature_of_property,
-    strata_lot_no)
+    strata_lot_number)
 SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
     source_id,
     effective_date,
