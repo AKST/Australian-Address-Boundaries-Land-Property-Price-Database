@@ -99,7 +99,21 @@ CREATE INDEX idx_effective_date_property_area_by_strata_lot
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_under_strata_plan(
   property_id INT NOT NULL,
   under_strata_plan BOOL NOT NULL,
+
   UNIQUE (property_id, effective_date),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) inherits (meta.event);
+
+--
+-- ## Nature of Property
+--
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.nature_of_property(
+  property_id INT NOT NULL,
+  nature_of_property nsw_lrs.property_nature NOT NULL,
+  strata_lot_no INT,
+
+  UNIQUE (property_id, effective_date, strata_lot_no),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
 ) inherits (meta.event);
 
@@ -111,6 +125,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
   primary_purpose_id INT NOT NULL,
   property_id INT NOT NULL,
   strata_lot_no INT,
+
   UNIQUE (property_id, effective_date, strata_lot_no),
   FOREIGN KEY (primary_purpose_id) REFERENCES nsw_lrs.primary_purpose(primary_purpose_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
