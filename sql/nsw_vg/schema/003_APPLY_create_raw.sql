@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     area FLOAT,
     area_type varchar(1),
     dimensions TEXT,
-    comp_code TEXT,
+    comp_code varchar(3),
     zone_code varchar(4),
     zone_standard nsw_vg.zoning_standard,
     UNIQUE (file_path, position)
@@ -88,13 +88,13 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     zone_code varchar(4),
     zone_standard nsw_vg.zoning_standard,
 
-    nature_of_property TEXT NOT NULL,
-    primary_purpose TEXT,
+    nature_of_property varchar(1) NOT NULL,
+    primary_purpose varchar(20),
     strata_lot_number INT,
-    comp_code TEXT,
-    sale_code TEXT,
+    comp_code varchar(3),
+    sale_code varchar(3),
     interest_of_sale INT,
-    dealing_number TEXT NOT NULL,
+    dealing_number varchar(10) NOT NULL,
     UNIQUE (file_path, position)
 );
 

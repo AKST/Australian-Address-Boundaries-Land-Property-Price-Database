@@ -152,31 +152,33 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.described_dimensions (
 CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale (
   notice_of_sale_id BIGSERIAL PRIMARY KEY,
   property_id int NOT NULL,
-  purchase_price INT,
+  purchase_price FLOAT,
   contract_date DATE,
-
-  -- what is this? I don't know!
-  comp_code varchar(3),
-  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) INHERITS (meta.event);
-
-CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_2001 (
   strata_lot_number INT,
   dealing_number varchar(10) NOT NULL,
-  settlement_date DATE NOT NULL,
+  settlement_date DATE,
   interest_of_sale INT,
   sale_participants nsw_lrs.sale_participant[] NOT NULL,
 
-  -- what is this? I don't know!
+  -- what are these? I don't know!
   sale_code varchar(3),
+  comp_code varchar(3),
 
-  UNIQUE (dealing_number, property_id, property_strata_lot)
-) INHERITS (nsw_lrs.notice_of_sale);
+  UNIQUE (dealing_number, property_id, strata_lot_number),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) INHERITS (meta.event);
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_archived (
+  notice_of_sale_archived_id BIGSERIAL PRIMARY KEY,
+  property_id int NOT NULL,
+  purchase_price FLOAT,
+  contract_date DATE,
+
   -- what is this? I don't know!
-  valuation_number varchar(16)
-) INHERITS (nsw_lrs.notice_of_sale);
+  valuation_number varchar(16),
+  comp_code varchar(3),
 
-
+  UNIQUE (property_id, contract_date, purchase_price),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) INHERITS (meta.event);
 

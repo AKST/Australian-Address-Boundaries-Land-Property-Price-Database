@@ -15,8 +15,7 @@ WITH
            sale_counter,
            ROW_NUMBER() OVER (
              PARTITION BY dealing_number, property_id, strata_lot_number
-             ORDER BY
-               (
+             ORDER BY (
                  (CASE WHEN property_id IS NOT NULL THEN 1 ELSE 0 END) +
                  (CASE WHEN contract_date IS NOT NULL THEN 1 ELSE 0 END) +
                  (CASE WHEN settlement_date IS NOT NULL THEN 1 ELSE 0 END) +
@@ -51,7 +50,7 @@ WITH
       LEFT JOIN sale_participant_groupings USING (file_source_id, sale_counter)
       WHERE ranked.row_rank = 1 AND ranked.ps_row_b_id IS NOT NULL)
 
-INSERT INTO nsw_lrs.notice_of_sale_2001(
+INSERT INTO nsw_lrs.notice_of_sale(
   source_id, effective_date, property_id, strata_lot_number,
   dealing_number, purchase_price, contract_date, settlement_date,
   interest_of_sale, sale_participants, comp_code, sale_code)
