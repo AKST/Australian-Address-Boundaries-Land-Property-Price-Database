@@ -6,26 +6,26 @@ from lib.service.database import DatabaseConfig
 from lib.service.static_environment.config import Target
 
 @dataclass
-class IngestionConfig:
+class AbsIngestionConfig:
     worker_count: int
-    worker_config: 'WorkerConfig'
+    worker_config: 'AbsWorkerConfig'
     ingest_sources: List['IngestionSource']
 
 @dataclass
 class WorkerArgs:
-    child: int
+    worker: int
     tasks: List[Tuple[str, 'IngestionSource']]
     source_root_dir: str
-    worker_config: 'WorkerConfig'
+    worker_config: 'AbsWorkerConfig'
 
 @dataclass
-class WorkerConfig:
+class AbsWorkerConfig:
     db_config: DatabaseConfig
     db_connections: int
-    log_config: Optional['WorkerLogConfig']
+    log_config: Optional['AbsWorkerLogConfig']
 
 @dataclass
-class WorkerLogConfig:
+class AbsWorkerLogConfig:
     level: int
     format: str
     datefmt: Optional[str]

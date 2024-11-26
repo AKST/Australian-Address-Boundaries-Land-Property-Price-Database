@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
-from lib.pipeline.abs.defaults import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
+from lib.pipeline.abs import *
 from lib.pipeline.gnaf.config import GnafConfig, GnafState
 from lib.pipeline.gnaf.defaults import GNAF_STATE_INSTANCE_MAP
 from lib.pipeline.gnaf.init_schema import init_target_schema
@@ -68,13 +68,13 @@ async def ingest_all(config: IngestConfig):
     )
 
     await ingest_abs(
-        abs_config.IngestionConfig(
+        AbsIngestionConfig(
             ingest_sources=[ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES],
             worker_count=4,
-            worker_config=abs_config.WorkerConfig(
+            worker_config=AbsWorkerConfig(
                 db_config=db_service_config,
                 db_connections=2,
-                log_config=abs_config.WorkerLogConfig(
+                log_config=AbsWorkerLogConfig(
                     level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt=None,

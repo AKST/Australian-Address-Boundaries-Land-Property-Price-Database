@@ -7,7 +7,7 @@ import pandas as pd
 
 from lib.service.database import DatabaseService, DatabaseConfig
 
-from .config import IngestionConfig, WorkerConfig, WorkerArgs, IngestionSource
+from .config import AbsIngestionConfig, AbsWorkerConfig, WorkerArgs, IngestionSource
 from .constants import SCHEMA
 
 
@@ -19,8 +19,8 @@ def divide_list(lst, n):
         for i in range(n)
     ]
 
-class AbsIngestion:
-    _logger = logging.getLogger(f'{__name__}.AbsIngestion')
+class AbsIngestionSupervisor:
+    _logger = logging.getLogger(f'{__name__}.AbsIngestionSupervisor')
     _db: DatabaseService
     zip_dir: str
 
@@ -28,7 +28,7 @@ class AbsIngestion:
         self._db = db
         self.zip_dir = zip_dir
 
-    async def ingest(self: Self, config: IngestionConfig) -> None:
+    async def ingest(self: Self, config: AbsIngestionConfig) -> None:
         processes = [
             Process(
                 target=AbsIngestionWorker.run,
@@ -100,7 +100,7 @@ class AbsIngestionWorker:
         if worker_c.log_config:
             l_conf = worker_c.log_config
             logging.basicConfig(level=l_conf.level,
-                                format=f'[{args.child}]{l_conf.format}',
+                                format=f'[{args.worker}]{l_conf.format}',
                                 datefmt=l_conf.datefmt)
 
         async def start():

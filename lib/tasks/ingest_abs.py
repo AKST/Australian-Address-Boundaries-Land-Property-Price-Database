@@ -1,22 +1,21 @@
 import asyncio
 
 
-from lib.pipeline.abs.ingest import AbsIngestion
-from lib.pipeline.abs.config import *
+from lib.pipeline.abs import *
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
 _OUTDIR = './_out_zip'
 
-async def ingest_all(config: IngestionConfig,
+async def ingest_all(config: AbsIngestionConfig,
                      db: DatabaseService,
                      io: IoService) -> None:
     """
     TODO make concurrent. Before I can do that I need to
     handle the schema initialisation more gracefully.
     """
-    abs_ingestion = AbsIngestion(db, _OUTDIR)
+    abs_ingestion = AbsIngestionSupervisor(db, _OUTDIR)
 
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     await controller.command(Command.Drop(ns='abs'))
@@ -27,7 +26,7 @@ async def ingest_all(config: IngestionConfig,
         await conn.execute(clean_dzn_sql)
     await controller.command(Command.AddForeignKeys(ns='abs'))
 
-async def _main(config: IngestionConfig,
+async def _main(config: AbsIngestionConfig,
                 db_conf: DatabaseConfig,
                 file_limit: int) -> None:
         db = DatabaseService.create(db_conf, 32)
@@ -46,7 +45,6 @@ if __name__ == '__main__':
     import logging
     import resource
 
-    from lib.pipeline.abs.defaults import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
     from lib.service.database.defaults import DB_INSTANCE_MAP
 
     from .fetch_static_files import get_session, initialise
@@ -73,17 +71,17 @@ if __name__ == '__main__':
 
     worker_log_config = None
     if args.worker_logs:
-        worker_log_config = WorkerLogConfig(
+        worker_log_config = AbsWorkerLogConfig(
             level=logging.DEBUG if args.debug else logging.INFO,
             datefmt='%Y-%m-%d %H:%M:%S',
             format=f'[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         )
 
     db_config = DB_INSTANCE_MAP[args.instance]
-    config = IngestionConfig(
+    config = AbsIngestionConfig(
         ingest_sources=[ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES],
         worker_count=args.workers,
-        worker_config=WorkerConfig(
+        worker_config=AbsWorkerConfig(
             db_config=db_config,
             db_connections=args.worker_db_connections,
             log_config=worker_log_config,
