@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     file_path TEXT NOT NULL,
     district_code INT NOT NULL,
     source TEXT,
-    valuation_number TEXT,
+    valuation_number varchar(16),
     property_id INT,
     unit_number TEXT,
     house_number TEXT,
@@ -118,6 +118,6 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d (
     property_id INT,
     sale_counter INT NOT NULL,
     date_provided DATE NOT NULL,
-    participant nsw_vg.sale_participant NOT NULL,
+    participant nsw_lrs.sale_participant NOT NULL,
     UNIQUE (file_path, position)
 );

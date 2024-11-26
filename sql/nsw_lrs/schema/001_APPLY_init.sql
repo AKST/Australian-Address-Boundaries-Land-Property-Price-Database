@@ -1,5 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS nsw_lrs;
 
+CREATE TYPE nsw_lrs.sale_participant AS ENUM ('V', 'P');
+
 --
 -- ## How are properties defined
 --

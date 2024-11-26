@@ -6,6 +6,4 @@ CREATE TYPE nsw_vg.zoning_standard AS ENUM (
   'unknown'
 );
 
-CREATE TYPE nsw_vg.sale_participant AS ENUM ('V', 'P');
-
 CREATE SCHEMA IF NOT EXISTS nsw_vg_raw;

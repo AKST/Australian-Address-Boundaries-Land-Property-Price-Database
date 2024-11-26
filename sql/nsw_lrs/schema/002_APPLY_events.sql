@@ -149,8 +149,34 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.described_dimensions (
 -- ## Notice of Sale
 --
 
+CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale (
+  notice_of_sale_id BIGSERIAL PRIMARY KEY,
+  property_id int NOT NULL,
+  purchase_price INT,
+  contract_date DATE,
 
+  -- what is this? I don't know!
+  comp_code varchar(3),
+  FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
+) INHERITS (meta.event);
 
+CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_2001 (
+  strata_lot_number INT,
+  dealing_number varchar(10) NOT NULL,
+  settlement_date DATE NOT NULL,
+  interest_of_sale INT,
+  sale_participants nsw_lrs.sale_participant[] NOT NULL,
+
+  -- what is this? I don't know!
+  sale_code varchar(3),
+
+  UNIQUE (dealing_number, property_id, property_strata_lot)
+) INHERITS (nsw_lrs.notice_of_sale);
+
+CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_archived (
+  -- what is this? I don't know!
+  valuation_number varchar(16)
+) INHERITS (nsw_lrs.notice_of_sale);
 
 
 
