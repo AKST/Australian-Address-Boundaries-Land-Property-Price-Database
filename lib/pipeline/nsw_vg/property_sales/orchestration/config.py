@@ -9,7 +9,7 @@ from ..ingestion.config import IngestionConfig
 
 # TODO RENAME
 @dataclass
-class ParentConfig:
+class NswVgPsiSupervisorConfig:
     target_root_dir: str
     publish_min: Optional[int]
     publish_max: Optional[int]
@@ -35,20 +35,20 @@ class ParentConfig:
             case _: return True
 
 @dataclass
-class ChildLogConfig:
+class NswVgPsiWorkerLogConfig:
     format: str
     datefmt: str
     debug_logs: bool = field(default=False)
 
 @dataclass
-class ChildConfig:
+class NswVgPsiWorkerConfig:
     file_limit: int | None
     parser_chunk_size: int
     db_pool_size: int
     db_batch_size: int
     db_config: DatabaseConfig
     ingestion_config: IngestionConfig
-    log_config: Optional[ChildLogConfig]
+    log_config: Optional[NswVgPsiWorkerLogConfig]
 
 class ParentMessage:
     class Message:

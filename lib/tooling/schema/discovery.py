@@ -11,7 +11,7 @@ from lib.utility.concurrent import fmap
 from lib.utility.iteration import partition
 
 from .config import schema_ns
-from .type import *
+from .type import Stmt, SchemaNamespace, SqlFileMetaData, SchemaSyntax, SchemaSteps
 
 @dataclass
 class _FileMeta:

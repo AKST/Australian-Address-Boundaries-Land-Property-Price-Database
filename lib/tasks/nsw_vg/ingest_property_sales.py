@@ -20,19 +20,14 @@ from lib.service.io import IoService
 from lib.service.database import DatabaseService
 from lib.utility.sampling import Sampler, SamplingConfig
 
+from .config import NswVgTaskConfig
 from ..fetch_static_files import Environment
-
-@dataclass
-class PropertySaleIngestionConfig:
-    worker_count: int
-    worker_config: ChildConfig
-    parent_config: ParentConfig
 
 async def ingest_property_sales_rows(
     environment: Environment,
     clock: ClockService,
     io: IoService,
-    config: PropertySaleIngestionConfig,
+    config: NswVgTaskConfig.PsiIngest,
 ):
     worker_count = config.worker_count
     worker_config = config.worker_config
@@ -78,7 +73,7 @@ async def ingest_property_sales_rows(
 
 def _child_proc_entry(
     idx: int,
-    worker_config: ChildConfig,
+    worker_config: NswVgPsiWorkerConfig,
     recv_msgs: IpcQueue,
     send_msgs: IpcQueue,
 ) -> None:
@@ -93,7 +88,7 @@ def _child_proc_entry(
     asyncio.run(_child_main(worker_config, recv_msgs, send_msgs))
 
 async def _child_main(
-    config: ChildConfig,
+    config: NswVgPsiWorkerConfig,
     recv_msgs: IpcQueue,
     send_msgs: IpcQueue,
 ) -> None:

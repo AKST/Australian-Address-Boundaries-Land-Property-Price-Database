@@ -14,14 +14,14 @@ from lib.utility.concurrent import merge_async_iters
 from lib.utility.sampling import Sampler
 
 from .child_client import NswVgPsChildClient
-from .config import ParentConfig
+from .config import NswVgPsiSupervisorConfig
 from .messages import ParentMessage
 from .telemetry import IngestionSample
 
 T = TypeVar('T')
 
 class NswVgPsIngestionCoordinator:
-    config: ParentConfig
+    config: NswVgPsiSupervisorConfig
 
     _recv_queue: multiprocessing.Queue
     _logger = getLogger(f'{__name__}.NswVgPsIngestionCoordinator')
@@ -31,7 +31,7 @@ class NswVgPsIngestionCoordinator:
     _tg: TaskGroup
 
     def __init__(self: Self,
-                 config: ParentConfig,
+                 config: NswVgPsiSupervisorConfig,
                  telemetry: Sampler[IngestionSample],
                  q_recv: multiprocessing.Queue,
                  children: List[NswVgPsChildClient],

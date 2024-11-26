@@ -4,11 +4,11 @@ import logging
 from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
-import lib.pipeline.nsw_vg.property_sales.orchestration.config as nswvg_psi_conf
 from lib.pipeline.abs.defaults import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
 from lib.pipeline.gnaf.config import GnafConfig, GnafState
 from lib.pipeline.gnaf.defaults import GNAF_STATE_INSTANCE_MAP
 from lib.pipeline.gnaf.init_schema import init_target_schema
+from lib.pipeline.nsw_vg.config import *
 from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG
 from lib.service.clock import ClockService
 from lib.service.docker import DockerService, ImageConfig, ContainerConfig
@@ -17,9 +17,8 @@ from lib.service.io import IoService
 from lib.tasks.fetch_static_files import initialise, get_session
 from lib.tasks.ingest_gnaf import ingest_gnaf
 from lib.tasks.ingest_abs import ingest_all as ingest_abs
-from lib.tasks.nsw_vg.ingest import ingest_nswvg, NswVgIngestionConfig, NswVgIngestionDedupConfig, NswVgLandValueIngestionConfig
-from lib.tasks.nsw_vg.ingest_property_sales import PropertySaleIngestionConfig
-from lib.tasks.nsw_vg.ingest_property_descriptions import NswVgLegalDescriptionIngestionConfig
+from lib.tasks.nsw_vg.config import NswVgTaskConfig
+from lib.tasks.nsw_vg.ingest import ingest_nswvg
 from lib.tasks.schema.count import run_count_for_schemas
 from lib.tasks.schema.update import update_schema, UpdateSchemaConfig
 from lib.tooling.schema.config import ns_dependency_order
@@ -92,13 +91,13 @@ async def ingest_all(config: IngestConfig):
         ClockService(),
         db_service,
         io_service,
-        NswVgIngestionConfig(
-            load_raw_land_values=NswVgLandValueIngestionConfig(
+        NswVgTaskConfig.Ingestion(
+            load_raw_land_values=NswVgTaskConfig.LvIngest(
                 truncate_raw_earlier=False,
             ),
-            load_raw_property_sales=PropertySaleIngestionConfig(
+            load_raw_property_sales=NswVgTaskConfig.PsiIngest(
                 worker_count=6,
-                worker_config=nswvg_psi_conf.ChildConfig(
+                worker_config=NswVgPsiWorkerConfig(
                     db_config=db_service_config,
                     db_pool_size=4,
                     db_batch_size=1000,
@@ -107,7 +106,7 @@ async def ingest_all(config: IngestConfig):
                     parser_chunk_size=8 * 2 ** 10,
                     log_config=None,
                 ),
-                parent_config=nswvg_psi_conf.ParentConfig(
+                parent_config=NswVgPsiSupervisorConfig(
                     target_root_dir='./_out_zip',
                     publish_min=config.nswvg_psi_publish_min,
                     publish_max=None,
@@ -115,11 +114,11 @@ async def ingest_all(config: IngestConfig):
                     download_max=None,
                 ),
             ),
-            deduplicate=NswVgIngestionDedupConfig(
+            deduplicate=NswVgTaskConfig.Dedup(
                 run_from=1,
                 run_till=6,
             ),
-            property_descriptions=NswVgLegalDescriptionIngestionConfig(
+            property_descriptions=NswVgTaskConfig.PropDescIngest(
                 workers=6,
                 sub_workers=10,
                 child_debug=False,

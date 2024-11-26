@@ -11,27 +11,12 @@ from lib.tooling.schema.type import Command
 
 from ..fetch_static_files import Environment, get_session, initialise
 from ..schema.update import update_schema, UpdateSchemaConfig
-from .ingest_property_descriptions import ingest_property_description, NswVgLegalDescriptionIngestionConfig
-from .ingest_property_sales import PropertySaleIngestionConfig, ingest_property_sales_rows
-from .ingest_land_values import NswVgLandValueIngestionConfig, ingest_land_values
+from .config import NswVgTaskConfig
+from .ingest_property_descriptions import ingest_property_description
+from .ingest_property_sales import ingest_property_sales_rows
+from .ingest_land_values import ingest_land_values
 
 ZIP_DIR = './_out_zip'
-
-@dataclass
-class NswVgIngestionDedupConfig:
-    run_from: int
-    run_till: int
-    truncate: bool = field(default=False)
-    drop_raw: bool = field(default=False)
-    drop_dst_schema: bool = field(default=False)
-
-@dataclass
-class NswVgIngestionConfig:
-    load_raw_land_values: Optional[NswVgLandValueIngestionConfig]
-    load_raw_property_sales: Optional[PropertySaleIngestionConfig]
-    deduplicate: Optional[NswVgIngestionDedupConfig]
-    property_descriptions: Optional[NswVgLegalDescriptionIngestionConfig]
-
 _logger = logging.getLogger(__name__)
 
 async def ingest_nswvg(
@@ -39,7 +24,7 @@ async def ingest_nswvg(
     clock: ClockService,
     db: DatabaseService,
     io: IoService,
-    config: NswVgIngestionConfig,
+    config: NswVgTaskConfig.Ingestion,
 ):
     if config.load_raw_land_values:
         lv_conf = config.load_raw_land_values
@@ -64,7 +49,7 @@ async def ingest_nswvg(
 async def ingest_nswvg_deduplicate(
     db: DatabaseService,
     io: IoService,
-    config: NswVgIngestionDedupConfig,
+    config: NswVgTaskConfig.Dedup,
 ):
     logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
     scripts = [
@@ -133,7 +118,7 @@ if __name__ == '__main__':
     from datetime import date
     from lib.service.database.defaults import DB_INSTANCE_MAP
     from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG, PropertySalesIngestion
-    from lib.pipeline.nsw_vg.property_sales.orchestration import ParentConfig, ChildConfig, ChildLogConfig
+    from lib.pipeline.nsw_vg.property_sales.orchestration import NswVgPsiSupervisorConfig, NswVgPsiWorkerConfig, NswVgPsiWorkerLogConfig
 
     parser = argparse.ArgumentParser(description="Ingest NSW VG Data")
     parser.add_argument("--instance", type=int, required=True)
@@ -184,7 +169,7 @@ if __name__ == '__main__':
 
     load_land_values = None
     if args.load_land_values:
-        load_land_values = NswVgLandValueIngestionConfig(
+        load_land_values = NswVgTaskConfig.LvIngest(
             truncate_raw_earlier=args.lv_truncate_earlier
         )
 
@@ -201,22 +186,22 @@ if __name__ == '__main__':
             print(f"Error: The following arguments are required when --a is provided: {', '.join(missing_args)}")
             sys.exit(1)
 
-        load_raw_property_sales = PropertySaleIngestionConfig(
+        load_raw_property_sales = NswVgTaskConfig.PsiIngest(
             worker_count=args.ps_workers,
-            worker_config=ChildConfig(
+            worker_config=NswVgPsiWorkerConfig(
                 db_config=DB_INSTANCE_MAP[args.instance],
                 db_pool_size=args.ps_worker_db_pool_size,
                 db_batch_size=args.ps_worker_db_batch_size,
                 file_limit=args.ps_worker_file_limit,
                 ingestion_config=NSW_VG_PS_INGESTION_CONFIG,
                 parser_chunk_size=args.ps_worker_parser_chunk_size,
-                log_config=ChildLogConfig(
+                log_config=NswVgPsiWorkerLogConfig(
                     debug_logs=args.ps_worker_debug,
                     datefmt='%Y-%m-%d %H:%M:%S',
                     format=f'[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s'
                 ),
             ),
-            parent_config=ParentConfig(
+            parent_config=NswVgPsiSupervisorConfig(
                 target_root_dir=ZIP_DIR,
                 publish_min=args.ps_publish_min,
                 publish_max=args.ps_publish_max,
@@ -227,7 +212,7 @@ if __name__ == '__main__':
 
     deduplicate = None
     if args.dedup:
-        deduplicate = NswVgIngestionDedupConfig(
+        deduplicate = NswVgTaskConfig.Dedup(
             run_from=args.dedup_run_from,
             run_till=args.dedup_run_till,
             truncate=args.dedup_initial_truncate,
@@ -237,14 +222,14 @@ if __name__ == '__main__':
 
     property_description_config = None
     if args.nswlrs_propdesc:
-        property_description_config = NswVgLegalDescriptionIngestionConfig(
+        property_description_config = NswVgTaskConfig.PropDescIngest(
             db_config=DB_INSTANCE_MAP[args.instance],
             child_debug=args.nswlrs_propdesc_child_debug,
             workers=args.nswlrs_propdesc_workers,
             sub_workers=args.nswlrs_propdesc_subworkers,
         )
 
-    config = NswVgIngestionConfig(
+    config = NswVgTaskConfig.Ingestion(
         load_raw_land_values=load_land_values,
         load_raw_property_sales=load_raw_property_sales,
         deduplicate=deduplicate,
@@ -255,7 +240,7 @@ if __name__ == '__main__':
         file_limit: int,
         parent_db_pool_limit: int,
         parent_db_config: DatabaseConfig,
-        config: NswVgIngestionConfig,
+        config: NswVgTaskConfig.Ingestion,
     ) -> None:
         clock = ClockService()
         io = IoService.create(file_limit)

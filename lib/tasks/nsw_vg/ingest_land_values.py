@@ -8,17 +8,15 @@ from lib.service.database import DatabaseService
 from lib.service.io import IoService
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
-_ZIPDIR = './_out_zip'
+from .config import NswVgTaskConfig
 
-@dataclass
-class NswVgLandValueIngestionConfig:
-    truncate_raw_earlier: bool = field(default=False)
+_ZIPDIR = './_out_zip'
 
 async def ingest_land_values(
     db: DatabaseService,
     io: IoService,
     target: NswVgTarget,
-    config: NswVgLandValueIngestionConfig,
+    config: NswVgTaskConfig.LvIngest,
 ) -> None:
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     if config.truncate_raw_earlier:

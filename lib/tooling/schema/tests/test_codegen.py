@@ -1,6 +1,8 @@
 from pprint import pformat
+from typing import List
 import pytest
 
+from ..type import Stmt
 from ..codegen import *
 from ..discovery import sql_as_operations
 

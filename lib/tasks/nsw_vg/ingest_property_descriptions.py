@@ -10,21 +10,15 @@ from lib.pipeline.nsw_vg.property_description.ingest import PropertyDescriptionI
 from lib.pipeline.nsw_vg.property_description.ingest import QuantileWorkerPool
 from lib.pipeline.nsw_vg.property_description.ingest import WorkerProcessConfig
 from lib.service.database import DatabaseService, DatabaseConfig
+from lib.tasks.nsw_vg.config import NswVgTaskConfig
 
-@dataclass
-class NswVgLegalDescriptionIngestionConfig:
-    workers: int
-    sub_workers: int
-    child_debug: bool
-    db_config: DatabaseConfig
-
-async def cli_main(config: NswVgLegalDescriptionIngestionConfig) -> None:
+async def cli_main(config: NswVgTaskConfig.PropDescIngest) -> None:
     db_service = DatabaseService.create(config.db_config, config.workers)
     await ingest_property_description(db_service, config)
 
 async def ingest_property_description(
         db: DatabaseService,
-        config: NswVgLegalDescriptionIngestionConfig) -> None:
+        config: NswVgTaskConfig.PropDescIngest) -> None:
     semaphore = Semaphore(1)
     spawn_child_with_worker_config = lambda w_config: \
         Process(target=spawn_child,
@@ -64,7 +58,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     asyncio.run(cli_main(
-        NswVgLegalDescriptionIngestionConfig(
+        NswVgTaskConfig.PropDescIngest(
             db_config=DB_INSTANCE_MAP[args.instance],
             workers=args.workers,
             sub_workers=args.sub_workers,

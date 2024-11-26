@@ -3,7 +3,7 @@ from sqlglot import expressions, Expression
 from psycopg import AsyncCursor
 from typing import Dict, Iterator, List, Optional, Tuple, Type
 
-from .type import *
+from ..type import Stmt, SchemaSyntax
 
 def _id(schema: Optional[str], name: str) -> str:
     match schema:
