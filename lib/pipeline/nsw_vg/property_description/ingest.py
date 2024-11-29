@@ -86,7 +86,8 @@ class PropDescIngestionSupervisor:
                 SELECT segment, MIN(source_id), MAX(source_id)
                 FROM (SELECT source_id, NTILE({no_of_quantiles}) OVER (ORDER BY source_id) AS segment
                         FROM nsw_lrs.legal_description
-                       WHERE legal_description_kind = '> 2004-08-17') t
+                       WHERE legal_description_kind = '> 2004-08-17'
+                         AND strata_lot_number IS NULL) t
                 GROUP BY segment
                 ORDER BY segment
             """)
@@ -242,7 +243,8 @@ class PropDescIngestionWorker:
               LEFT JOIN meta.file_source USING (file_source_id)
              WHERE legal_description_kind = '> 2004-08-17'
                {f"AND source_id >= {q.start}" if q.start else ''}
-               {f"AND source_id < {q.end}" if q.end else ''};
+               {f"AND source_id < {q.end}" if q.end else ''}
+               AND strata_lot_number IS NULL;
         """)
         self._semaphore.release()
         time.sleep(0.01)
