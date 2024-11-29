@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
 
 CREATE INDEX idx_property_id_legal_description
     ON nsw_lrs.legal_description(property_id);
-CREATE INDEX idx_property_id_legal_description
+CREATE INDEX idx_property_id_strata_lot_number_legal_description
     ON nsw_lrs.legal_description(property_id, strata_lot_number);
 CREATE INDEX idx_effective_date_legal_description
     ON nsw_lrs.legal_description(effective_date DESC);
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
 CREATE INDEX idx_property_id_property_area
     ON nsw_lrs.property_area(property_id);
 
-CREATE INDEX idx_property_id_property_area
+CREATE INDEX idx_property_id_strata_lot_number_property_area
     ON nsw_lrs.property_area(property_id, strata_lot_number);
 
 CREATE INDEX idx_effective_date_property_area

@@ -116,12 +116,12 @@ async def ingest_all(config: IngestConfig):
             ),
             deduplicate=NswVgTaskConfig.Dedup(
                 run_from=1,
-                run_till=6,
+                run_till=12,
             ),
             property_descriptions=NswVgTaskConfig.PropDescIngest(
                 worker_debug=False,
                 workers=6,
-                sub_workers=10,
+                sub_workers=8,
                 db_config=db_service_config,
             ),
         ),
