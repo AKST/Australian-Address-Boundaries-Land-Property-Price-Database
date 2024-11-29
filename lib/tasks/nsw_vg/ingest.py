@@ -58,6 +58,8 @@ async def ingest_nswvg_deduplicate(
         './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
         './sql/nsw_vg/tasks/from_raw_derive/004_addresses/001_from_land_values.sql',
         './sql/nsw_vg/tasks/from_raw_derive/004_addresses/002_from_psi.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/003_from_psi_archive.sql',
+        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/004_rematerialize.sql',
         './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
         './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values.sql',
         './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
@@ -151,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument("--dedup-initial-truncate", action='store_true', default=False)
     parser.add_argument("--dedup-drop-raw", action='store_true', default=False)
     parser.add_argument("--dedup-run-from", type=int, default=1)
-    parser.add_argument("--dedup-run-till", type=int, default=10)
+    parser.add_argument("--dedup-run-till", type=int, default=12)
 
     parser.add_argument("--load-parcels", action='store_true', default=False)
 

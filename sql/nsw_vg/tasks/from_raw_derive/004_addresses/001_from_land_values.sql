@@ -65,4 +65,3 @@ SELECT source_id,
   LEFT JOIN nsw_gnb.locality l USING (locality_name)
   LEFT JOIN nsw_gnb.street s USING (street_name, locality_id);
 
-REFRESH MATERIALIZED VIEW nsw_gnb.full_property_address;
