@@ -55,8 +55,8 @@ def test_land_parcel_ids(desc, remains, expected_items):
         LandParcel(id='650/751743'),
         t.NonIrrigablePurchase('15'),
     ]),
-    ('PART; crown roads Licence 623573', 'PART; crown roads ', [
-        t.CrownLandLicense(id='623573'),
+    ('PART; crown roads Licence 623573', 'PART; ', [
+        t.CrownRoadsLicense(id='623573'),
     ]),
     (
         'PT 1/209581 PT 7321/1166558 Subsurface Area = 53.41ha; Surface Area = 12.25 ha Mining Lease 739',
@@ -228,14 +228,14 @@ def test_land_parcel_ids(desc, remains, expected_items):
     ),
     (
         '7309/1169890 5997/1205342 6058/1205343 6871/1205344 3578/1205346 PART; and crown roads Licence 623573',
-        'PART; and crown roads ',
+        'PART; and ',
         [
             LandParcel(id='7309/1169890'),
             LandParcel(id='5997/1205342'),
             LandParcel(id='6058/1205343'),
             LandParcel(id='6871/1205344'),
             LandParcel(id='3578/1205346'),
-            t.CrownLandLicense(id='623573'),
+            t.CrownRoadsLicense(id='623573'),
         ],
     ),
     ('1/1010832 Railway Land Lease 216.4101/430/3332 Railway Land Lease 65/430/3332', '', [

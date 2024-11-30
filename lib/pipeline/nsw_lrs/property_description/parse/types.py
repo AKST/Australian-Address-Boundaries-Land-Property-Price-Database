@@ -155,6 +155,14 @@ class CrownLandLicense(ParseItem):
     id: str
 
 @dataclass
+class CrownRoadsLicense(ParseItem):
+    """
+    Very likely this:
+    - https://www.crownland.nsw.gov.au/licences-leases-and-permits/information-about-crown-roads
+    """
+    id: str
+
+@dataclass
 class CrownReserve(ParseItem):
     """
     For parsing the grammar "Crown Reserve \w+"

@@ -65,6 +65,7 @@ id_patterns = [
     IdPattern(re=re.compile(r'Non-Irrigable Purchase\s+(\w+)'), Const=t.NonIrrigablePurchase),
     IdPattern(re=re.compile(r'NSW Maritime\s+([\w/]+)'), Const=t.NswMaritime),
     IdPattern(re=re.compile(r'Housing PRN\s+([\w/]+)'), Const=t.HousingPRN),
+    IdPattern(re=re.compile(r'crown roads Licence\s+(\d+)'), Const=t.CrownRoadsLicense),
     IdPattern(re=re.compile(r'Licence\s+(\d+)'), Const=t.CrownLandLicense),
     IdPattern(re=re.compile(r'BUS DEPOT LEASE\s+(\w+)'), Const=t.BusDepotLease),
 
