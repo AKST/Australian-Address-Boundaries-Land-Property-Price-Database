@@ -55,6 +55,18 @@ def test_land_parcel_ids(desc, remains, expected_items):
         LandParcel(id='650/751743'),
         t.NonIrrigablePurchase('15'),
     ]),
+    ('PART; crown roads Licence 623573', 'PART; crown roads ', [
+        t.CrownLandLicense(id='623573'),
+    ]),
+    (
+        'PT 1/209581 PT 7321/1166558 Subsurface Area = 53.41ha; Surface Area = 12.25 ha Mining Lease 739',
+        '; Surface Area = 12.25 ha ',
+        [
+            LandParcel(id='1/209581', part=True),
+            LandParcel(id='7321/1166558', part=True),
+            t.MiningLease(id='739'),
+        ],
+    ),
     ('B/100895 6, PT 20/755520 Enclosure Permit 510145', '', [
         LandParcel(id='B/100895'),
         LandParcel(id='6/755520'),
@@ -194,10 +206,38 @@ def test_land_parcel_ids(desc, remains, expected_items):
             LandParcel(id='1/325917'),
         ],
     ),
+    (
+        '1/1062221 (being at Tarana in two parts:- Pumphouse (2042.5 m2); Reservoir 1/1062221 and Easement) Railway Land Lease 151311',
+        '(being at Tarana in two parts:- Pumphouse (2042.5 m2); Reservoir 1/1062221 and Easement) ',
+        [
+            LandParcel(id='1/1062221'),
+            t.RailwayLandLease('151311'),
+        ],
+    ),
     ('PT 2/1109126 Railway Land Lease 65/430/2470', '', [
         LandParcel(id='2/1109126', part=True),
         t.RailwayLandLease('65/430/2470'),
     ]),
+    (
+        '12/1161984 (part Wildlife Refuge No.362); Enclosure Permit 22427',
+        '(part Wildlife Refuge No.362); ',
+        [
+            LandParcel(id='12/1161984'),
+            t.EnclosurePermit(id='22427'),
+        ],
+    ),
+    (
+        '7309/1169890 5997/1205342 6058/1205343 6871/1205344 3578/1205346 PART; and crown roads Licence 623573',
+        'PART; and crown roads ',
+        [
+            LandParcel(id='7309/1169890'),
+            LandParcel(id='5997/1205342'),
+            LandParcel(id='6058/1205343'),
+            LandParcel(id='6871/1205344'),
+            LandParcel(id='3578/1205346'),
+            t.CrownLandLicense(id='623573'),
+        ],
+    ),
     ('1/1010832 Railway Land Lease 216.4101/430/3332 Railway Land Lease 65/430/3332', '', [
         LandParcel(id='1/1010832'),
         t.RailwayLandLease('216.4101/430/3332'),
@@ -222,4 +262,81 @@ def test_parse_property_description(desc, remains, expected_items):
     out_remains, out_items = parse_property_description(desc)
     assert out_remains == remains
     assert out_items == expected_items
+
+def test_unsupported_message_3838002():
+    """
+    Test for checking checking changes in `3838002`
+    """
+    property_desc = \
+        '42, PT 57, PT 58, PT 59, PT 60, PT 61/754940 and Pt Leard ' \
+        'State Forest No.420 in Parish of Leard; and then about ' \
+        '1700 ha subsurface being Lots 3, pt 35, 55, Pts 58, 64, ' \
+        '65 110 DP 754924; Lots 32, pt 35, 39, 40, 41, 42 DP 754940; ' \
+        'Lots 27, 70, 74, 75, Pts 68, 69, 71, 83 DP 754948; Lots 1-2 ' \
+        'DP 510801; pt 1 DP 1157540; pt 1, lot 3 DP 1144479; lot 1 ' \
+        'DP114793; pt 7001 DP94069. Coal Lease 375 Mining Lease 1701'
+    out_remains, out_items = parse_property_description(property_desc)
+    assert out_items == [
+        LandParcel(id='42/754940'),
+        LandParcel(id='57/754940', part=True),
+        LandParcel(id='58/754940', part=True),
+        LandParcel(id='59/754940', part=True),
+        LandParcel(id='60/754940', part=True),
+        LandParcel(id='61/754940', part=True),
+        t.MiningLease(id='1701'),
+        t.CoalLease(id='375'),
+    ]
+
+def test_unsupported_message_3407923():
+    """
+    Test for checking checking changes in `3407923`
+    """
+    property_desc = \
+        '122/42056 2/718634 2/733835 58, 69, 132/751078 1, 2/1022767 ' \
+        '1, 4, 5/1080470 for grazing(crown land bounded by 105/751078, ' \
+        '1,2/1080470;parcel west of 96/751078) Licence 344585 Licence 405371'
+    out_remains, out_items = parse_property_description(property_desc)
+    assert out_items == [
+        LandParcel(id='122/42056'),
+        LandParcel(id='2/718634'),
+        LandParcel(id='2/733835'),
+        LandParcel(id='58/751078'),
+        LandParcel(id='69/751078'),
+        LandParcel(id='132/751078'),
+        LandParcel(id='1/1022767'),
+        LandParcel(id='2/1022767'),
+        LandParcel(id='1/1080470'),
+        LandParcel(id='4/1080470'),
+        LandParcel(id='5/1080470'),
+        t.CrownLandLicense(id='344585'),
+        t.CrownLandLicense(id='405371'),
+    ]
+
+def test_unsupported_message_748784():
+    """
+    Test for checking checking changes in `748784`
+    """
+    property_desc = \
+        '252/531397 Council lease (34sqm. - STONE SEAWA;L, '\
+        'RECLAIMED LAND, BOATSHED, DECK T/SKID) SHARED USE '\
+        'NSW Maritime 30003836'
+    out_remains, out_items = parse_property_description(property_desc)
+    assert out_items == [
+        LandParcel(id='252/531397'),
+        t.NswMaritime(id='30003836'),
+    ]
+
+def test_unsupported_message_970426():
+    """
+    Test for checking checking changes in `970426`
+    """
+    property_desc = \
+        'PT 7093/93909 AND NSW MARITIME LEASE SHOWN IN ' \
+        'PLAN No WL2025; BEING THE SITE OF NORTHBRIDGE ' \
+        'SAILING CLUB, RAMP, PONTOON, CONCRETE PILES AND ' \
+        'CHAIN STAYS. PART LOT 7093 DP 93909 HAS AN UNSPECIFIED AREA.'
+    out_remains, out_items = parse_property_description(property_desc)
+    assert out_items == [
+        LandParcel(id='7093/93909', part=True),
+    ]
 
