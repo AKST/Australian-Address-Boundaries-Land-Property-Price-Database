@@ -16,6 +16,8 @@ _logger = logging.getLogger(f'{__name__}.initialise_db_schema')
 class UpdateSchemaConfig:
     packages: List[SchemaNamespace]
     range: Dict[SchemaNamespace, range | int] | int | range | None
+    # TODO remove when this issue is fixed
+    enable_direct_raw_nsw_lrs_schema_creation: bool
     apply: bool = field(default=True)
     revert: bool = field(default=False)
 
@@ -57,7 +59,13 @@ async def update_schema(
     for ns in create_list:
         try:
             r = get_range(ns)
-            await controller.command(Command.Create(ns=ns, range=r))
+            command = Command.Create(ns=ns, range=r)
+            allowed_schemas = {'nsw_lrs', 'nsw_gnb'}
+            await controller.command(Command.Create(
+                run_raw_schema=ns in allowed_schemas \
+                    and config.enable_direct_raw_nsw_lrs_schema_creation,
+                ns=ns,
+                range=r))
         except Exception as e:
             logging.error(f'failed on creating {ns}')
             raise e
@@ -70,6 +78,7 @@ async def nuke(db: DatabaseService, io: IoService) -> None:
     await update_schema(
         UpdateSchemaConfig(
             packages=ns_dependency_order,
+            enable_direct_raw_nsw_lrs_schema_creation=False,
             range=None,
             apply=True,
             revert=True,
@@ -146,6 +155,7 @@ if __name__ == '__main__':
 
             config = UpdateSchemaConfig(
                 packages=packages,
+                enable_direct_raw_nsw_lrs_schema_creation=False,
                 range=range(args.range_min, args.range_max + 1),
                 apply=not args.disable_apply,
                 revert=args.enable_revert,

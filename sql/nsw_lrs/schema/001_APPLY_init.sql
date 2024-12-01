@@ -1,5 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS nsw_lrs;
 
+CREATE TYPE nsw_lrs.normalised_property_id AS (property_id INT, strata_lot_num INT);
+
 CREATE TYPE nsw_lrs.sale_participant AS ENUM ('V', 'P');
 CREATE TYPE nsw_lrs.property_nature AS ENUM (
   'Residence',

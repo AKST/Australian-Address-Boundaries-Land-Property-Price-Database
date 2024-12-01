@@ -22,6 +22,7 @@ class Command:
     @dataclass
     class Create(BaseCommand):
         omit_foreign_keys: bool = field(default=False)
+        run_raw_schema: bool = field(default=False)
 
     @dataclass
     class AddForeignKeys(BaseCommand):
@@ -75,6 +76,7 @@ class SchemaSyntax:
 
 @dataclass
 class SqlFileMetaData:
+    file_name: str
     root_dir: str
     ns: SchemaNamespace
     step: int

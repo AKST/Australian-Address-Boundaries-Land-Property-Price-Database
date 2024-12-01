@@ -40,11 +40,20 @@ class SchemaController:
                 raise TypeError(f'unknown command {other}')
 
     async def create(self: Self, command: Command.Create) -> None:
-        file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
+        load_syn = not command.run_raw_schema
+        file_list = await self._discovery.files(
+            command.ns,
+            command.range,
+            load_syn=load_syn)
 
         async with self._db.async_connect() as conn, conn.cursor() as cursor:
             for file in file_list:
-                if file.contents is None:
+                if command.run_raw_schema:
+                    sql_text = await self._io.f_read(file.file_name)
+                    self._logger.debug(f'running {file.file_name}')
+                    await cursor.execute(sql_text)
+                    continue
+                elif file.contents is None:
                     raise TypeError()
 
                 for operation in codegen.create(

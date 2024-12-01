@@ -94,7 +94,7 @@ class SchemaDiscovery:
     async def __f_sql_meta_data(self: Self, f: str, meta: _FileMeta, load_syn: bool) -> SqlFileMetaData:
         try:
             contents = await fmap(sql_as_operations, self._io.f_read(f)) if load_syn else None
-            return SqlFileMetaData(self.root_dir, meta.ns, meta.step, meta.name, contents)
+            return SqlFileMetaData(f, self.root_dir, meta.ns, meta.step, meta.name, contents)
         except Exception as e:
             self.logger.error(f'failed on {f}')
             raise e
