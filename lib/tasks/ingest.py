@@ -62,12 +62,7 @@ async def ingest_all(config: IngestConfig):
     )
 
     await update_schema(
-        UpdateSchemaConfig(
-            packages=ns_dependency_order,
-            enable_direct_raw_nsw_lrs_schema_creation=True,
-            range=None,
-            apply=True,
-        ),
+        UpdateSchemaConfig(packages=ns_dependency_order, range=None, apply=True),
         db_service,
         io_service,
     )
