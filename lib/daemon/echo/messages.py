@@ -9,7 +9,16 @@ class Message:
 
 def message_field(id: int, **kwargs) -> Any:
     """A decorator for fields that adds an 'id' to their metadata."""
-    return field(metadata={"id": id}, **kwargs)
+    return field(metadata={
+        "id": id,
+        "skip": False,
+    }, **kwargs)
+
+def message_type(id: str, **kwargs):
+    """A decorator for fields that adds an 'id' to their metadata."""
+    return field(metadata={
+        "skip": True,
+    }, default=id, init=False)
 
 M = TypeVar('M', bound='Message')
 
@@ -34,6 +43,9 @@ class MessageRegistry:
         message_type_id = message.message_id.encode("utf-8")
         payload = struct.pack("!I", len(message_type_id)) + message_type_id
         for field in fields(message):
+            if field.metadata.get("skip"):
+                continue
+
             field_id = field.metadata.get("id")
             if field_id is None:
                 raise ValueError(f"Field '{field.name}' in message '{message.message_id}' must have an 'id'.")
@@ -60,7 +72,11 @@ class MessageRegistry:
             raise ValueError(f"Unknown message ID: {type_id}")
 
         message_cls = self._registry[type_id]
-        field_map = {field.metadata["id"]: field for field in fields(message_cls)}
+        field_map = {
+            field.metadata["id"]: field
+            for field in fields(message_cls)
+            if not field.metadata["skip"]
+        }
         field_values = {}
 
         # Decode fields by their IDs
@@ -90,30 +106,28 @@ echo_response = MessageRegistry()
 @echo_request
 @dataclass
 class CloseRequest(Message):
-    message_id = 'base:close'
+    message_id: str = message_type('base:close')
 
 @echo_request
 @dataclass
 class HandshakeRequest(Message):
-    message_id = 'base:handshake'
-    protocol_version: int = message_field(1)
+    message_id: str = message_type('base:handshake')
 
-@echo_request
+@echo_response
 @dataclass
 class HandshakeResponse(Message):
-    message_id = 'base:handshake'
-    message: str = message_field(1)
+    message_id: str = message_type('base:handshake')
 
 @echo_request
 @dataclass
 class EchoRequest(Message):
-    message_id = 'app:echo'
+    message_id: str = message_type('app:echo')
     message: str = message_field(1)
 
 @echo_response
 @dataclass
 class EchoResponse(Message):
-    message_id = 'app:echo'
+    message_id: str = message_type('app:echo')
     message: str = message_field(1)
 
 

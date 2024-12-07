@@ -6,11 +6,21 @@ import signal
 import time
 from typing import Optional, Self
 
+from .messages import (
+    Message,
+    echo_request,
+    echo_response,
+    CloseRequest,
+    HandshakeRequest,
+    HandshakeResponse,
+    EchoRequest,
+    EchoResponse,
+)
+
 
 logger = logging.getLogger(__name__)
 
 EVAR_PROC_PORT = "DB_AKST_IO_PROC_PORT"
-
 
 class DaemonConnectionHandler:
     _server: Optional[asyncio.Server] = None
@@ -20,21 +30,26 @@ class DaemonConnectionHandler:
         logger.info('connection')
         addr = None
         try:
+            resp: Message
+
             self._active_connections += 1
             addr = writer.get_extra_info('peername')
             logger.info(f"OPENING {addr}")
             while data := await asyncio.wait_for(reader.read(1024), timeout=1.0):
-                message = data.decode()
+                message: Message = echo_request.decode(data)
                 logger.info(f"Received: {message}")
 
-                if message == "HANDSHAKE:ENQUIRY":
-                    writer.write(b"HANDSHAKE:ACKNOWLEDGE")
-                    await writer.drain()
-                elif message == "CLOSE":
-                    break
-                else:
-                    writer.write(f"Hello from daemon".encode())
-                    await writer.drain()
+                match message:
+                    case HandshakeRequest():
+                        resp = HandshakeResponse()
+                        writer.write(echo_response.encode(resp))
+                        await writer.drain()
+                    case EchoRequest(message=m):
+                        resp = EchoResponse(message=m)
+                        writer.write(echo_response.encode(resp))
+                        await writer.drain()
+                    case CloseRequest:
+                        break
             logger.info(f"CLOSING {addr}")
         except Exception as e:
             logger.info(f"failed for {addr}")

@@ -8,6 +8,16 @@ import time
 
 from typing import List, Optional, Tuple
 
+from lib.daemon.echo.messages import (
+    echo_request,
+    echo_response,
+    CloseRequest,
+    HandshakeRequest,
+    HandshakeResponse,
+    EchoRequest,
+    EchoResponse,
+)
+
 EVAR_PROC_NAME = "DB_AKST_IO_PROC_NAME"
 EVAR_PROC_PORT = "DB_AKST_IO_PROC_PORT"
 
@@ -48,18 +58,18 @@ async def find_daemon_port(pid: int, timeout: float) -> int:
             try:
                 port_candidate = conn.laddr.port
                 reader, writer = await asyncio.open_connection("localhost", port_candidate)
-                writer.write(b"HANDSHAKE:ENQUIRY")
+                writer.write(echo_request.encode(HandshakeRequest()))
                 await writer.drain()
 
-                response = await reader.read(1024)
-                if response.decode().startswith("HANDSHAKE:ACKNOWLEDGE"):
-                    writer.write(b"CLOSE")
-                    await writer.drain()
+                match echo_response.decode(await reader.read(1024)):
+                    case HandshakeResponse():
+                        writer.write(echo_request.encode(CloseRequest()))
+                        await writer.drain()
 
-                    writer.close()
-                    await writer.wait_closed()
+                        writer.close()
+                        await writer.wait_closed()
 
-                    return port_candidate
+                        return port_candidate
             except (ConnectionRefusedError, OSError):
                 continue
     raise DaemonPortNotFound()
@@ -118,14 +128,15 @@ async def communicate_with_daemon() -> None:
         print(f"Connected to daemon at {host}:{port}")
 
         # Send a request
-        writer.write(b"Hello, daemon!")
+        echo_req = EchoRequest(message="Hello, daemon!")
+        writer.write(echo_request.encode(echo_req))
         await writer.drain()
 
         # Read the response
-        data = await reader.read(1024)
-        print(f"Response from daemon: {data.decode()}")
+        echo_resp = echo_response.decode(await reader.read(1024))
+        print(f"Response from daemon: {echo_resp}")
 
-        writer.write(b"CLOSE")
+        writer.write(echo_request.encode(CloseRequest()))
         await writer.drain()
 
         writer.close()
