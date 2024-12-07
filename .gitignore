@@ -4,6 +4,7 @@
 __pycache__
 env
 
+_out_log
 _out_web
 _out_zip
 _out_cache

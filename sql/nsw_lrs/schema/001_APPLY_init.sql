@@ -1,5 +1,16 @@
 CREATE SCHEMA IF NOT EXISTS nsw_lrs;
 
+--
+-- This exists for the sake of joining data with property &
+-- strata_lot_num information. In SQL typically null != null
+-- so joining like like this:
+--
+--   SELECT *
+--     FROM nsw_lrs.property_area
+--     LEFT JOIN nsw_lrs.primary_purpose USING (property_id, strata_lot_num)
+--
+-- would fail for anything without a strata lot (any non appartment building).
+--
 CREATE TYPE nsw_lrs.normalised_property_id AS (property_id INT, strata_lot_num INT);
 
 CREATE TYPE nsw_lrs.sale_participant AS ENUM ('V', 'P');
