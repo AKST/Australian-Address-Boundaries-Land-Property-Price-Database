@@ -1,12 +1,16 @@
 from datetime import datetime
-from typing import Set, Dict, Tuple, Optional
+from typing import Any, Set, Dict, Tuple, Optional, Iterator
 from .types import (
     ConceptSchemeMeta,
     ContentConstraintsMeta,
     DataFlowMeta,
     CodeListMeta,
     DataStructureMeta,
+    Observation,
+    ObservationMeta,
 )
+
+_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 def parse_annotations(d, supported_types: Set[str], value_key: str) -> Dict[str, str]:
     if 'annotations' not in d:
@@ -31,7 +35,6 @@ def parse_conceptscheme_meta(d) -> ConceptSchemeMeta:
     )
 
 def parse_contentconstraints_meta(d) -> ContentConstraintsMeta:
-    time_format = "%Y-%m-%dT%H:%M:%S"
     def parse_cuberegion(kv) -> ContentConstraintsMeta.CubeRegion:
         match kv:
             case { 'id': id, 'values': values }:
@@ -40,9 +43,9 @@ def parse_contentconstraints_meta(d) -> ContentConstraintsMeta:
             case { 'id': id, 'timeRange': timeRange }:
                 return ContentConstraintsMeta.TimeCubeRegion(
                     id,
-                    datetime.strptime(timeRange['startPeriod']['period'], time_format),
+                    datetime.strptime(timeRange['startPeriod']['period'], _TIME_FORMAT),
                     timeRange['startPeriod']['isInclusive'],
-                    datetime.strptime(timeRange['endPeriod']['period'], time_format),
+                    datetime.strptime(timeRange['endPeriod']['period'], _TIME_FORMAT),
                     timeRange['endPeriod']['isInclusive'],
                 )
         raise TypeError()
@@ -55,7 +58,8 @@ def parse_contentconstraints_meta(d) -> ContentConstraintsMeta:
             parse_cuberegion(kv)
             for cr in d['cubeRegions']
             for kv in cr['keyValues']
-        ]
+        ],
+        raw=d,
     )
 
 def parse_dataflow_meta(d, data=None) -> DataFlowMeta:
@@ -120,10 +124,11 @@ def parse_datastructure_meta(d, data=None) -> DataStructureMeta:
             concept_identity=d['conceptIdentity'],
             local_representation=parse_local_representation(d.get('localRepresentation')))
 
-    def parse_dimension_with_pos(d) -> Tuple[int, DataStructureMeta.Dimension]:
-        return d['position'], DataStructureMeta.Dimension(
+    def parse_dimension_with_pos(d) -> DataStructureMeta.Dimension:
+        return DataStructureMeta.Dimension(
             id=d['id'],
             type=d['type'],
+            position=d['position'],
             concept_identity=d['conceptIdentity'],
             local_representation=parse_local_representation(d.get('localRepresentation')))
 
@@ -144,28 +149,62 @@ def parse_datastructure_meta(d, data=None) -> DataStructureMeta:
             relationships=parse_attribute_relations(d['attributeRelationship']),
             local_representation=parse_local_representation(d.get('localRepresentation')))
 
-    attributes = []
-    dimensions = []
 
     components = d['dataStructureComponents']
 
+    attributes = []
     if 'attributeList' in components:
         attributes = list(map(parse_attribute, components['attributeList']['attributes']))
 
+    dimensions = {}
     if 'dimensionList' in components:
         norm_ds = map(parse_dimension_with_pos, components['dimensionList']['dimensions'])
         time_ds = map(parse_dimension_with_pos, components['dimensionList']['timeDimensions'])
-        dimensions = [d for _, d in sorted([*norm_ds, *time_ds], key=lambda x: x[0])]
+        dimensions = { d.id: d for d in [*norm_ds, *time_ds] }
 
     primary_measure = parse_measure(components['measureList']['primaryMeasure'])
 
     return DataStructureMeta(
         id=d['id'],
-        structure_url=d.get('structure'),
         name=d['name'],
         version=d['version'],
         primary_measure=primary_measure,
-        dimensions={ d.id: d for d in dimensions },
+        dimensions=dimensions,
+        dimension_datakey=[d for d in dimensions.values() if d.type == 'Dimension'],
+        dimension_time=next((d for d in dimensions.values() if d.type == 'TimeDimension'), None),
         attributes=attributes,
         raw=d)
 
+def parse_data_all_dimensions(resp) -> Iterator[Observation.AllDimensions]:
+    def parse_dimension_value(value: Dict[str, Any]) -> ObservationMeta.DimensionValue:
+        match value:
+            case { 'order': order, 'id': id, 'name': name, **rest }:
+                parent = rest.get('parent')
+                return ObservationMeta.DimensionEnumableValue(id, name, order, parent)
+            case { 'start': start_s, 'end': end_s, 'id': id, 'name': name, **rest }:
+                start, end = datetime.strptime(start_s, _TIME_FORMAT), datetime.strptime(end_s, _TIME_FORMAT)
+                return ObservationMeta.DimensionTemporalValue(id, name, start, end)
+        raise TypeError('unknown data')
+
+    d = resp['data']
+    urns = [next(l['urn'] for l in ds['links'] if l['rel'] == 'DataStructure') for ds in d['dataSets']]
+    dimension_tables = [
+        ObservationMeta.DimensionLookupTable(raw=structure, urn=urns[structure['dataSets'][0]],
+            dimensions=[
+                ObservationMeta.DimensionDefinition(
+                    id=dimension['id'], name=dimension['name'], pos=dimension['keyPosition'],
+                    values=[parse_dimension_value(v) for v in dimension['values']] )
+                for dimension in structure['dimensions']['observation']])
+        for structure in d['structures']
+    ]
+
+    for d_idx, dataset in enumerate(d['dataSets']):
+        table = dimension_tables[dataset['structure']]
+        for values, observations in dataset['observations'].items():
+            dimensions = {
+                dim.id: ObservationMeta.DimensionRef((d_idx, v_idx), dim.values[v_idx])
+                for d_idx, v_idx in enumerate(map(int, values.split(':')))
+                for dim in [table.dimensions[d_idx]] }
+
+            for count in observations:
+                yield Observation.AllDimensions(urns[d_idx], count, dimensions, table)

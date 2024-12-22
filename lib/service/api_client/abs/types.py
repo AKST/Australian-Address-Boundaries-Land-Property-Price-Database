@@ -61,6 +61,7 @@ class ContentConstraintsMeta:
     version: str
     name: str
     cube_regions: List[CubeRegion]
+    raw: Any = field(repr=False)
 
 @dataclass
 class CodeListMeta:
@@ -121,14 +122,15 @@ class DataStructureMeta:
     class PrimaryMeasure:
         id: str
         concept_identity: str
-        local_representation: Optional['DataStructureMeta.LocalRepr']
+        local_representation: Optional['DataStructureMeta.LocalRepr'] = field(repr=False)
 
     @dataclass
     class Dimension:
         id: str
-        type: DimensionType
+        type: DimensionType = field(repr=False)
+        position: int = field(repr=False)
         concept_identity: str
-        local_representation: Optional['DataStructureMeta.LocalRepr']
+        local_representation: Optional['DataStructureMeta.LocalRepr'] = field(repr=False)
 
     @dataclass
     class AttributeRelations:
@@ -141,16 +143,66 @@ class DataStructureMeta:
         assignment_status: AssignmentStatus
         concept_identity: str
         relationships: Optional['DataStructureMeta.AttributeRelations']
-        local_representation: Optional['DataStructureMeta.LocalRepr']
+        local_representation: Optional['DataStructureMeta.LocalRepr'] = field(repr=False)
 
     id: str
-    structure_url: Optional[str]
     name: Optional[str]
     version: Optional[str]
     attributes: List[Attribute]
-    dimensions: Dict[str, Dimension]
+    dimensions: Dict[str, Dimension] = field(repr=False)
+    dimension_datakey: List[Dimension]
+    dimension_time: Optional[Dimension]
     primary_measure: PrimaryMeasure
     raw: Any = field(repr=False)
 
+class ObservationMeta:
+    @dataclass
+    class DimensionValue:
+        id: str
+        name: str
+        # annotations: List[str]
 
+    @dataclass
+    class DimensionEnumableValue(DimensionValue):
+        order: int
+        parent: Optional[str]
+
+    @dataclass
+    class DimensionTemporalValue(DimensionValue):
+        start: datetime
+        end: datetime
+
+    @dataclass
+    class DimensionDefinition:
+        id: str
+        name: str
+        pos: int
+        values: List['ObservationMeta.DimensionValue']
+
+    @dataclass
+    class DimensionLookupTable:
+        urn: str
+        dimensions: List['ObservationMeta.DimensionDefinition']
+        raw: Any = field(repr=False)
+
+    @dataclass
+    class DimensionRef:
+        index: Tuple[int, int]
+        value: 'ObservationMeta.DimensionValue'
+
+class Observation:
+    @dataclass
+    class AllDimensions:
+        urn: str = field(repr=False)
+        count: int
+        dimension_meta: Dict[str, ObservationMeta.DimensionRef]
+        _table: ObservationMeta.DimensionLookupTable
+
+        @property
+        def dimensions(self) -> Dict[str, str]:
+            return { k: d.value.id for k, d in self.dimension_meta.items() }
+
+        def __repr__(self) -> str:
+            dimensions = list(self.dimensions.values())
+            return f'Observation.AllDimensions(count={self.count}, dimensions={dimensions})'
 

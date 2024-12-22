@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from logging import getLogger
 from typing import Dict, List, Optional
 from urllib.parse import urlencode
 
@@ -9,6 +10,7 @@ from .parse import (
     parse_contentconstraints_meta,
     parse_dataflow_meta,
     parse_datastructure_meta,
+    parse_data_all_dimensions,
 )
 from .types import (
     CategorisationMeta,
@@ -29,15 +31,16 @@ _ABS_URL = 'https://data.api.abs.gov.au/rest'
 _ACCEPTS = 'application/vnd.sdmx.structure+json'
 
 class AbsClient:
+    logger = getLogger(f'{__name__}.AbsClient')
+
     def __init__(self, session: ClientSession):
         self._session = session
-
 
     async def get_data(self,
                        dataflow: DataFlowMeta,
                        data_key: Optional[DataKey] = None,
                        detail: Optional[SdmxDataDetail] = None,
-                       observation_dimension: Optional[DimensionAtObservation] = None,
+                       dimension_at_observation: Optional[DimensionAtObservation] = None,
                        start_period: Optional[str] = None,
                        end_period: Optional[str] = None):
         if data_key:
@@ -52,7 +55,7 @@ class AbsClient:
             params['startPeriod'] = start_period
         if end_period:
             params['endPeriod'] = end_period
-        match observation_dimension:
+        match dimension_at_observation:
             case DataStructureMeta.Dimension(id=dimension_id):
                 params['dimensionAtObservation'] = dimension_id
             case other if isinstance(other, str):
@@ -61,29 +64,40 @@ class AbsClient:
         url = f'{_ABS_URL}/data/ABS,{dataflow.id},{dataflow.version}/{data_key_s}'
         if params:
             url = f'{url}?{urlencode(params)}'
+        self.logger.debug(f'GET {url}')
         async with self._session.get(url, { 'Accept': 'application/vnd.sdmx.data+json' }) as resp:
             if resp.status == 200:
                 return await resp.json()
-            print(url, resp.status)
-            print(await resp.text())
+            self.logger.error(f'({resp.status}) failed to fetch {url}\n{await resp.text()}')
             raise TypeError()
+
+    async def get_data_all_dimensions(
+            self,
+            dataflow: DataFlowMeta,
+            data_key: Optional[DataKey] = None,
+            detail: Optional[SdmxDataDetail] = None,
+            start_period: Optional[str] = None,
+            end_period: Optional[str] = None):
+        resp = await self.get_data(dataflow, data_key, detail, 'AllDimensions', start_period, end_period)
+        return list(parse_data_all_dimensions(resp))
+
 
     async def get_structure_meta(self,
                                  structure_type: StructureType,
                                  structure_id: str,
                                  detail: SdmxMetaDetail,
-                                 references: Optional[List[StructureType]] = None):
+                                 references: Optional[StructureType] = None):
         params: Dict[str, str] = { 'detail': detail }
 
         if references:
-            params['references'] = ','.join(references)
+            params['references'] = references
 
         url = f'{_ABS_URL}/{structure_type}/ABS/{structure_id}?{urlencode(params)}'
-        print(url)
+        self.logger.debug(f'GET {url}')
         async with self._session.get(url, { 'Accept': 'application/vnd.sdmx.structure+json' }) as resp:
             if resp.status == 200:
                 return await resp.json()
-            print(resp.status)
+            self.logger.error(f'({resp.status}) failed to fetch {url}\n{await resp.text()}')
             raise TypeError()
 
     async def get_dataflow_meta(self) -> List[DataFlowMeta]:
@@ -93,7 +107,7 @@ class AbsClient:
 
     async def find_dataflow_meta(self,
                                  structure_id: str,
-                                 references: Optional[List[StructureType]] = None) -> DataFlowMeta:
+                                 references: Optional[StructureType] = None) -> DataFlowMeta:
         json = await self.get_structure_meta('dataflow', structure_id, 'full', references)
         return parse_dataflow_meta(json['data']['dataflows'][0], json['data'])
 
