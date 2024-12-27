@@ -1,6 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Set, Any, Iterator, List, Tuple
+from typing import Optional, Set, Any, Iterator, List, Tuple
 
 from .predicate import YearMonth, PredicateFunction
 
@@ -11,6 +11,10 @@ class SchemaField:
     category: str
     name: str
     priority: int = field(default=1)
+    """
+    This is the field name once it's loaded into data.
+    """
+    rename: Optional[str] = field(default=None)
 
 @dataclass
 class GisSchema:
@@ -27,9 +31,9 @@ class GisProjection:
     fields: FieldPriority
     epsg_crs: int
 
-    def get_fields(self) -> Iterator[str]:
+    def get_fields(self) -> Iterator[SchemaField]:
         if isinstance(self.fields, str) and self.fields == '*':
-            return (f.name for f in self.schema.fields)
+            return (f for f in self.schema.fields)
 
         elif isinstance(self.fields, str):
             # if you set `fields` to a str, you should only set it to '*'
@@ -38,7 +42,7 @@ class GisProjection:
         requirements = [((r, 3) if isinstance(r, str) else r) for r in self.fields]
 
         return (
-            f.name
+            f
             for category, priority in requirements
             for f in self.schema.fields
             if f.category == category and f.priority <= priority

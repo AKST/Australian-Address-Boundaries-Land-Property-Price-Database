@@ -1,8 +1,3 @@
-CREATE TABLE IF NOT EXISTS example (
-  col_a INT NOT NULL,
-  col_b INT NOT NULL,
-  col_c INT GENERATED ALWAYS AS (col_a + col_b) STORED
-);
 --
 -- # Observations and Events
 --

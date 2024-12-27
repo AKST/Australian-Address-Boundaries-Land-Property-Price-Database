@@ -13,7 +13,7 @@ from lib.service.http.util import url_with_params
 from lib.utility.concurrent import pipe, merge_async_iters
 
 from .counts import ClauseCounts
-from .component_factory import ComponentFactory
+from .component_factory import DataframeFactory
 from .errors import GisNetworkError, GisTaskNetworkError, MissingResultsError
 
 @dataclass
@@ -55,7 +55,7 @@ class GisStream:
 
     def __init__(self,
                  projection: GisProjection,
-                 factory: ComponentFactory,
+                 factory: DataframeFactory,
                  session: AbstractClientSession):
         self.projection = projection
         self._session = session
@@ -66,7 +66,7 @@ class GisStream:
     def create(session, projection: GisProjection):
         return GisStream(
             projection,
-            ComponentFactory(projection.schema.id_field),
+            DataframeFactory.create(projection.schema.id_field),
             session,
         )
 
@@ -161,7 +161,7 @@ class GisStream:
                 'where': task.where_clause,
                 'geometryType': 'esriGeometryEnvelope',
                 'outSR': p.epsg_crs,
-                'outFields': ','.join(p.get_fields()),
+                'outFields': ','.join(f.name for f in p.get_fields()),
                 'f': 'json',
             }
             data = await self._get_json(params, use_cache=task.use_cache, cache_name='page')
@@ -179,19 +179,8 @@ class GisStream:
                 f'got {len(features)} wanted {task.expected_results}')
 
         self._counts.inc(task.where_clause, len(features))
-        geometries, attributes = [], []
-        for f in features:
-            component = self._factory.from_feature(f)
-            if component:
-                geometries.append(component.geometry)
-                attributes.append(component.attributes)
-
-        gdf = gpd.GeoDataFrame(
-            attributes,
-            geometry=geometries,
-            crs=f"EPSG:{p.epsg_crs}",
-        ) if attributes else gpd.GeoDataFrame()
-        return task, gdf
+        df = self._factory.build(p.epsg_crs, features, self.projection)
+        return task, df
 
     async def _get_count(self, where_clause: str | None, use_cache: bool) -> int:
         params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }

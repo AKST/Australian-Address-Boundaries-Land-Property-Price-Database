@@ -2,6 +2,7 @@ from datetime import datetime
 import geopandas as gpd
 from logging import getLogger
 import math
+import pandas as pd
 import time
 from typing import Self
 
@@ -124,6 +125,10 @@ async def run(UiFactory, open_file_limit):
 
             ui = UiFactory(timer, producer)
             async for proj, task, page in producer.produce(param):
+                # with pd.option_context('display.max_columns', None):
+                #     print(page)
+                #     raise TypeError()
+
                 ui.on_loop(proj, task, page)
             ui.log('finished loading GIS')
     except Exception as e:
