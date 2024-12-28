@@ -11,6 +11,8 @@ _out_cache
 _out_state
 _out_debug
 
+profile.json
+
 *.apkg
 *.atx
 *.cpg
@@ -23,7 +25,6 @@ _out_debug
 *.gpkg
 *.html
 *.horizon
-*.json
 *.numbers
 *.prj
 *.pdf

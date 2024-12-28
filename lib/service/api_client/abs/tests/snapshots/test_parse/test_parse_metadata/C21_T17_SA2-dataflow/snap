@@ -1,0 +1,16 @@
+[DataFlowMeta(id='C21_T17_SA2',
+              version='1.0.0',
+              name='Census 2021, T17 Dwelling structure and number of bedrooms by number of persons usually resident for group households, Time '
+                   'Series, Main Statistical Areas Level 2 and up (SA2+)',
+              desc='Dwelling structure and number of bedrooms by number of persons usually resident for group households time series data for Main '
+                   'Statistical Areas Level 2 and up (SA2+), 2021 Census, Count of occupied private dwellings containing group households.\n'
+                   'This table is based on place of enumeration.\n'
+                   'Includes up to three residents who were temporarily absent on Census Night.\n'
+                   "Excludes 'Family', 'Lone person', 'Visitors only' and 'Other non-classifiable' households.\n"
+                   'Please note that there are small random adjustments made to all cell values to protect the confidentiality of data. These '
+                   'adjustments may cause the sum of rows or columns to differ by small amounts from table totals.',
+              params=[DataFlowMeta.DataFlowParam(id='REGION', default_value='AUS'),
+                      DataFlowMeta.DataFlowParam(id='TIME_PERIOD_START', default_value='2011')],
+              layout_col=['NPRD'],
+              layout_row=['STRBEDD'],
+              layout_row_sec=['TIME_PERIOD', 'REGION'])]

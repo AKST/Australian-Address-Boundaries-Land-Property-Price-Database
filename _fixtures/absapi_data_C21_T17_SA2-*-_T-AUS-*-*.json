@@ -1,0 +1,1271 @@
+{
+  "meta": {
+    "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/master/data-message/tools/schemas/2.0.0/sdmx-json-data-schema.json",
+    "id": "IREF000854",
+    "prepared": "2024-12-28T00:29:47Z",
+    "test": true,
+    "contentLanguages": [
+      "en"
+    ],
+    "sender": {
+      "id": "Stable_-_DotStat_v8",
+      "name": "unknown",
+      "names": {
+        "en": "unknown"
+      }
+    }
+  },
+  "data": {
+    "dataSets": [
+      {
+        "structure": 0,
+        "action": "Information",
+        "links": [
+          {
+            "urn": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:C21_T17_SA2(1.0.0)",
+            "rel": "DataStructure"
+          }
+        ],
+        "annotations": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "observations": {
+          "0:0:0:0:0:0": [
+            619
+          ],
+          "0:0:0:0:0:1": [
+            648
+          ],
+          "0:0:0:0:0:2": [
+            595
+          ],
+          "1:0:0:0:0:0": [
+            91824
+          ],
+          "1:0:0:0:0:1": [
+            104844
+          ],
+          "1:0:0:0:0:2": [
+            101594
+          ],
+          "2:0:0:0:0:0": [
+            244
+          ],
+          "2:0:0:0:0:1": [
+            365
+          ],
+          "2:0:0:0:0:2": [
+            365
+          ],
+          "3:0:0:0:0:0": [
+            5025
+          ],
+          "3:0:0:0:0:1": [
+            7834
+          ],
+          "3:0:0:0:0:2": [
+            4936
+          ],
+          "4:0:0:0:0:0": [
+            1160
+          ],
+          "4:0:0:0:0:1": [
+            2435
+          ],
+          "4:0:0:0:0:2": [
+            1230
+          ],
+          "5:0:0:0:0:0": [
+            5618
+          ],
+          "5:0:0:0:0:1": [
+            7389
+          ],
+          "5:0:0:0:0:2": [
+            5326
+          ],
+          "6:0:0:0:0:0": [
+            334
+          ],
+          "6:0:0:0:0:1": [
+            296
+          ],
+          "6:0:0:0:0:2": [
+            198
+          ],
+          "7:0:0:0:0:0": [
+            176405
+          ],
+          "7:0:0:0:0:1": [
+            182048
+          ],
+          "7:0:0:0:0:2": [
+            195246
+          ],
+          "8:0:0:0:0:0": [
+            171
+          ],
+          "8:0:0:0:0:1": [
+            158
+          ],
+          "8:0:0:0:0:2": [
+            117
+          ],
+          "9:0:0:0:0:0": [
+            17292
+          ],
+          "9:0:0:0:0:1": [
+            20737
+          ],
+          "9:0:0:0:0:2": [
+            20121
+          ],
+          "10:0:0:0:0:0": [
+            1480
+          ],
+          "10:0:0:0:0:1": [
+            1979
+          ],
+          "10:0:0:0:0:2": [
+            1992
+          ],
+          "11:0:0:0:0:0": [
+            2932
+          ],
+          "11:0:0:0:0:1": [
+            3226
+          ],
+          "11:0:0:0:0:2": [
+            2989
+          ],
+          "12:0:0:0:0:0": [
+            19137
+          ],
+          "12:0:0:0:0:1": [
+            19909
+          ],
+          "12:0:0:0:0:2": [
+            19572
+          ],
+          "13:0:0:0:0:0": [
+            25389
+          ],
+          "13:0:0:0:0:1": [
+            22826
+          ],
+          "13:0:0:0:0:2": [
+            22845
+          ],
+          "14:0:0:0:0:0": [
+            49436
+          ],
+          "14:0:0:0:0:1": [
+            62828
+          ],
+          "14:0:0:0:0:2": [
+            60816
+          ],
+          "15:0:0:0:0:0": [
+            24679
+          ],
+          "15:0:0:0:0:1": [
+            30628
+          ],
+          "15:0:0:0:0:2": [
+            30124
+          ],
+          "16:0:0:0:0:0": [
+            171
+          ],
+          "16:0:0:0:0:1": [
+            152
+          ],
+          "16:0:0:0:0:2": [
+            122
+          ],
+          "17:0:0:0:0:0": [
+            321010
+          ],
+          "17:0:0:0:0:1": [
+            354911
+          ],
+          "17:0:0:0:0:2": [
+            361822
+          ],
+          "18:0:0:0:0:0": [
+            2206
+          ],
+          "18:0:0:0:0:1": [
+            2388
+          ],
+          "18:0:0:0:0:2": [
+            2176
+          ],
+          "19:0:0:0:0:0": [
+            61828
+          ],
+          "19:0:0:0:0:1": [
+            70602
+          ],
+          "19:0:0:0:0:2": [
+            72204
+          ],
+          "20:0:0:0:0:0": [
+            524
+          ],
+          "20:0:0:0:0:1": [
+            794
+          ],
+          "20:0:0:0:0:2": [
+            738
+          ],
+          "21:0:0:0:0:0": [
+            369
+          ],
+          "21:0:0:0:0:1": [
+            384
+          ],
+          "21:0:0:0:0:2": [
+            336
+          ],
+          "22:0:0:0:0:0": [
+            50901
+          ],
+          "22:0:0:0:0:1": [
+            59215
+          ],
+          "22:0:0:0:0:2": [
+            70282
+          ],
+          "23:0:0:0:0:0": [
+            2182
+          ],
+          "23:0:0:0:0:1": [
+            3830
+          ],
+          "23:0:0:0:0:2": [
+            1897
+          ],
+          "24:0:0:0:0:0": [
+            408
+          ],
+          "24:0:0:0:0:1": [
+            1966
+          ],
+          "24:0:0:0:0:2": [
+            1181
+          ],
+          "25:0:0:0:0:0": [
+            92998
+          ],
+          "25:0:0:0:0:1": [
+            89541
+          ],
+          "25:0:0:0:0:2": [
+            94599
+          ],
+          "26:0:0:0:0:0": [
+            1286
+          ],
+          "26:0:0:0:0:1": [
+            1239
+          ],
+          "26:0:0:0:0:2": [
+            1235
+          ],
+          "27:0:0:0:0:0": [
+            5399
+          ],
+          "27:0:0:0:0:1": [
+            7653
+          ],
+          "27:0:0:0:0:2": [
+            8221
+          ],
+          "28:0:0:0:0:0": [
+            863
+          ],
+          "28:0:0:0:0:1": [
+            734
+          ],
+          "28:0:0:0:0:2": [
+            427
+          ],
+          "29:0:0:0:0:0": [
+            734
+          ],
+          "29:0:0:0:0:1": [
+            1219
+          ],
+          "29:0:0:0:0:2": [
+            1011
+          ]
+        }
+      }
+    ],
+    "structures": [
+      {
+        "name": "Census 2021, T17 Dwelling structure and number of bedrooms by number of persons usually resident for group households, Time Series, Main Statistical Areas Level 2 and up (SA2+)",
+        "names": {
+          "en": "Census 2021, T17 Dwelling structure and number of bedrooms by number of persons usually resident for group households, Time Series, Main Statistical Areas Level 2 and up (SA2+)"
+        },
+        "description": "Dwelling structure and number of bedrooms by number of persons usually resident for group households time series data for Main Statistical Areas Level 2 and up (SA2+), 2021 Census, Count of occupied private dwellings containing group households.\nThis table is based on place of enumeration.\nIncludes up to three residents who were temporarily absent on Census Night.\nExcludes 'Family', 'Lone person', 'Visitors only' and 'Other non-classifiable' households.\nPlease note that there are small random adjustments made to all cell values to protect the confidentiality of data. These adjustments may cause the sum of rows or columns to differ by small amounts from table totals.",
+        "descriptions": {
+          "en": "Dwelling structure and number of bedrooms by number of persons usually resident for group households time series data for Main Statistical Areas Level 2 and up (SA2+), 2021 Census, Count of occupied private dwellings containing group households.\nThis table is based on place of enumeration.\nIncludes up to three residents who were temporarily absent on Census Night.\nExcludes 'Family', 'Lone person', 'Visitors only' and 'Other non-classifiable' households.\nPlease note that there are small random adjustments made to all cell values to protect the confidentiality of data. These adjustments may cause the sum of rows or columns to differ by small amounts from table totals."
+        },
+        "dimensions": {
+          "dataSet": [],
+          "series": [],
+          "observation": [
+            {
+              "id": "STRBEDD",
+              "name": "Dwelling structure and Number of bedrooms",
+              "names": {
+                "en": "Dwelling structure and Number of bedrooms"
+              },
+              "keyPosition": 0,
+              "roles": [
+                "STRBEDD"
+              ],
+              "values": [
+                {
+                  "id": "11_0",
+                  "order": 2,
+                  "name": "Separate house: None (includes studio apartments or bedsitters)",
+                  "names": {
+                    "en": "Separate house: None (includes studio apartments or bedsitters)"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    7
+                  ]
+                },
+                {
+                  "id": "3",
+                  "order": 15,
+                  "name": "Flat or apartment: Total",
+                  "names": {
+                    "en": "Flat or apartment: Total"
+                  },
+                  "parent": "_T",
+                  "parents": [
+                    "_T"
+                  ],
+                  "annotations": [
+                    8
+                  ]
+                },
+                {
+                  "id": "9_4",
+                  "order": 27,
+                  "name": "Other dwelling: Four or more bedrooms",
+                  "names": {
+                    "en": "Other dwelling: Four or more bedrooms"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    9
+                  ]
+                },
+                {
+                  "id": "11_N",
+                  "order": 7,
+                  "name": "Separate house: Number of bedrooms not stated",
+                  "names": {
+                    "en": "Separate house: Number of bedrooms not stated"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    10
+                  ]
+                },
+                {
+                  "id": "2_N",
+                  "order": 14,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: Number of bedrooms not stated",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: Number of bedrooms not stated"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    11
+                  ]
+                },
+                {
+                  "id": "3_1",
+                  "order": 17,
+                  "name": "Flat or apartment: One bedroom",
+                  "names": {
+                    "en": "Flat or apartment: One bedroom"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    12
+                  ]
+                },
+                {
+                  "id": "9_N",
+                  "order": 28,
+                  "name": "Other dwelling: Number of bedrooms not stated",
+                  "names": {
+                    "en": "Other dwelling: Number of bedrooms not stated"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    13
+                  ]
+                },
+                {
+                  "id": "11",
+                  "order": 1,
+                  "name": "Separate house: Total",
+                  "names": {
+                    "en": "Separate house: Total"
+                  },
+                  "parent": "_T",
+                  "parents": [
+                    "_T"
+                  ],
+                  "annotations": [
+                    14
+                  ]
+                },
+                {
+                  "id": "2_0",
+                  "order": 9,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: None (includes studio apartments or bedsitters)",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: None (includes studio apartments or bedsitters)"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    15
+                  ]
+                },
+                {
+                  "id": "2_2",
+                  "order": 11,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: Two bedrooms",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: Two bedrooms"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    16
+                  ]
+                },
+                {
+                  "id": "11_1",
+                  "order": 3,
+                  "name": "Separate house: One bedroom",
+                  "names": {
+                    "en": "Separate house: One bedroom"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    17
+                  ]
+                },
+                {
+                  "id": "9",
+                  "order": 22,
+                  "name": "Other dwelling: Total",
+                  "names": {
+                    "en": "Other dwelling: Total"
+                  },
+                  "parent": "_T",
+                  "parents": [
+                    "_T"
+                  ],
+                  "annotations": [
+                    18
+                  ]
+                },
+                {
+                  "id": "3_3",
+                  "order": 19,
+                  "name": "Flat or apartment: Three bedrooms",
+                  "names": {
+                    "en": "Flat or apartment: Three bedrooms"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    19
+                  ]
+                },
+                {
+                  "id": "11_2",
+                  "order": 4,
+                  "name": "Separate house: Two bedrooms",
+                  "names": {
+                    "en": "Separate house: Two bedrooms"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    20
+                  ]
+                },
+                {
+                  "id": "2",
+                  "order": 8,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: Total",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: Total"
+                  },
+                  "parent": "_T",
+                  "parents": [
+                    "_T"
+                  ],
+                  "annotations": [
+                    21
+                  ]
+                },
+                {
+                  "id": "2_3",
+                  "order": 12,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: Three bedrooms",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: Three bedrooms"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    22
+                  ]
+                },
+                {
+                  "id": "9_0",
+                  "order": 23,
+                  "name": "Other dwelling: None (includes studio apartments or bedsitters)",
+                  "names": {
+                    "en": "Other dwelling: None (includes studio apartments or bedsitters)"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    23
+                  ]
+                },
+                {
+                  "id": "_T",
+                  "order": 0,
+                  "name": "Total",
+                  "names": {
+                    "en": "Total"
+                  },
+                  "annotations": [
+                    24
+                  ]
+                },
+                {
+                  "id": "3_4",
+                  "order": 20,
+                  "name": "Flat or apartment: Four or more bedrooms",
+                  "names": {
+                    "en": "Flat or apartment: Four or more bedrooms"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    25
+                  ]
+                },
+                {
+                  "id": "3_2",
+                  "order": 18,
+                  "name": "Flat or apartment: Two bedrooms",
+                  "names": {
+                    "en": "Flat or apartment: Two bedrooms"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    26
+                  ]
+                },
+                {
+                  "id": "9_3",
+                  "order": 26,
+                  "name": "Other dwelling: Three bedrooms",
+                  "names": {
+                    "en": "Other dwelling: Three bedrooms"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    27
+                  ]
+                },
+                {
+                  "id": "9_1",
+                  "order": 24,
+                  "name": "Other dwelling: One bedroom",
+                  "names": {
+                    "en": "Other dwelling: One bedroom"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    28
+                  ]
+                },
+                {
+                  "id": "11_4",
+                  "order": 6,
+                  "name": "Separate house: Four or more bedrooms",
+                  "names": {
+                    "en": "Separate house: Four or more bedrooms"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    29
+                  ]
+                },
+                {
+                  "id": "3_N",
+                  "order": 21,
+                  "name": "Flat or apartment: Number of bedrooms not stated",
+                  "names": {
+                    "en": "Flat or apartment: Number of bedrooms not stated"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    30
+                  ]
+                },
+                {
+                  "id": "_N",
+                  "order": 29,
+                  "name": "Dwelling structure not stated",
+                  "names": {
+                    "en": "Dwelling structure not stated"
+                  },
+                  "parent": "_T",
+                  "parents": [
+                    "_T"
+                  ],
+                  "annotations": [
+                    31
+                  ]
+                },
+                {
+                  "id": "11_3",
+                  "order": 5,
+                  "name": "Separate house: Three bedrooms",
+                  "names": {
+                    "en": "Separate house: Three bedrooms"
+                  },
+                  "parent": "11",
+                  "parents": [
+                    "11"
+                  ],
+                  "annotations": [
+                    32
+                  ]
+                },
+                {
+                  "id": "9_2",
+                  "order": 25,
+                  "name": "Other dwelling: Two bedrooms",
+                  "names": {
+                    "en": "Other dwelling: Two bedrooms"
+                  },
+                  "parent": "9",
+                  "parents": [
+                    "9"
+                  ],
+                  "annotations": [
+                    33
+                  ]
+                },
+                {
+                  "id": "2_4",
+                  "order": 13,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: Four or more bedrooms",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: Four or more bedrooms"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    34
+                  ]
+                },
+                {
+                  "id": "3_0",
+                  "order": 16,
+                  "name": "Flat or apartment: None (includes studio apartments or bedsitters)",
+                  "names": {
+                    "en": "Flat or apartment: None (includes studio apartments or bedsitters)"
+                  },
+                  "parent": "3",
+                  "parents": [
+                    "3"
+                  ],
+                  "annotations": [
+                    35
+                  ]
+                },
+                {
+                  "id": "2_1",
+                  "order": 10,
+                  "name": "Semi-detached, row or terrace house, townhouse etc: One bedroom",
+                  "names": {
+                    "en": "Semi-detached, row or terrace house, townhouse etc: One bedroom"
+                  },
+                  "parent": "2",
+                  "parents": [
+                    "2"
+                  ],
+                  "annotations": [
+                    36
+                  ]
+                }
+              ],
+              "annotations": [
+                37
+              ]
+            },
+            {
+              "id": "NPRD",
+              "name": "Number of persons usually resident in dwelling",
+              "names": {
+                "en": "Number of persons usually resident in dwelling"
+              },
+              "keyPosition": 1,
+              "roles": [
+                "NPRD"
+              ],
+              "values": [
+                {
+                  "id": "_T",
+                  "order": 0,
+                  "name": "Total",
+                  "names": {
+                    "en": "Total"
+                  },
+                  "annotations": [
+                    14
+                  ]
+                }
+              ],
+              "annotations": [
+                38,
+                39,
+                40,
+                41,
+                42,
+                43
+              ]
+            },
+            {
+              "id": "REGION",
+              "name": "Region",
+              "names": {
+                "en": "Region"
+              },
+              "keyPosition": 2,
+              "roles": [
+                "REGION"
+              ],
+              "values": [
+                {
+                  "id": "AUS",
+                  "order": 0,
+                  "name": "Australia",
+                  "names": {
+                    "en": "Australia"
+                  },
+                  "annotations": [
+                    29,
+                    44,
+                    45
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "REGION_TYPE",
+              "name": "Region Type",
+              "names": {
+                "en": "Region Type"
+              },
+              "keyPosition": 3,
+              "roles": [
+                "REGION_TYPE"
+              ],
+              "values": [
+                {
+                  "id": "AUS",
+                  "order": 0,
+                  "name": "Australia",
+                  "names": {
+                    "en": "Australia"
+                  },
+                  "annotations": [
+                    16
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "STATE",
+              "name": "State",
+              "names": {
+                "en": "State"
+              },
+              "keyPosition": 4,
+              "roles": [
+                "STATE"
+              ],
+              "values": [
+                {
+                  "id": "AUS",
+                  "order": 0,
+                  "name": "Australia",
+                  "names": {
+                    "en": "Australia"
+                  },
+                  "annotations": [
+                    16
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "TIME_PERIOD",
+              "name": "Time Period",
+              "names": {
+                "en": "Time Period"
+              },
+              "keyPosition": 5,
+              "roles": [
+                "TIME_PERIOD"
+              ],
+              "values": [
+                {
+                  "start": "2011-01-01T00:00:00",
+                  "end": "2011-12-31T23:59:59",
+                  "id": "2011",
+                  "name": "2011",
+                  "names": {
+                    "en": "2011"
+                  }
+                },
+                {
+                  "start": "2016-01-01T00:00:00",
+                  "end": "2016-12-31T23:59:59",
+                  "id": "2016",
+                  "name": "2016",
+                  "names": {
+                    "en": "2016"
+                  }
+                },
+                {
+                  "start": "2021-01-01T00:00:00",
+                  "end": "2021-12-31T23:59:59",
+                  "id": "2021",
+                  "name": "2021",
+                  "names": {
+                    "en": "2021"
+                  }
+                }
+              ],
+              "annotations": [
+                46
+              ]
+            }
+          ]
+        },
+        "attributes": {
+          "dataSet": [],
+          "dimensionGroup": [],
+          "series": [],
+          "observation": []
+        },
+        "annotations": [
+          {
+            "type": "NonProductionDataflow",
+            "text": "true",
+            "texts": {
+              "en": "true"
+            }
+          },
+          {
+            "title": "NPRD",
+            "type": "LAYOUT_COLUMN"
+          },
+          {
+            "title": "STRBEDD",
+            "type": "LAYOUT_ROW"
+          },
+          {
+            "title": "TIME_PERIOD,REGION",
+            "type": "LAYOUT_ROW_SECTION"
+          },
+          {
+            "title": "REGION=AUS,TIME_PERIOD_START=2011",
+            "type": "DEFAULT"
+          },
+          {
+            "type": "EXT_RESOURCE",
+            "text": "Guide to Census data|https://www.abs.gov.au/census/guide-census-data",
+            "texts": {
+              "en": "Guide to Census data|https://www.abs.gov.au/census/guide-census-data"
+            }
+          },
+          {
+            "type": "EXT_RESOURCE",
+            "text": "Download all data - Census DataPacks|https://www.abs.gov.au/census/find-census-data/datapacks",
+            "texts": {
+              "en": "Download all data - Census DataPacks|https://www.abs.gov.au/census/find-census-data/datapacks"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "1",
+            "texts": {
+              "en": "1"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "21",
+            "texts": {
+              "en": "21"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "26",
+            "texts": {
+              "en": "26"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "6",
+            "texts": {
+              "en": "6"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "13",
+            "texts": {
+              "en": "13"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "16",
+            "texts": {
+              "en": "16"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "27",
+            "texts": {
+              "en": "27"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "7",
+            "texts": {
+              "en": "7"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "8",
+            "texts": {
+              "en": "8"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "10",
+            "texts": {
+              "en": "10"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "2",
+            "texts": {
+              "en": "2"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "28",
+            "texts": {
+              "en": "28"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "18",
+            "texts": {
+              "en": "18"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "3",
+            "texts": {
+              "en": "3"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "14",
+            "texts": {
+              "en": "14"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "11",
+            "texts": {
+              "en": "11"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "22",
+            "texts": {
+              "en": "22"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "30",
+            "texts": {
+              "en": "30"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "19",
+            "texts": {
+              "en": "19"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "17",
+            "texts": {
+              "en": "17"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "25",
+            "texts": {
+              "en": "25"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "23",
+            "texts": {
+              "en": "23"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "5",
+            "texts": {
+              "en": "5"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "20",
+            "texts": {
+              "en": "20"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "29",
+            "texts": {
+              "en": "29"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "4",
+            "texts": {
+              "en": "4"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "24",
+            "texts": {
+              "en": "24"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "12",
+            "texts": {
+              "en": "12"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "15",
+            "texts": {
+              "en": "15"
+            }
+          },
+          {
+            "type": "ORDER",
+            "text": "9",
+            "texts": {
+              "en": "9"
+            }
+          },
+          {
+            "type": "CONSIDERATION",
+            "text": "Combination variable created for community profiles.",
+            "texts": {
+              "en": "Combination variable created for community profiles."
+            }
+          },
+          {
+            "type": "CONTEXT",
+            "text": "This variable is derived by counting the number of usual residents who were present in the household on Census night plus the Count of people who were temporarily absent from household [(CPAD)](https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/count-persons-temporarily-absent-household-cpad).\n\n[CPAD](https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/count-persons-temporarily-absent-household-cpad)\u00a0allows for up to three persons to be temporarily absent from the household on Census night.",
+            "texts": {
+              "en": "This variable is derived by counting the number of usual residents who were present in the household on Census night plus the Count of people who were temporarily absent from household [(CPAD)](https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/count-persons-temporarily-absent-household-cpad).\n\n[CPAD](https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/count-persons-temporarily-absent-household-cpad)\u00a0allows for up to three persons to be temporarily absent from the household on Census night."
+            }
+          },
+          {
+            "type": "SCOPE",
+            "text": "Occupied private dwellings",
+            "texts": {
+              "en": "Occupied private dwellings"
+            }
+          },
+          {
+            "type": "SOURCE",
+            "text": "https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/number-persons-usually-resident-dwelling-nprd",
+            "texts": {
+              "en": "https://www.abs.gov.au/census/guide-census-data/census-dictionary/2021/variables-topic/household-and-families/number-persons-usually-resident-dwelling-nprd"
+            }
+          },
+          {
+            "type": "TOPIC",
+            "text": "Household and families",
+            "texts": {
+              "en": "Household and families"
+            }
+          },
+          {
+            "type": "RELEASE",
+            "text": "June 2022",
+            "texts": {
+              "en": "June 2022"
+            }
+          },
+          {
+            "type": "CONSIDERATION",
+            "text": "Due to form limitations a maximum of three people can be reported and coded as temporarily absent from the dwelling. If more than three people are absent from the household the additional people are unable to be included on the form.",
+            "texts": {
+              "en": "Due to form limitations a maximum of three people can be reported and coded as temporarily absent from the dwelling. If more than three people are absent from the household the additional people are unable to be included on the form."
+            }
+          },
+          {
+            "type": "AREA_ALBERS_SQKM",
+            "text": "7688094.9379",
+            "texts": {
+              "en": "7688094.9379"
+            }
+          },
+          {
+            "type": "ASGS_LOCI_URI",
+            "text": "http://linked.data.gov.au/dataset/asgsed3/AUS/AUS",
+            "texts": {
+              "en": "http://linked.data.gov.au/dataset/asgsed3/AUS/AUS"
+            }
+          },
+          {
+            "type": "CONTEXT",
+            "text": "The measurement represented by each observation corresponds to a specific point in time (e.g. a single day) or a period (e.g. a month, a fiscal year, or a calendar year).",
+            "texts": {
+              "en": "The measurement represented by each observation corresponds to a specific point in time (e.g. a single day) or a period (e.g. a month, a fiscal year, or a calendar year)."
+            }
+          }
+        ],
+        "dataSets": [
+          0
+        ]
+      }
+    ]
+  },
+  "errors": []
+}

@@ -1,0 +1,114 @@
+{
+  "data": {
+    "dataStructures": [
+      {
+        "id": "C21_T17_SA2",
+        "version": "1.0.0",
+        "agencyID": "ABS",
+        "isFinal": true,
+        "name": "Census 2021, T17 Dwelling structure and number of bedrooms by number of persons usually resident for group households, Time Series, Main Statistical Areas Level 2 and up (SA2+) Datastructure",
+        "names": {
+          "en": "Census 2021, T17 Dwelling structure and number of bedrooms by number of persons usually resident for group households, Time Series, Main Statistical Areas Level 2 and up (SA2+) Datastructure"
+        },
+        "dataStructureComponents": {
+          "dimensionList": {
+            "id": "DimensionDescriptor",
+            "dimensions": [
+              {
+                "id": "STRBEDD",
+                "position": 0,
+                "type": "Dimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_C21_DWELLING(1.1.0).STRBEDD",
+                "localRepresentation": {
+                  "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_C21_STRBEDD01(1.0.0)"
+                }
+              },
+              {
+                "id": "NPRD",
+                "position": 1,
+                "type": "Dimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_C21_DWELLING(1.0.0).NPRD",
+                "localRepresentation": {
+                  "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_C21_NPRD02(1.0.0)"
+                }
+              },
+              {
+                "id": "REGION",
+                "position": 2,
+                "type": "Dimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_GEOGRAPHY(1.0.0).REGION",
+                "localRepresentation": {
+                  "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_ASGS_2021(1.0.0)"
+                }
+              },
+              {
+                "id": "REGION_TYPE",
+                "position": 3,
+                "type": "Dimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_GEOGRAPHY(1.0.0).REGION_TYPE",
+                "localRepresentation": {
+                  "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_REGION_TYPE(1.0.0)"
+                }
+              },
+              {
+                "id": "STATE",
+                "position": 4,
+                "type": "Dimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_GEOGRAPHY(1.0.0).STATE",
+                "localRepresentation": {
+                  "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_STATE(1.0.0)"
+                }
+              }
+            ],
+            "timeDimensions": [
+              {
+                "id": "TIME_PERIOD",
+                "position": 5,
+                "type": "TimeDimension",
+                "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).TIME_PERIOD",
+                "localRepresentation": {
+                  "textFormat": {
+                    "textType": "ObservationalTimePeriod",
+                    "isSequence": false,
+                    "isMultiLingual": false
+                  }
+                }
+              }
+            ]
+          },
+          "measureList": {
+            "id": "MeasureDescriptor",
+            "primaryMeasure": {
+              "id": "OBS_VALUE",
+              "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).OBS_VALUE",
+              "localRepresentation": {
+                "textFormat": {
+                  "textType": "Double",
+                  "isSequence": false,
+                  "isMultiLingual": false
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/develop/structure-message/tools/schemas/1.0/sdmx-json-structure-schema.json",
+    "contentLanguages": [
+      "en"
+    ],
+    "id": "IDREF112",
+    "prepared": "2024-12-28T00:18:46Z",
+    "test": false,
+    "sender": {
+      "id": "Unknown"
+    },
+    "receiver": [
+      {
+        "id": "Unknown"
+      }
+    ]
+  }
+}

@@ -89,14 +89,14 @@ class ConceptSchemeMeta:
     version: str
     name: Optional[str]
     concepts: List[Concept]
-    raw: Any
+    raw: Any = field(repr=False)
 
 
 @dataclass
 class CategorisationMeta:
     id: str
     name: Optional[str]
-    raw: Any
+    raw: Any = field(repr=False)
 
 TextType = Literal['ObservationalTimePeriod', 'Double']
 DimensionType = Literal['Dimension', 'TimeDimension']
