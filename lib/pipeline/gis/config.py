@@ -1,6 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Optional, Set, Any, Iterator, List, Tuple
+from typing import Optional, Set, Any, Iterator, List, Tuple, Self
 
 from .predicate import YearMonth, PredicateFunction
 
@@ -30,7 +30,11 @@ class GisSchema:
     result_limit: int
     fields: List[SchemaField]
     shard_scheme: List[PredicateFunction]
-    debug_plot_column: str
+    debug_field: str
+
+    @property
+    def debug_plot_column(self: Self) -> str:
+        return next(f.rename or f.name for f in self.fields if f.name == self.debug_field)
 
 @dataclass
 class GisProjection:

@@ -35,7 +35,7 @@ HOST_SEMAPHORE_CONFIG = [
 
 SNSW_PROP_SCHEMA = GisSchema(
     url=SPATIAL_NSW_PROP_FEATURE_LAYER,
-    debug_plot_column='Shape__Area',
+    debug_field='Shape__Area',
     shard_scheme=[
         DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
@@ -86,7 +86,7 @@ SNSW_PROP_PROJECTION = GisProjection(
 
 SNSW_LOT_SCHEMA = GisSchema(
     url=SPATIAL_NSW_LOT_FEATURE_LAYER,
-    debug_plot_column='Shape__Area',
+    debug_field='Shape__Area',
     shard_scheme=[
         DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
@@ -137,7 +137,7 @@ SNSW_LOT_PROJECTION = GisProjection(
 
 ENSW_DA_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_DA_LAYER,
-    debug_plot_column='STATUS',
+    debug_field='STATUS',
     shard_scheme=[
         DatePredicateFunction.create(field='SUBMITTED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
     ],
@@ -225,7 +225,7 @@ ENSW_DA_PROJECTION = GisProjection(
 
 ENSW_ZONE_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_ZONE_LAYER,
-    debug_plot_column='SYM_CODE',
+    debug_field='SYM_CODE',
     shard_scheme=[
         DatePredicateFunction.create(field='PUBLISHED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
     ],
