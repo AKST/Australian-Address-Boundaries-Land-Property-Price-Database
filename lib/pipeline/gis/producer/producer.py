@@ -13,7 +13,7 @@ from lib.service.http.util import url_with_params
 from lib.utility.concurrent import pipe, merge_async_iters
 
 from .counts import ClauseCounts
-from .component_factory import DataframeFactory
+from .df_factory import DataframeFactory
 from .errors import GisNetworkError, GisTaskNetworkError, MissingResultsError
 
 @dataclass
@@ -66,7 +66,10 @@ class GisStream:
     def create(session, projection: GisProjection):
         return GisStream(
             projection,
-            DataframeFactory.create(projection.schema.id_field),
+            DataframeFactory.create(
+                projection.schema.id_field,
+                projection,
+            ),
             session,
         )
 
@@ -179,8 +182,7 @@ class GisStream:
                 f'got {len(features)} wanted {task.expected_results}')
 
         self._counts.inc(task.where_clause, len(features))
-        df = self._factory.build(p.epsg_crs, features, self.projection)
-        return task, df
+        return task, self._factory.build(p.epsg_crs, features)
 
     async def _get_count(self, where_clause: str | None, use_cache: bool) -> int:
         params = { 'where': where_clause or '1=1', 'returnCountOnly': True, 'f': 'json' }

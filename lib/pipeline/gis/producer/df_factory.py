@@ -13,7 +13,11 @@ class ComponentPair:
 
 @dataclass
 class FactoryState:
+    """
+    This largely exist to capture duplicate data.
+    """
     id_field: str
+    projection: GisProjection
     seen: Set[Any] = field(default_factory=lambda: set())
 
 @dataclass
@@ -39,8 +43,7 @@ class DataframeBuilder:
         self.components.append(ComponentPair(geom, feature['attributes']))
 
     def get_dataframe(self: Self,
-                      epsg_crs: int,
-                      projection: GisProjection) -> gpd.GeoDataFrame:
+                      epsg_crs: int) -> gpd.GeoDataFrame:
         geometries, attributes = [], []
         for c in self.components:
             geometries.append(c.geometry)
@@ -55,7 +58,8 @@ class DataframeBuilder:
             crs=f"EPSG:{epsg_crs}",
         ).rename(columns={
             f.name: f.rename
-            for f in projection.get_fields() if f.rename
+            for f in self.state.projection.get_fields()
+            if f.rename
         })
 
 
@@ -64,15 +68,14 @@ class DataframeFactory:
     _state: FactoryState
 
     @staticmethod
-    def create(id_field: str) -> 'DataframeFactory':
-        return DataframeFactory(FactoryState(id_field=id_field))
+    def create(id_field: str, projection: GisProjection) -> 'DataframeFactory':
+        return DataframeFactory(FactoryState(id_field, projection))
 
     def build(self: Self,
               epsg_crs: int,
-              features: List[Dict[str, Any]],
-              projection: GisProjection) -> gpd.GeoDataFrame:
+              features: List[Dict[str, Any]]) -> gpd.GeoDataFrame:
         builder = DataframeBuilder(self._state)
         for feature in features:
             builder.consume_feature(feature)
-        return builder.get_dataframe(epsg_crs, projection)
+        return builder.get_dataframe(epsg_crs)
 
