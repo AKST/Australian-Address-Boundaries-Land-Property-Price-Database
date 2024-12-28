@@ -4,7 +4,7 @@ from typing import Set, List, Any, Dict, Self, Optional
 
 import geopandas as gpd
 
-from lib.pipeline.gis.request import GisProjection
+from lib.pipeline.gis.config import GisProjection
 
 @dataclass
 class ComponentPair:
@@ -22,8 +22,11 @@ class FactoryState:
 
 @dataclass
 class DataframeBuilder:
+    """
+    TODO inline in GisStream
+    """
     state: FactoryState
-    components: List[ComponentPair] = field(default_factory=lambda: [])
+    components: List[ComponentPair]
 
     def consume_feature(self, feature: Dict[str, Any]):
         obj_id = feature['attributes'][self.state.id_field]
@@ -74,7 +77,7 @@ class DataframeFactory:
     def build(self: Self,
               epsg_crs: int,
               features: List[Dict[str, Any]]) -> gpd.GeoDataFrame:
-        builder = DataframeBuilder(self._state)
+        builder = DataframeBuilder(self._state, [])
         for feature in features:
             builder.consume_feature(feature)
         return builder.get_dataframe(epsg_crs)

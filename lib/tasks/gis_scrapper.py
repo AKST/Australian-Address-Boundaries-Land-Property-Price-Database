@@ -6,13 +6,20 @@ import pandas as pd
 import time
 from typing import Self
 
-from lib.pipeline.gis.defaults import HOST_SEMAPHORE_CONFIG, BACKOFF_CONFIG
-from lib.pipeline.gis.defaults import ENSW_DA_PROJECTION
-from lib.pipeline.gis.defaults import SNSW_LOT_PROJECTION
-from lib.pipeline.gis.defaults import SNSW_PROP_PROJECTION
-from lib.pipeline.gis.defaults import ENSW_ZONE_PROJECTION
-from lib.pipeline.gis.producer import GisProducer
-from lib.pipeline.gis.predicate.date import YearMonth, DateRangeParam
+from lib.pipeline.gis import (
+    FeaturePaginationSharderFactory,
+    FeatureServerClient,
+    GisProducer,
+    GisStreamFactory,
+    DateRangeParam,
+    BACKOFF_CONFIG,
+    HOST_SEMAPHORE_CONFIG,
+    ENSW_DA_PROJECTION,
+    SNSW_LOT_PROJECTION,
+    SNSW_PROP_PROJECTION,
+    ENSW_ZONE_PROJECTION,
+    YearMonth,
+)
 from lib.service.io import IoService
 from lib.service.clock import ClockService
 from lib.service.http import CachedClientSession, ThrottledClientSession, ExpBackoffClientSession
@@ -92,7 +99,7 @@ def initialise_session(open_file_limit):
         io_service=io_service,
     )
 
-async def run(UiFactory, open_file_limit):
+async def run(UiFactory, open_file_limit) -> None:
     """
     The http client composes a cache layer and a throttling
     layer. Some GIS serves, such as the ones below may end
@@ -109,38 +116,35 @@ async def run(UiFactory, open_file_limit):
         active requests is set on a host basis.
     """
     clock = ClockService()
-    # param = [DateRangeParam(YearMonth(2023, 1), YearMonth(2023, 2), clock)]
+    params = [DateRangeParam(YearMonth(2023, 1), YearMonth(2023, 2), clock)]
+    params = []
 
-    param = []
-    try:
-        timer_state = { 'count': 0, 'items': 0 }
-        timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
+    timer_state = { 'count': 0, 'items': 0 }
+    timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
 
-        async with initialise_session(open_file_limit) as session:
-            producer = GisProducer(session)
-            producer.queue(SNSW_PROP_PROJECTION)
-            producer.queue(SNSW_LOT_PROJECTION)
-            # reader.queue(ENSW_ZONE_PROJECTION)
-            # reader.queue(ENSW_DA_PROJECTION)
+    async with initialise_session(open_file_limit) as session:
+        feature_client = FeatureServerClient(session)
+        sharder_factory = FeaturePaginationSharderFactory(feature_client)
+        streamer_factory = GisStreamFactory(feature_client, sharder_factory)
+        producer = GisProducer(streamer_factory)
+        producer.queue(SNSW_PROP_PROJECTION)
+        producer.queue(SNSW_LOT_PROJECTION)
+        # reader.queue(ENSW_ZONE_PROJECTION)
+        # reader.queue(ENSW_DA_PROJECTION)
 
-            ui = UiFactory(timer, producer)
-            async for proj, task, page in producer.produce(param):
-                # with pd.option_context('display.max_columns', None):
-                #     print(page)
-                #     raise TypeError()
-
-                ui.on_loop(proj, task, page)
-            ui.log('finished loading GIS')
-    except Exception as e:
-        raise e
+        ui = UiFactory(timer, producer)
+        async for proj, task, page in producer.produce(params):
+            ui.on_loop(proj, task, page)
+        ui.log('finished loading GIS')
 
 async def run_in_notebook():
     await run(IPythonUi, None)
 
 if __name__ == '__main__':
-    import resource
-    import logging
     import asyncio
+    import argparse
+    import logging
+    import resource
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(slim * 0.8)

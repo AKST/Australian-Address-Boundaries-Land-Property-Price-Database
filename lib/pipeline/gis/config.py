@@ -7,6 +7,13 @@ from .predicate import YearMonth, PredicateFunction
 FieldPriority = str | List[str | Tuple[str, int]]
 
 @dataclass
+class FeaturePageDescription:
+    where_clause: str
+    offset: int
+    expected_results: int
+    use_cache: bool
+
+@dataclass
 class SchemaField:
     category: str
     name: str

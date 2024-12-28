@@ -5,7 +5,7 @@ from .constants import SPATIAL_NSW_PROP_FEATURE_LAYER
 from .constants import ENVIRONMENT_NSW_DA_LAYER
 from .constants import ENVIRONMENT_NSW_ZONE_LAYER
 from .predicate import DatePredicateFunction, FloatPredicateFunction
-from .request import SchemaField, GisSchema, GisProjection, Bounds, FieldPriority
+from .config import SchemaField, GisSchema, GisProjection, Bounds, FieldPriority
 
 from lib.service.http import HostSemaphoreConfig, BackoffConfig, RetryPreference, HostOverride
 
