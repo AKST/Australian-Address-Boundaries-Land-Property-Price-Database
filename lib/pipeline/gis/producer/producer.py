@@ -4,7 +4,8 @@ import geopandas as gpd
 from logging import getLogger
 import math
 from random import shuffle
-from typing import Any, AsyncIterator, List, Self, Tuple, Sequence
+from shapely.geometry import shape
+from typing import Any, AsyncIterator, Dict, List, Self, Tuple, Sequence, Set
 
 from lib.pipeline.gis.config import (
     GisSchema,
@@ -18,7 +19,6 @@ from lib.service.http.util import url_with_params
 from lib.utility.concurrent import pipe, merge_async_iters
 
 from .counts import ClauseCounts
-from .df_factory import DataframeFactory
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
 
 StreamItem = Tuple[GisProjection, FeaturePageDescription, Any]
@@ -40,25 +40,24 @@ class GisProducer:
 
     async def produce(self, params: Sequence[PredicateParam]) -> AsyncIterator[StreamItem]:
         async with asyncio.TaskGroup() as tg:
-            iters = [ss.run_all(tg, params) for ss in self._streams]
+            iters = [ss.stream_pages(tg, params) for ss in self._streams]
             async for result in merge_async_iters(iters):
                 yield result
-
 
 class GisStream:
     _logger = getLogger(f'{__name__}.GisStream')
     _counts: ClauseCounts
+    _seen: Set[Any]
 
     def __init__(self: Self,
                  projection: GisProjection,
                  sharder_factory: FeaturePaginationSharderFactory,
-                 df_factory: DataframeFactory,
                  feature_server: FeatureServerClient):
         self.projection = projection
         self._feature_server = feature_server
         self._sharder_factory = sharder_factory
-        self._df_factory = df_factory
         self._counts = ClauseCounts()
+        self._seen = set()
 
     def progress_str(self, task: FeaturePageDescription) -> str:
         amount, total = self._counts.progress(task.where_clause)
@@ -66,25 +65,55 @@ class GisStream:
         percent = math.floor(100*(amount/total))
         return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
 
-    async def run_all(self: Self,
+    async def stream_pages(self: Self,
                       tg: asyncio.TaskGroup,
                       params: Sequence[PredicateParam]) -> AsyncIterator[StreamItem]:
         schema = self.projection.schema
         limit = schema.result_limit
-
         sharder = self._sharder_factory.create(tg, self._counts, self.projection)
-
         producer = lambda: sharder.shard(params)
         consumer = lambda shard: self._run_task(shard)
-
-        async for task, gdf in pipe(producer, consumer, tg):
+        async for page, gdf in pipe(producer, consumer, tg):
             if len(gdf) > 0:
-                yield self.projection, task, gdf
+                yield self.projection, page, gdf
 
     async def _run_task(self: Self, page_desc: FeaturePageDescription) -> Tuple[FeaturePageDescription, gpd.GeoDataFrame]:
         page = await self._feature_server.get_page(self.projection, page_desc)
         self._counts.inc(page_desc.where_clause, len(page))
-        return page_desc, self._df_factory.build(self.projection.epsg_crs, page)
+        return page_desc, build_df(self.projection, self._seen, page)
+
+def build_df(proj: GisProjection, seen: Set[Any], page: List[Any]) -> gpd.GeoDataFrame:
+    components: List[Tuple[Any, Dict[str, Any]]] = []
+
+    for feature in page:
+        obj_id = feature['attributes'][proj.schema.id_field]
+        if obj_id in seen:
+            continue
+
+        geometry = feature['geometry']
+        if 'rings' in geometry:
+            geom = shape({"type": "Polygon", "coordinates": geometry['rings']})
+        elif 'paths' in geometry:
+            geom = shape({"type": "LineString", "coordinates": geometry['paths']})
+        else:
+            geom = shape(geometry)
+
+        seen.add(obj_id)
+        components.append((geom, feature['attributes']))
+
+    if not components:
+        return gpd.GeoDataFrame()
+
+    geometries, attributes = [list(c) for c in zip(*components)]
+    return gpd.GeoDataFrame(
+        attributes,
+        geometry=geometries,
+        crs=f"EPSG:{proj.epsg_crs}",
+    ).rename(columns={
+        f.name: f.rename
+        for f in proj.get_fields()
+        if f.rename
+     })
 
 class GisStreamFactory:
     def __init__(self: Self,
@@ -97,10 +126,6 @@ class GisStreamFactory:
         return GisStream(
             projection,
             self._sharder_factory,
-            DataframeFactory.create(
-                projection.schema.id_field,
-                projection,
-            ),
             self._feature_server,
         )
 

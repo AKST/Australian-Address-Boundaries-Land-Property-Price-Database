@@ -12,8 +12,6 @@ from lib.pipeline.gis.predicate import PredicateFunction, PredicateParam
 from .counts import ClauseCounts
 
 class FeaturePaginationSharderFactory:
-    _logger = getLogger(f'{__name__}.Factory')
-
     def __init__(
         self: Self,
         feature_server: FeatureServerClient,
@@ -22,23 +20,11 @@ class FeaturePaginationSharderFactory:
         self._feature_server = feature_server
         self._shuffle = shuffle
 
-    def create(self: Self,
-               tg: asyncio.TaskGroup,
-               counts: ClauseCounts,
-               proj: GisProjection):
-        return RequestSharder(
-            tg,
-            counts,
-            proj,
-            self._feature_server,
-            self._shuffle)
+    def create(self: Self, tg: asyncio.TaskGroup, counts: ClauseCounts, proj: GisProjection):
+        return RequestSharder(tg, counts, proj, self._feature_server, self._shuffle)
 
 class RequestSharder:
-    _logger = getLogger(f'{__name__}.RequestSharder')
-    """
-    Passed in by param to remove randomness when I
-    eventually write some tests.
-    """
+    _logger = getLogger(f'{__name__}')
 
     def __init__(self: Self,
                  tg: asyncio.TaskGroup,
