@@ -9,7 +9,7 @@ from lib.pipeline.gis.config import GisProjection, FeaturePageDescription
 from lib.pipeline.gis.feature_server_client import FeatureServerClient
 from lib.pipeline.gis.predicate import PredicateFunction, PredicateParam
 
-from ..telemetry import GisPipelineTelemetry
+from .telemetry import GisPipelineTelemetry
 
 class FeaturePaginationSharderFactory:
     def __init__(

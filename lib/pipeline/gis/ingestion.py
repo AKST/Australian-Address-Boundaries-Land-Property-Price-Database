@@ -5,24 +5,25 @@ import pandas as pd
 import warnings
 from logging import getLogger
 from shapely.geometry import shape
-from typing import Any, Dict, List, Self, Tuple, Optional
+from typing import Any, Dict, List, Self, Set, Tuple, Optional
 
 from lib.service.database import DatabaseService, PgClientException, log_exception_info_df
 
-from ..config import (
+from .config import (
     GisProjection,
     FeaturePageDescription,
     SchemaFieldFormat,
 )
-from ..feature_server_client import FeatureServerClient
-from ..telemetry import GisPipelineTelemetry
+from .feature_server_client import FeatureServerClient
+from .telemetry import GisPipelineTelemetry
 
 class GisIngestion:
     """
     This Chunk size column exists to
     """
     chunk_size: Optional[int]
-    _queue: asyncio.Queue[Tuple[GisProjection, FeaturePageDescription]]
+    _queue: asyncio.Queue[Tuple[GisProjection, FeaturePageDescription, gpd.GeoDataFrame]]
+    _fetch_ts: Set[asyncio.Task]
     _logger = getLogger(f'{__name__}.GisStream')
     _listeners = 0
 
@@ -35,38 +36,42 @@ class GisIngestion:
         self._feature_server = feature_server
         self._queue = asyncio.Queue()
         self._telemetry = telemetry
+        self._fetch_ts = set()
         self.chunk_size = chunk_size
 
     async def ingest(self: Self, listeners: int):
         async def child_ingest():
-            while self._listeners > 0:
+            while self.is_consuming():
                 try:
-                    proj, page = await asyncio.wait_for(self._queue.get(), timeout=0.5)
-                    await self.consume(proj, page)
+                    proj, page, df = await asyncio.wait_for(self._queue.get(), timeout=0.5)
+                    await self._save(proj, page, df)
                 except asyncio.TimeoutError:
                     continue
-
-        while self._queue.empty():
-            await asyncio.sleep(0.1)
 
         await asyncio.gather(*[
             child_ingest()
             for i in range(0, listeners)
         ])
 
-    async def queue_page(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
-        await self._queue.put((projection, page_desc))
+    def dispatch_task(self: Self,
+                      tg: asyncio.TaskGroup,
+                      proj: GisProjection,
+                      page_desc: FeaturePageDescription) -> None:
+        self._fetch_ts.add(tg.create_task(self._fetch(proj, page_desc)))
 
-    async def consume(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
+    async def _fetch(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
         page = await self._feature_server.get_page(projection, page_desc)
         self._telemetry.record_fetched(projection, page_desc.where_clause, len(page))
-        df = build_df(projection, page)
-        db_relation = projection.schema.db_relation
+        await self._queue.put((projection, page_desc, build_df(projection, page)))
+
+    async def _save(self: Self, proj: GisProjection, page_desc: FeaturePageDescription, df: gpd.GeoDataFrame):
+        db_relation = proj.schema.db_relation
 
         if not db_relation:
-            return page_desc, df
+            self._telemetry.record_saved(proj, page_desc.where_clause, len(df))
+            return
 
-        df_copy, query = prepare_query(projection, df)
+        df_copy, query = prepare_query(proj, df)
         async with self._db.async_connect() as conn:
             async with conn.cursor() as cur:
                 slice, rows = [], df_copy.to_records(index=False).tolist()
@@ -81,7 +86,11 @@ class GisIngestion:
                     log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
                     raise e
             await conn.commit()
-        self._telemetry.record_saved(projection, page_desc.where_clause, len(page))
+        self._telemetry.record_saved(proj, page_desc.where_clause, len(df))
+
+    def is_consuming(self: Self) -> bool:
+        self._fetch_ts -= {t for t in self._fetch_ts if t.done()}
+        return not self._queue.empty() or self._listeners > 0 or bool(self._fetch_ts)
 
     async def __aenter__(self):
         self._listeners += 1

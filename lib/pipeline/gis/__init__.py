@@ -7,9 +7,10 @@ from .defaults import (
     ENSW_ZONE_PROJECTION,
 )
 from .feature_server_client import FeatureServerClient
-from .ingestion import *
+from .feature_pagination_sharding import FeaturePaginationSharderFactory
+from .ingestion import GisIngestion
 from .predicate import *
-from .producer import *
+from .pipeline import GisPipeline
 from .telemetry import GisPipelineTelemetry
 from .config import (
     FeaturePageDescription,

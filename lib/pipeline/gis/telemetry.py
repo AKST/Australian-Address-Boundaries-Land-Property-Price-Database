@@ -51,16 +51,14 @@ class GisPipelineTelemetry:
 
     @staticmethod
     def create(clock: ClockService) -> 'GisPipelineTelemetry':
-        start_time: float = clock.now()
+        start_time: float = clock.time()
         return GisPipelineTelemetry(clock, start_time, None)
 
     def init_clause(self: Self, p: GisProjection, clause: str, count):
         if p.id not in self._state_map:
             self._state_map[p.id] = {}
         self._state_map[p.id][clause] = ShardState(count)
-
-        total = self.get_total()
-        self._logger.info(f"queue {total.progress()} ({total.count()})")
+        self._log_status(event="Queue")
 
     def add_projection(self: Self, p: GisProjection, ls: List[Tuple[int, str]]):
         self._state_map[p.id] = { clause: ShardState(count) for count, clause in ls }
@@ -68,16 +66,12 @@ class GisPipelineTelemetry:
     def record_fetched(self, p: GisProjection, clause: str, amount: int):
         state = self._state_map[p.id][clause]
         state.fetched_from_network += amount
-
-        total = self.get_total()
-        self._logger.info(f"fetch {total.progress()} ({total.count()})")
+        self._log_status(event="Fetch")
 
     def record_saved(self, p: GisProjection, clause: str, amount: int):
         state = self._state_map[p.id][clause]
         state.saved_to_database += amount
-
-        total = self.get_total()
-        self._logger.info(f"saved {total.progress()} ({total.count()})")
+        self._log_status(event="Saved")
 
     def get_state(self, p: GisProjection, clause: str) -> ShardState:
         return self._state_map[p.id][clause]
@@ -88,3 +82,9 @@ class GisPipelineTelemetry:
             for p_map in self._state_map.values()
             for shard_state in p_map.values()
         ])
+
+    def _log_status(self: Self, event: str):
+        total = self.get_total()
+        t = int(self._clock.time() - self._start_time)
+        th, tm, ts = t // 3600, t // 60 % 60, t % 60
+        self._logger.info(f"{event} ({th}h {tm}m {ts}s) {total.progress()} ({total.count()})")

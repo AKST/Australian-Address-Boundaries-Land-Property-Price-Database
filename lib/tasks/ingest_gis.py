@@ -10,8 +10,7 @@ from lib.pipeline.gis import (
     FeaturePaginationSharderFactory,
     FeatureServerClient,
     GisIngestion,
-    GisProducer,
-    GisStreamFactory,
+    GisPipeline,
     GisPipelineTelemetry,
     DateRangeParam,
     BACKOFF_CONFIG,
@@ -119,7 +118,7 @@ async def run(io: IoService, db: DatabaseService, workers: int):
     """
     clock = ClockService()
     params = [DateRangeParam(YearMonth(2023, 1), YearMonth(2023, 2), clock)]
-    params = []
+    # params = []
 
     timer_state = { 'count': 0, 'items': 0 }
     timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
@@ -130,18 +129,16 @@ async def run(io: IoService, db: DatabaseService, workers: int):
         telemetry = GisPipelineTelemetry.create(clock)
         ingestion = GisIngestion(feature_client, db, telemetry)
         sharder_factory = FeaturePaginationSharderFactory(feature_client, telemetry)
-        streamer_factory = GisStreamFactory(sharder_factory, ingestion)
+        pipeline = GisPipeline(sharder_factory, ingestion)
 
-        producer = GisProducer(streamer_factory)
-        producer.queue(SNSW_PROP_PROJECTION)
-        producer.queue(SNSW_LOT_PROJECTION)
-        # producer.queue(ENSW_ZONE_PROJECTION)
-        # producer.queue(ENSW_DA_PROJECTION)
-
-        await asyncio.gather(*[
-            producer.scrape(params),
-            ingestion.ingest(workers),
+        producer_tasks = asyncio.gather(*[
+            pipeline.produce(SNSW_PROP_PROJECTION, params),
+            pipeline.produce(SNSW_LOT_PROJECTION, params),
+            # pipeline.produce(ENSW_ZONE_PROJECTION, params),
+            # pipeline.produce(ENSW_DA_PROJECTION, params),
         ])
+        await asyncio.sleep(0.01)
+        await asyncio.gather(producer_tasks, ingestion.ingest(workers))
 
 async def run_in_console(open_file_limit: int, db_config: DatabaseConfig, db_conns: int):
     io = IoService.create(open_file_limit)
