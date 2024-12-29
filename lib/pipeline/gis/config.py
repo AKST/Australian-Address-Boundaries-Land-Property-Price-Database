@@ -8,17 +8,18 @@ FieldPriority = str | List[str | Tuple[str, int]]
 
 SchemaFieldFormat = Literal[
     'timestamp_ms',
+    'nullable_num',
     'geometry'
 ]
 
-@dataclass
+@dataclass(frozen=True)
 class FeaturePageDescription:
     where_clause: str
     offset: int
     expected_results: int
     use_cache: bool
 
-@dataclass
+@dataclass(frozen=True)
 class SchemaField:
     category: str
     name: str
@@ -29,7 +30,7 @@ class SchemaField:
     rename: Optional[str] = field(default=None)
     format: Optional[SchemaFieldFormat] = field(default=None)
 
-@dataclass
+@dataclass(frozen=True)
 class GisSchema:
     url: str
     id_field: str
@@ -47,8 +48,9 @@ class GisSchema:
             if f.name == self.debug_field
         )
 
-@dataclass
+@dataclass(frozen=True)
 class GisProjection:
+    id: str
     schema: GisSchema
     fields: FieldPriority
     epsg_crs: int
@@ -70,7 +72,7 @@ class GisProjection:
             if f.category == category and f.priority <= priority
         )
 
-@dataclass
+@dataclass(frozen=True)
 class Bounds:
     xmin: float
     ymin: float

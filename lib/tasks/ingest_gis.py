@@ -12,6 +12,7 @@ from lib.pipeline.gis import (
     GisIngestion,
     GisProducer,
     GisStreamFactory,
+    GisPipelineTelemetry,
     DateRangeParam,
     BACKOFF_CONFIG,
     HOST_SEMAPHORE_CONFIG,
@@ -100,7 +101,7 @@ def initialise_session(io_service: IoService):
         io_service=io_service,
     )
 
-async def run(UiFactory, io: IoService, db: DatabaseService):
+async def run(io: IoService, db: DatabaseService, workers: int):
     """
     The http client composes a cache layer and a throttling
     layer. Some GIS serves, such as the ones below may end
@@ -122,36 +123,33 @@ async def run(UiFactory, io: IoService, db: DatabaseService):
 
     timer_state = { 'count': 0, 'items': 0 }
     timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
+    clock = ClockService()
 
     async with initialise_session(io) as session:
         feature_client = FeatureServerClient(session)
-        ingestion = GisIngestion(feature_client, db)
-        sharder_factory = FeaturePaginationSharderFactory(feature_client)
+        telemetry = GisPipelineTelemetry.create(clock)
+        ingestion = GisIngestion(feature_client, db, telemetry)
+        sharder_factory = FeaturePaginationSharderFactory(feature_client, telemetry)
         streamer_factory = GisStreamFactory(sharder_factory, ingestion)
+
         producer = GisProducer(streamer_factory)
         producer.queue(SNSW_PROP_PROJECTION)
         producer.queue(SNSW_LOT_PROJECTION)
-        # reader.queue(ENSW_ZONE_PROJECTION)
-        # reader.queue(ENSW_DA_PROJECTION)
+        # producer.queue(ENSW_ZONE_PROJECTION)
+        # producer.queue(ENSW_DA_PROJECTION)
 
-        ui = UiFactory(timer, producer)
-        async for proj, task, page in producer.produce(params):
-            ui.on_loop(proj, task, page)
-        ui.log('finished loading GIS')
+        await asyncio.gather(*[
+            producer.scrape(params),
+            ingestion.ingest(workers),
+        ])
 
-async def run_in_notebook(io: IoService, db: DatabaseService):
-    await run(IPythonUi, io, db)
-
-async def run_in_console(
-        open_file_limit: int,
-        db_config: DatabaseConfig,
-        db_connections: int):
+async def run_in_console(open_file_limit: int, db_config: DatabaseConfig, db_conns: int):
     io = IoService.create(open_file_limit)
-    db = DatabaseService.create(db_config, db_connections)
+    db = DatabaseService.create(db_config, db_conns)
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     await controller.command(Command.Drop(ns='nsw_spatial'))
     await controller.command(Command.Create(ns='nsw_spatial'))
-    await run(ConsoleUi, io, db)
+    await run(io, db, db_conns)
 
 if __name__ == '__main__':
     import asyncio
@@ -164,7 +162,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--db-connections", type=int, default=8)
+    parser.add_argument("--db-connections", type=int, default=32)
 
     args = parser.parse_args()
 

@@ -9,33 +9,35 @@ from lib.pipeline.gis.config import GisProjection, FeaturePageDescription
 from lib.pipeline.gis.feature_server_client import FeatureServerClient
 from lib.pipeline.gis.predicate import PredicateFunction, PredicateParam
 
-from .counts import ClauseCounts
+from ..telemetry import GisPipelineTelemetry
 
 class FeaturePaginationSharderFactory:
     def __init__(
         self: Self,
         feature_server: FeatureServerClient,
+        telemetry: GisPipelineTelemetry,
         shuffle: Callable[[List[PredicateParam]], None] = random.shuffle,
     ) -> None:
         self._feature_server = feature_server
+        self._telemetry = telemetry
         self._shuffle = shuffle
 
-    def create(self: Self, tg: asyncio.TaskGroup, counts: ClauseCounts, proj: GisProjection):
-        return RequestSharder(tg, counts, proj, self._feature_server, self._shuffle)
+    def create(self: Self, tg: asyncio.TaskGroup, proj: GisProjection):
+        return RequestSharder(tg, proj, self._feature_server, self._telemetry, self._shuffle)
 
 class RequestSharder:
     _logger = getLogger(f'{__name__}')
 
     def __init__(self: Self,
                  tg: asyncio.TaskGroup,
-                 counts: ClauseCounts,
                  projection: GisProjection,
                  feature_server: FeatureServerClient,
+                 telemetry: GisPipelineTelemetry,
                  shuffle: Callable[[List[PredicateParam]], None]):
-        self._counts = counts
         self._tg = tg
         self._projection = projection
         self._feature_server = feature_server
+        self._telemetry = telemetry
         self._shuffle = shuffle
 
     async def shard(self: Self, params: Sequence[PredicateParam]) -> AsyncIterator[FeaturePageDescription]:
@@ -70,7 +72,7 @@ class RequestSharder:
                 if count == 0:
                     continue
                 elif count <= limit * 150:
-                    self._counts.init_clause(query, count)
+                    self._telemetry.init_clause(self._projection, query, count)
                     for offset in range(0, count, limit):
                         expected = min(limit, offset % limit)
                         yield FeaturePageDescription(query, offset, expected, use_cache=_use_cache)

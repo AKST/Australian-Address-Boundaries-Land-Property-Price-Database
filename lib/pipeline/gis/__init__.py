@@ -10,6 +10,7 @@ from .feature_server_client import FeatureServerClient
 from .ingestion import *
 from .predicate import *
 from .producer import *
+from .telemetry import GisPipelineTelemetry
 from .config import (
     FeaturePageDescription,
     GisSchema,

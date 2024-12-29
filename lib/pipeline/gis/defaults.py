@@ -48,7 +48,7 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('meta', 'createdate', 1, rename='create_date', format='timestamp_ms'),
         SchemaField('assoc', 'propid', 1, rename='property_id'),
         SchemaField('assoc', 'gurasid', 3),
-        SchemaField('assoc', 'principaladdresssiteoid', 2, rename='principal_address_site_oid'),
+        SchemaField('assoc', 'principaladdresssiteoid', 2, rename='principal_address_site_oid', format='nullable_num'),
 
         # no real clue what valnet, can only presume they
         # are a company that does valuations or a data
@@ -73,14 +73,15 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('meta', 'changetype', 2, rename='change_type'),
         SchemaField('meta', 'processstate', 3),
         SchemaField('data', 'urbanity', 3),
-        SchemaField('data', 'principaladdresstype', 2, rename='principle_addresss_type'),
-        SchemaField('assoc', 'addressstringoid', 1, rename='addresss_string_oid'),
+        SchemaField('data', 'principaladdresstype', 2, rename='principle_addresss_type', format='nullable_num'),
+        SchemaField('assoc', 'addressstringoid', 1, rename='addresss_string_oid', format='nullable_num'),
         SchemaField('geo', 'Shape__Length', 1, rename='shape_length'),
         SchemaField('geo', 'Shape__Area', 1, rename='shape_area'),
     ],
 )
 
 SNSW_PROP_PROJECTION = GisProjection(
+    id="nsw_spatial_property",
     schema=SNSW_PROP_SCHEMA,
     fields=_field_priority,
     epsg_crs=GDA2020_CRS)
@@ -133,6 +134,7 @@ SNSW_LOT_SCHEMA = GisSchema(
 )
 
 SNSW_LOT_PROJECTION = GisProjection(
+    id="nsw_spatial_lot",
     schema=SNSW_LOT_SCHEMA,
     fields=_field_priority,
     epsg_crs=GDA2020_CRS)
@@ -221,6 +223,7 @@ ENSW_DA_SCHEMA = GisSchema(
 )
 
 ENSW_DA_PROJECTION = GisProjection(
+    id="nsw_planning_da",
     schema=ENSW_DA_SCHEMA,
     fields='*',
     epsg_crs=GDA2020_CRS)
@@ -254,6 +257,7 @@ ENSW_ZONE_SCHEMA = GisSchema(
 
 
 ENSW_ZONE_PROJECTION = GisProjection(
+    id="nsw_planning_zoning",
     schema=ENSW_ZONE_SCHEMA,
     fields='*',
     epsg_crs=GDA2020_CRS)

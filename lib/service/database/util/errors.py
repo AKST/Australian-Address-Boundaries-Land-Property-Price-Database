@@ -1,6 +1,6 @@
 import pandas as pd
 from logging import Logger
-from psycopg.errors import Error
+from psycopg.errors import Error, NumericValueOutOfRange
 
 def log_exception_info(logger: Logger, error: Error):
     logger.error(f"Args: {error.args}")
@@ -28,7 +28,12 @@ def log_exception_info(logger: Logger, error: Error):
 def log_exception_info_df(df: pd.DataFrame, logger: Logger, error: Error):
     with pd.option_context('display.max_columns', None):
         logger.error(str(df.head()))
+    logger.error(df.info())
     logger.error(f"Columns: {df.columns}")
     logger.error(f"Rows: {len(df)}")
     log_exception_info(logger, error)
+    match error:
+        case NumericValueOutOfRange():
+             df_num = df.select_dtypes(include=["number"])
+             logger.error(f"summary stats\n{df_num.describe()}")
 

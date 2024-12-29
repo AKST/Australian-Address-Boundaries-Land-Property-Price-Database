@@ -7,16 +7,14 @@ from random import shuffle
 from shapely.geometry import shape
 from typing import Any, AsyncIterator, Dict, List, Self, Tuple, Sequence, Set
 
-from lib.utility.concurrent import pipe, merge_async_iters
-
 from ..config import GisSchema, GisProjection, FeaturePageDescription
 from ..ingestion import GisIngestion
 from ..predicate import PredicateParam
-from .counts import ClauseCounts
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
 
 StreamItem = Tuple[GisProjection, FeaturePageDescription, Any]
 
+# Todo rename pipeline?
 class GisProducer:
     _logger = getLogger(f'{__name__}.GisProducer')
     _streams: List['GisStream']
@@ -28,20 +26,12 @@ class GisProducer:
     def queue(self: Self, proj: GisProjection):
         self._streams.append(self._stream_factory.create(proj))
 
-    def progress(self, p: GisProjection, task: FeaturePageDescription):
-        it = (s.progress_str(task) for s in self._streams if s.projection == p)
-        return next(it, None)
-
-    async def produce(self, params: Sequence[PredicateParam]) -> AsyncIterator[StreamItem]:
+    async def scrape(self, params: Sequence[PredicateParam]):
         async with asyncio.TaskGroup() as tg:
-            iters = [ss.stream_pages(tg, params) for ss in self._streams]
-            async for result in merge_async_iters(iters):
-                yield result
+            await asyncio.gather(*[s.scrape(params) for s in self._streams])
 
 class GisStream:
     _logger = getLogger(f'{__name__}.GisStream')
-    _counts: ClauseCounts
-    _seen: Set[Any]
 
     def __init__(self: Self,
                  projection: GisProjection,
@@ -50,28 +40,13 @@ class GisStream:
         self.projection = projection
         self._ingestion = ingestion
         self._sharder_factory = sharder_factory
-        self._counts = ClauseCounts()
-        self._seen = set()
 
-    def progress_str(self, task: FeaturePageDescription) -> str:
-        amount, total = self._counts.progress(task.where_clause)
-        amount = task.offset + task.expected_results
-        percent = math.floor(100*(amount/total))
-        return f'({amount}/{total}) {percent}% progress for {task.where_clause}'
-
-    async def stream_pages(self: Self,
-                      tg: asyncio.TaskGroup,
-                      params: Sequence[PredicateParam]) -> AsyncIterator[StreamItem]:
-        schema = self.projection.schema
-        limit = schema.result_limit
-        sharder = self._sharder_factory.create(tg, self._counts, self.projection)
-        producer = lambda: sharder.shard(params)
-        consumer = lambda shard: self._ingestion.consume(self.projection, shard)
-        async for page_desc, gdf in pipe(producer, consumer, tg):
-            self._logger.info(str(page_desc))
-            self._counts.inc(page_desc.where_clause, len(gdf))
-            if len(gdf) > 0:
-                yield self.projection, page_desc, gdf
+    async def scrape(self: Self, params: Sequence[PredicateParam]):
+        async with asyncio.TaskGroup() as tg:
+            sharder = self._sharder_factory.create(tg, self.projection)
+            async with self._ingestion:
+                async for page in sharder.shard(params):
+                    await self._ingestion.queue_page(self.projection, page)
 
 class GisStreamFactory:
     def __init__(self: Self,

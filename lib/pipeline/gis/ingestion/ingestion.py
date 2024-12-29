@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import geopandas as gpd
 import pandas as pd
@@ -14,20 +15,51 @@ from ..config import (
     SchemaFieldFormat,
 )
 from ..feature_server_client import FeatureServerClient
+from ..telemetry import GisPipelineTelemetry
 
 class GisIngestion:
+    """
+    This Chunk size column exists to
+    """
+    chunk_size: Optional[int]
+    _queue: asyncio.Queue[Tuple[GisProjection, FeaturePageDescription]]
     _logger = getLogger(f'{__name__}.GisStream')
+    _listeners = 0
 
-    def __init__(self: Self, feature_server: FeatureServerClient, db: DatabaseService):
+    def __init__(self: Self,
+                 feature_server: FeatureServerClient,
+                 db: DatabaseService,
+                 telemetry: GisPipelineTelemetry,
+                 chunk_size: Optional[int] = None):
         self._db = db
         self._feature_server = feature_server
+        self._queue = asyncio.Queue()
+        self._telemetry = telemetry
+        self.chunk_size = chunk_size
 
-    async def consume(
-        self: Self,
-        projection: GisProjection,
-        page_desc: FeaturePageDescription
-    ) -> Tuple[FeaturePageDescription, gpd.GeoDataFrame]:
+    async def ingest(self: Self, listeners: int):
+        async def child_ingest():
+            while self._listeners > 0:
+                try:
+                    proj, page = await asyncio.wait_for(self._queue.get(), timeout=0.5)
+                    await self.consume(proj, page)
+                except asyncio.TimeoutError:
+                    continue
+
+        while self._queue.empty():
+            await asyncio.sleep(0.1)
+
+        await asyncio.gather(*[
+            child_ingest()
+            for i in range(0, listeners)
+        ])
+
+    async def queue_page(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
+        await self._queue.put((projection, page_desc))
+
+    async def consume(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
         page = await self._feature_server.get_page(projection, page_desc)
+        self._telemetry.record_fetched(projection, page_desc.where_clause, len(page))
         df = build_df(projection, page)
         db_relation = projection.schema.db_relation
 
@@ -37,16 +69,26 @@ class GisIngestion:
         df_copy, query = prepare_query(projection, df)
         async with self._db.async_connect() as conn:
             async with conn.cursor() as cur:
-                rows = df_copy.to_records(index=False).tolist()
+                slice, rows = [], df_copy.to_records(index=False).tolist()
+                cusor, size = 0, self.chunk_size or len(rows)
                 try:
-                    await cur.executemany(query, rows)
+                    for cursor in range(0, len(rows), size):
+                        slice = rows[cursor:cursor + size]
+                        await cur.executemany(query, slice)
                 except PgClientException as e:
-                    self._logger.error(f"projection {projection}")
-                    print([r[16] for r in rows])
-                    log_exception_info_df(df_copy, self._logger, e)
+                    for row in slice:
+                        self._logger.error(f"Row {row[:-1]}")
+                    log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
                     raise e
             await conn.commit()
-        return page_desc, df
+        self._telemetry.record_saved(projection, page_desc.where_clause, len(page))
+
+    async def __aenter__(self):
+        self._listeners += 1
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        self._listeners -= 1
 
 _Formats = Dict[str, SchemaFieldFormat]
 
@@ -74,12 +116,12 @@ def prepare_query(p: GisProjection, df: gpd.GeoDataFrame) -> Tuple[gpd.GeoDataFr
                     copy[k] = copy[k].apply(lambda geom: geom if geom.is_valid else geom.buffer(0))
                     copy[k] = copy[k].apply(lambda geom: geom.wkt if geom is not None else None)
                 case 'timestamp_ms':
-                    # copy[k] = pd.to_datetime(copy[k], unit='ms')
-                    # print(type(copy.info()))
-                    # max_ms = (datetime.max - datetime(1970, 1, 1)).total_seconds()
                     max_ms = 2147483647000
                     copy[k] = copy[k].apply(lambda x: \
                         datetime.fromtimestamp(x // 1000).strftime('%Y-%m-%d %H:%M:%S') if x <= max_ms else None)
+                case 'nullable_num':
+                    copy[k] = copy[k].astype(object)
+                    copy[[k]] = copy[[k]].where(pd.notnull(copy[[k]]), None)
 
     return copy, query
 
