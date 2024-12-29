@@ -7,17 +7,11 @@ from random import shuffle
 from shapely.geometry import shape
 from typing import Any, AsyncIterator, Dict, List, Self, Tuple, Sequence, Set
 
-from lib.pipeline.gis.config import (
-    GisSchema,
-    GisProjection,
-    FeaturePageDescription,
-)
-from lib.pipeline.gis.feature_server_client import FeatureServerClient
-from lib.pipeline.gis.predicate import PredicateParam
-from lib.service.http import AbstractClientSession, CacheHeader
-from lib.service.http.util import url_with_params
 from lib.utility.concurrent import pipe, merge_async_iters
 
+from ..config import GisSchema, GisProjection, FeaturePageDescription
+from ..ingestion import GisIngestion
+from ..predicate import PredicateParam
 from .counts import ClauseCounts
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
 
@@ -52,9 +46,9 @@ class GisStream:
     def __init__(self: Self,
                  projection: GisProjection,
                  sharder_factory: FeaturePaginationSharderFactory,
-                 feature_server: FeatureServerClient):
+                 ingestion: GisIngestion):
         self.projection = projection
-        self._feature_server = feature_server
+        self._ingestion = ingestion
         self._sharder_factory = sharder_factory
         self._counts = ClauseCounts()
         self._seen = set()
@@ -72,60 +66,24 @@ class GisStream:
         limit = schema.result_limit
         sharder = self._sharder_factory.create(tg, self._counts, self.projection)
         producer = lambda: sharder.shard(params)
-        consumer = lambda shard: self._run_task(shard)
-        async for page, gdf in pipe(producer, consumer, tg):
+        consumer = lambda shard: self._ingestion.consume(self.projection, shard)
+        async for page_desc, gdf in pipe(producer, consumer, tg):
+            self._logger.info(str(page_desc))
+            self._counts.inc(page_desc.where_clause, len(gdf))
             if len(gdf) > 0:
-                yield self.projection, page, gdf
-
-    async def _run_task(self: Self, page_desc: FeaturePageDescription) -> Tuple[FeaturePageDescription, gpd.GeoDataFrame]:
-        page = await self._feature_server.get_page(self.projection, page_desc)
-        self._counts.inc(page_desc.where_clause, len(page))
-        return page_desc, build_df(self.projection, self._seen, page)
-
-def build_df(proj: GisProjection, seen: Set[Any], page: List[Any]) -> gpd.GeoDataFrame:
-    components: List[Tuple[Any, Dict[str, Any]]] = []
-
-    for feature in page:
-        obj_id = feature['attributes'][proj.schema.id_field]
-        if obj_id in seen:
-            continue
-
-        geometry = feature['geometry']
-        if 'rings' in geometry:
-            geom = shape({"type": "Polygon", "coordinates": geometry['rings']})
-        elif 'paths' in geometry:
-            geom = shape({"type": "LineString", "coordinates": geometry['paths']})
-        else:
-            geom = shape(geometry)
-
-        seen.add(obj_id)
-        components.append((geom, feature['attributes']))
-
-    if not components:
-        return gpd.GeoDataFrame()
-
-    geometries, attributes = [list(c) for c in zip(*components)]
-    return gpd.GeoDataFrame(
-        attributes,
-        geometry=geometries,
-        crs=f"EPSG:{proj.epsg_crs}",
-    ).rename(columns={
-        f.name: f.rename
-        for f in proj.get_fields()
-        if f.rename
-     })
+                yield self.projection, page_desc, gdf
 
 class GisStreamFactory:
     def __init__(self: Self,
-                 feature_server: FeatureServerClient,
-                 sharder_factory: FeaturePaginationSharderFactory):
-        self._feature_server = feature_server
+                 sharder_factory: FeaturePaginationSharderFactory,
+                 ingestion: GisIngestion) -> None:
         self._sharder_factory = sharder_factory
+        self._ingestion = ingestion
 
     def create(self: Self, projection: GisProjection) -> GisStream:
         return GisStream(
             projection,
             self._sharder_factory,
-            self._feature_server,
+            self._ingestion,
         )
 

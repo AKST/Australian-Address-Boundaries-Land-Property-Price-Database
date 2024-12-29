@@ -9,6 +9,7 @@ from typing import Self
 from lib.pipeline.gis import (
     FeaturePaginationSharderFactory,
     FeatureServerClient,
+    GisIngestion,
     GisProducer,
     GisStreamFactory,
     DateRangeParam,
@@ -20,11 +21,13 @@ from lib.pipeline.gis import (
     ENSW_ZONE_PROJECTION,
     YearMonth,
 )
+from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.service.clock import ClockService
 from lib.service.http import CachedClientSession, ThrottledClientSession, ExpBackoffClientSession
 from lib.service.http.middleware.cache import FileCacher
 from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
+from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
 backoff_config = BackoffConfig(RetryPreference(allowed=8))
 
@@ -87,9 +90,7 @@ class ConsoleUi:
     def log(self: Self, m: str):
         self._logger.info(m)
 
-def initialise_session(open_file_limit):
-    io_service = IoService.create(open_file_limit)
-
+def initialise_session(io_service: IoService):
     return CachedClientSession.create(
         session=ExpBackoffClientSession.create(
             session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
@@ -99,7 +100,7 @@ def initialise_session(open_file_limit):
         io_service=io_service,
     )
 
-async def run(UiFactory, open_file_limit) -> None:
+async def run(UiFactory, io: IoService, db: DatabaseService):
     """
     The http client composes a cache layer and a throttling
     layer. Some GIS serves, such as the ones below may end
@@ -122,10 +123,11 @@ async def run(UiFactory, open_file_limit) -> None:
     timer_state = { 'count': 0, 'items': 0 }
     timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
 
-    async with initialise_session(open_file_limit) as session:
+    async with initialise_session(io) as session:
         feature_client = FeatureServerClient(session)
+        ingestion = GisIngestion(feature_client, db)
         sharder_factory = FeaturePaginationSharderFactory(feature_client)
-        streamer_factory = GisStreamFactory(feature_client, sharder_factory)
+        streamer_factory = GisStreamFactory(sharder_factory, ingestion)
         producer = GisProducer(streamer_factory)
         producer.queue(SNSW_PROP_PROJECTION)
         producer.queue(SNSW_LOT_PROJECTION)
@@ -137,8 +139,19 @@ async def run(UiFactory, open_file_limit) -> None:
             ui.on_loop(proj, task, page)
         ui.log('finished loading GIS')
 
-async def run_in_notebook():
-    await run(IPythonUi, None)
+async def run_in_notebook(io: IoService, db: DatabaseService):
+    await run(IPythonUi, io, db)
+
+async def run_in_console(
+        open_file_limit: int,
+        db_config: DatabaseConfig,
+        db_connections: int):
+    io = IoService.create(open_file_limit)
+    db = DatabaseService.create(db_config, db_connections)
+    controller = SchemaController(io, db, SchemaDiscovery.create(io))
+    await controller.command(Command.Drop(ns='nsw_spatial'))
+    await controller.command(Command.Create(ns='nsw_spatial'))
+    await run(ConsoleUi, io, db)
 
 if __name__ == '__main__':
     import asyncio
@@ -146,16 +159,27 @@ if __name__ == '__main__':
     import logging
     import resource
 
-    slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
-    file_limit = int(slim * 0.8)
+    from lib.service.database.defaults import DB_INSTANCE_MAP
+
+    parser = argparse.ArgumentParser(description="db schema tool")
+    parser.add_argument("--debug", action='store_true', default=False)
+    parser.add_argument("--instance", type=int, required=True)
+    parser.add_argument("--db-connections", type=int, default=8)
+
+    args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG if args.debug else logging.INFO,
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
+    slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
+    file_limit = int(slim * 0.8)
+
+    db_config = DB_INSTANCE_MAP[args.instance]
+
     try:
-        asyncio.run(run(ConsoleUi, file_limit))
+        asyncio.run(run_in_console(file_limit, db_config, args.db_connections))
     except ExceptionGroup as e:
         import psutil
 

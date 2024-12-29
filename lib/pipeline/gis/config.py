@@ -1,10 +1,15 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Optional, Set, Any, Iterator, List, Tuple, Self
+from typing import Optional, Set, Any, Iterator, Literal, List, Tuple, Self
 
 from .predicate import YearMonth, PredicateFunction
 
 FieldPriority = str | List[str | Tuple[str, int]]
+
+SchemaFieldFormat = Literal[
+    'timestamp_ms',
+    'geometry'
+]
 
 @dataclass
 class FeaturePageDescription:
@@ -22,11 +27,13 @@ class SchemaField:
     This is the field name once it's loaded into data.
     """
     rename: Optional[str] = field(default=None)
+    format: Optional[SchemaFieldFormat] = field(default=None)
 
 @dataclass
 class GisSchema:
     url: str
     id_field: str
+    db_relation: Optional[str]
     result_limit: int
     fields: List[SchemaField]
     shard_scheme: List[PredicateFunction]
@@ -34,7 +41,11 @@ class GisSchema:
 
     @property
     def debug_plot_column(self: Self) -> str:
-        return next(f.rename or f.name for f in self.fields if f.name == self.debug_field)
+        return next(
+            f.rename or f.name
+            for f in self.fields
+            if f.name == self.debug_field
+        )
 
 @dataclass
 class GisProjection:

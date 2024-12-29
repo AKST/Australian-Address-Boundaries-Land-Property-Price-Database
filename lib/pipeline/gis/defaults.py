@@ -16,7 +16,7 @@ _AREA_MAX = 1_000_000_000_000_000
 SYDNEY_BOUNDS = Bounds(xmin=150.5209, ymin=-34.1183, xmax=151.3430, ymax=-33.5781)
 NSW_BOUNDS = Bounds(xmin=140.9990, ymin=-37.5050, xmax=153.6383, ymax=-28.1570)
 
-WGS84_CRS = 4326
+GDA2020_CRS = 7844
 
 _field_priority: FieldPriority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 'geo']
 
@@ -35,6 +35,7 @@ HOST_SEMAPHORE_CONFIG = [
 
 SNSW_PROP_SCHEMA = GisSchema(
     url=SPATIAL_NSW_PROP_FEATURE_LAYER,
+    db_relation='nsw_spatial_lppt_raw.property_feature_layer',
     debug_field='Shape__Area',
     shard_scheme=[
         DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
@@ -44,7 +45,7 @@ SNSW_PROP_SCHEMA = GisSchema(
     result_limit=100,
     fields=[
         SchemaField('id', 'RID', 1, rename='rid'),
-        SchemaField('meta', 'createdate', 1, rename='created_date'),
+        SchemaField('meta', 'createdate', 1, rename='create_date', format='timestamp_ms'),
         SchemaField('assoc', 'propid', 1, rename='property_id'),
         SchemaField('assoc', 'gurasid', 3),
         SchemaField('assoc', 'principaladdresssiteoid', 2, rename='principal_address_site_oid'),
@@ -63,9 +64,9 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('data', 'superlot', 1, rename='super_lot'),
         SchemaField('data', 'housenumber', 3, rename='house_number'),
         SchemaField('data', 'address', 1),
-        SchemaField('meta', 'startdate', 1, rename='start_date'),
-        SchemaField('meta', 'enddate', 1, rename='end_date'),
-        SchemaField('meta', 'lastupdate', 1, rename='last_update'),
+        SchemaField('meta', 'startdate', 1, rename='start_date', format='timestamp_ms'),
+        SchemaField('meta', 'enddate', 1, rename='end_date', format='timestamp_ms'),
+        SchemaField('meta', 'lastupdate', 1, rename='last_update', format='timestamp_ms'),
         SchemaField('assoc', 'msoid', 3),
         SchemaField('assoc', 'centroidid', 3),
         SchemaField('meta', 'shapeuuid', 2, rename='shape_uuid'),
@@ -82,10 +83,11 @@ SNSW_PROP_SCHEMA = GisSchema(
 SNSW_PROP_PROJECTION = GisProjection(
     schema=SNSW_PROP_SCHEMA,
     fields=_field_priority,
-    epsg_crs=WGS84_CRS)
+    epsg_crs=GDA2020_CRS)
 
 SNSW_LOT_SCHEMA = GisSchema(
     url=SPATIAL_NSW_LOT_FEATURE_LAYER,
+    db_relation='nsw_spatial_lppt_raw.lot_feature_layer',
     debug_field='Shape__Area',
     shard_scheme=[
         DatePredicateFunction.create(field='lastupdate', default_range=(_1ST_YEAR, _NEXT_YEAR)),
@@ -95,15 +97,15 @@ SNSW_LOT_SCHEMA = GisSchema(
     result_limit=100,
     fields=[
         SchemaField('id', 'objectid', 1, rename='object_id'),
-        SchemaField('assoc', 'lotidstring', 1, rename='lot_it_string'),
+        SchemaField('assoc', 'lotidstring', 1, rename='lot_id_string'),
         SchemaField('assoc', 'controllingauthorityoid', 1, rename='controlling_authority_oid'),
         SchemaField('assoc', 'cadid', 2, rename='cad_id'),
 
-        SchemaField('meta', 'createdate', 1, rename='create_date'),
-        SchemaField('meta', 'modifieddate', 1, rename='modified_date'),
-        SchemaField('meta', 'startdate', 1, rename='start_date'),
-        SchemaField('meta', 'enddate', 1, rename='end_date'),
-        SchemaField('meta', 'lastupdate', 1, rename='last_update'),
+        SchemaField('meta', 'createdate', 1, rename='create_date', format='timestamp_ms'),
+        SchemaField('meta', 'modifieddate', 1, rename='modified_date', format='timestamp_ms'),
+        SchemaField('meta', 'startdate', 1, rename='start_date', format='timestamp_ms'),
+        SchemaField('meta', 'enddate', 1, rename='end_date', format='timestamp_ms'),
+        SchemaField('meta', 'lastupdate', 1, rename='last_update', format='timestamp_ms'),
 
         SchemaField('data', 'planoid', 1, rename='plan_oid'),
         SchemaField('data', 'plannumber', 1, rename='plan_number'),
@@ -133,10 +135,11 @@ SNSW_LOT_SCHEMA = GisSchema(
 SNSW_LOT_PROJECTION = GisProjection(
     schema=SNSW_LOT_SCHEMA,
     fields=_field_priority,
-    epsg_crs=WGS84_CRS)
+    epsg_crs=GDA2020_CRS)
 
 ENSW_DA_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_DA_LAYER,
+    db_relation=None,
     debug_field='STATUS',
     shard_scheme=[
         DatePredicateFunction.create(field='SUBMITTED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
@@ -220,11 +223,12 @@ ENSW_DA_SCHEMA = GisSchema(
 ENSW_DA_PROJECTION = GisProjection(
     schema=ENSW_DA_SCHEMA,
     fields='*',
-    epsg_crs=WGS84_CRS)
+    epsg_crs=GDA2020_CRS)
 
 
 ENSW_ZONE_SCHEMA = GisSchema(
     url=ENVIRONMENT_NSW_ZONE_LAYER,
+    db_relation=None,
     debug_field='SYM_CODE',
     shard_scheme=[
         DatePredicateFunction.create(field='PUBLISHED_DATE', default_range=(_1ST_YEAR, _NEXT_YEAR)),
@@ -252,4 +256,5 @@ ENSW_ZONE_SCHEMA = GisSchema(
 ENSW_ZONE_PROJECTION = GisProjection(
     schema=ENSW_ZONE_SCHEMA,
     fields='*',
-    epsg_crs=WGS84_CRS)
+    epsg_crs=GDA2020_CRS)
+
