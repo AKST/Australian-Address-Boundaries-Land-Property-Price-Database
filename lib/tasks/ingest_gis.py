@@ -92,7 +92,7 @@ async def run(
         ingestion = GisIngestion.create(
             GisIngestionConfig(
                 api_workers=16,
-                api_worker_backpressure=conf.db_workers ** 2,
+                api_worker_backpressure=conf.db_workers,
                 db_workers=conf.db_workers,
                 chunk_size=None),
             feature_client,
@@ -152,7 +152,6 @@ if __name__ == '__main__':
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
     http_limits = reduce(lambda acc, it: acc + it.limit, HOST_SEMAPHORE_CONFIG, 0)
     file_limit = int(slim * 0.8) - (args.db_connections + http_limits)
-    print(file_limit)
 
     db_config = DB_INSTANCE_MAP[args.instance]
 

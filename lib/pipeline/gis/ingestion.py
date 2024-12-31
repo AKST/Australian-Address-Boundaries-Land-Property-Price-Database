@@ -79,7 +79,9 @@ class GisIngestion:
     def queue_page(self: Self, t_desc: IngestionTaskDescriptor.Fetch) -> None:
         self._bg_ts.add(asyncio.create_task(self._fetch_queue.put(t_desc)))
 
-    async def ingest(self: Self, tg: asyncio.TaskGroup) -> None:
+    async def ingest(self: Self) -> None:
+        await asyncio.sleep(0)
+
         async def ingest_db_work() -> None:
             while self.is_consuming():
                 try:
@@ -99,14 +101,11 @@ class GisIngestion:
                 await asyncio.sleep(0)
 
         try:
-            tasks = [
-                *[tg.create_task(ingest_db_work()) for i in range(0, self.config.db_workers)],
-                *[tg.create_task(ingest_api_work()) for i in range(0, self.config.api_workers)],
-            ]
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*[
+                *[ingest_db_work() for i in range(0, self.config.db_workers)],
+                *[ingest_api_work() for i in range(0, self.config.api_workers)],
+            ])
         except Exception as e:
-            for t in tasks:
-                t.cancel()
             self.stop()
             raise e
 
@@ -147,12 +146,11 @@ class GisIngestion:
                         await cur.executemany(query, slice)
                 except PgClientException as e:
                     self.stop()
-                    for row in slice:
-                        self._logger.error(f"Row {row[:-1]}")
                     log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
                     raise e
             await conn.commit()
         self._telemetry.record_save_end(t_desc, len(t_desc.df))
+        t_desc.df.drop(t_desc.df.index, inplace=True)
 
     def is_consuming(self: Self) -> bool:
         if self._stopped:

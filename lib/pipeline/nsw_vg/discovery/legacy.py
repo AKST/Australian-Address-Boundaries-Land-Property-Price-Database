@@ -6,17 +6,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from lib.pipeline.nsw_vg.constants import lv_download_page, ps_download_page
 from lib.service.http import AbstractClientSession, CacheHeader
 from lib.service.static_environment import Target
 
+from .config import NswVgTarget
+from .constants import lv_download_page, ps_download_page
+
 ListItem = namedtuple('ListItem', ['Name', 'Link'])
 
-@dataclass
-class NswVgTarget(Target):
-    datetime: datetime
-
-class NswValuerGeneralBulkSalesScrapeAttempt:
+class NswVgBulkSalesScrapeAttempt:
     """
     The NSW Valuer Generals bulk data pages have identical
     layouts, so we can reuse parser this "scrape attempt"
@@ -45,7 +43,9 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
 
         self.links = []
 
-    async def load_links(self, session: AbstractClientSession):
+    async def load_links(self, session: AbstractClientSession) -> List[NswVgTarget]:
+        if self.links:
+            return self.links
         try:
             async with session.get(self._directory_page, headers={
                 CacheHeader.EXPIRE: self._cache_period,
@@ -75,12 +75,13 @@ class NswValuerGeneralBulkSalesScrapeAttempt:
             ]
         except Exception as e:
             raise e
+        return self.links
 
     @property
     def latest(self):
         return self.links[-1] if self.links else None
 
-class LandValueDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
+class LandValueDiscovery(NswVgBulkSalesScrapeAttempt):
     def __init__(self):
         super().__init__(prefix='nswvg_lv',
                          directory_page=lv_download_page,
@@ -88,7 +89,7 @@ class LandValueDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
                          cache_period='till_next_day_of_week:Tuesday',
                          date_fmt='%d %b %Y')
 
-class WeeklySalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
+class WeeklySalePriceDiscovery(NswVgBulkSalesScrapeAttempt):
     def __init__(self):
         super().__init__(prefix='nswvg_wps',
                          directory_page=ps_download_page,
@@ -97,7 +98,7 @@ class WeeklySalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
                          cache_period='till_next_day_of_week:Tuesday',
                          date_fmt='%d %b %Y')
 
-class AnnualSalePriceDiscovery(NswValuerGeneralBulkSalesScrapeAttempt):
+class AnnualSalePriceDiscovery(NswVgBulkSalesScrapeAttempt):
     def __init__(self):
         super().__init__(prefix='nswvg_aps',
                          directory_page=ps_download_page,

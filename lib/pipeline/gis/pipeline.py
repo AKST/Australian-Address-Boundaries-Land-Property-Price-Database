@@ -29,23 +29,18 @@ class GisPipeline:
         self._sharder_factory = sharder_factory
 
     async def start(self, projections: List[Tuple[GisProjection, Sequence[PredicateParam]]]):
-        async with asyncio.TaskGroup() as tg:
             try:
-                tasks = [
-                    tg.create_task(self._scrap_projection(tg, proj, params))
+                await asyncio.gather(self._ingestion.ingest(), *[
+                    self._scrap_projection(proj, params)
                     for proj, params in projections
-                ]
-                await asyncio.sleep(0)
-                await asyncio.gather(tg.create_task(self._ingestion.ingest(tg)), *tasks)
+                ])
             except Exception as e:
-                for t in tasks:
-                    t.cancel()
                 self._ingestion.stop()
                 raise e
 
-    async def _scrap_projection(self, tg, proj: GisProjection, params: Sequence[PredicateParam]) -> None:
+    async def _scrap_projection(self, proj: GisProjection, params: Sequence[PredicateParam]) -> None:
         async with self._ingestion:
-            sharder = self._sharder_factory.create(tg, proj)
+            sharder = self._sharder_factory.create(proj)
             async for page in sharder.shard(params):
                 task = IngestionTaskDescriptor.Fetch(proj, page)
                 self._ingestion.queue_page(task)

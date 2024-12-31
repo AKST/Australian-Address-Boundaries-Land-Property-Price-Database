@@ -22,19 +22,17 @@ class FeaturePaginationSharderFactory:
         self._telemetry = telemetry
         self._shuffle = shuffle
 
-    def create(self: Self, tg: asyncio.TaskGroup, proj: GisProjection):
-        return RequestSharder(tg, proj, self._feature_server, self._telemetry, self._shuffle)
+    def create(self: Self, proj: GisProjection):
+        return RequestSharder(proj, self._feature_server, self._telemetry, self._shuffle)
 
 class RequestSharder:
     _logger = getLogger(f'{__name__}')
 
     def __init__(self: Self,
-                 tg: asyncio.TaskGroup,
                  projection: GisProjection,
                  feature_server: FeatureServerClient,
                  telemetry: GisPipelineTelemetry,
                  shuffle: Callable[[List[PredicateParam]], None]):
-        self._tg = tg
         self._projection = projection
         self._feature_server = feature_server
         self._telemetry = telemetry
@@ -100,8 +98,8 @@ class RequestSharder:
                            use_cache: bool) -> Tuple[int, PredicateParam]:
         where_clause = shard_param.apply(field)
         use_cache = use_cache and shard_param.can_cache()
-        return await self._tg.create_task(self._feature_server.get_where_count(
+        return await self._feature_server.get_where_count(
             projection=self._projection,
             where_clause=where_clause,
             use_cache=use_cache,
-        )), shard_param
+        ), shard_param

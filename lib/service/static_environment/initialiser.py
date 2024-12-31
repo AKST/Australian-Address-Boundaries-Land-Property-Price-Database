@@ -1,13 +1,20 @@
 import asyncio
 from logging import getLogger, Logger
 from os import path
-from typing import List
+from typing import (
+    AsyncIterator,
+    List,
+    Sequence,
+    TypeVar,
+)
 
 from lib.service.io import IoService
 from lib.service.http import AbstractClientSession, CacheHeader
 from .config import Target
 
 CHUNKSIZE_16KB = 16384
+
+_T = TypeVar('_T', bound=Target)
 
 class StaticEnvironmentInitialiser:
     _logger = getLogger(f'{__name__}.StaticEnvironmentInitialiser')
@@ -32,6 +39,16 @@ class StaticEnvironmentInitialiser:
 
     def queue_target(self, target: Target):
         self._targets.append(target)
+
+    async def with_targets(self, targets: Sequence[_T]) -> AsyncIterator[_T]:
+        async def install(t: _T) -> _T:
+            await self._install_target(t)
+            return t
+
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(install(t)) for t in targets]
+            for target in asyncio.as_completed(tasks):
+                yield await target
 
     async def initalise_environment(self) -> None:
         await asyncio.gather(*map(self._initialise_dir, self._directories))
