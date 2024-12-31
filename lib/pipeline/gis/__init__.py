@@ -8,7 +8,7 @@ from .defaults import (
 )
 from .feature_server_client import FeatureServerClient
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
-from .ingestion import GisIngestion
+from .ingestion import GisIngestion, GisIngestionConfig
 from .predicate import *
 from .pipeline import GisPipeline
 from .telemetry import GisPipelineTelemetry

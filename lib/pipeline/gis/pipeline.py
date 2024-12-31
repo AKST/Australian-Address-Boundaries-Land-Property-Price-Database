@@ -7,7 +7,12 @@ from random import shuffle
 from shapely.geometry import shape
 from typing import Any, AsyncIterator, Dict, List, Self, Tuple, Sequence, Set
 
-from .config import GisSchema, GisProjection, FeaturePageDescription
+from .config import (
+    GisSchema,
+    GisProjection,
+    IngestionTaskDescriptor,
+    FeaturePageDescription,
+)
 from .ingestion import GisIngestion
 from .predicate import PredicateParam
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
@@ -23,10 +28,25 @@ class GisPipeline:
         self._ingestion = ingestion
         self._sharder_factory = sharder_factory
 
-    async def produce(self, proj: GisProjection, params: Sequence[PredicateParam]) -> None:
+    async def start(self, projections: List[Tuple[GisProjection, Sequence[PredicateParam]]]):
         async with asyncio.TaskGroup() as tg:
-            async with self._ingestion:
-                sharder = self._sharder_factory.create(tg, proj)
-                async for page in sharder.shard(params):
-                    self._ingestion.dispatch_task(tg, proj, page)
+            try:
+                tasks = [
+                    tg.create_task(self._scrap_projection(tg, proj, params))
+                    for proj, params in projections
+                ]
+                await asyncio.sleep(0)
+                await asyncio.gather(tg.create_task(self._ingestion.ingest(tg)), *tasks)
+            except Exception as e:
+                for t in tasks:
+                    t.cancel()
+                self._ingestion.stop()
+                raise e
+
+    async def _scrap_projection(self, tg, proj: GisProjection, params: Sequence[PredicateParam]) -> None:
+        async with self._ingestion:
+            sharder = self._sharder_factory.create(tg, proj)
+            async for page in sharder.shard(params):
+                task = IngestionTaskDescriptor.Fetch(proj, page)
+                self._ingestion.queue_page(task)
 

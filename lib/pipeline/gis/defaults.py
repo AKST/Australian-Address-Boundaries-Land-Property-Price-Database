@@ -29,7 +29,7 @@ BACKOFF_CONFIG = BackoffConfig(
 )
 
 HOST_SEMAPHORE_CONFIG = [
-    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=8),
+    HostSemaphoreConfig(host=SPATIAL_NSW_HOST, limit=16),
     HostSemaphoreConfig(host=ENVIRONMENT_NSW_HOST, limit=12),
 ]
 
@@ -48,7 +48,7 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('meta', 'createdate', 1, rename='create_date', format='timestamp_ms'),
         SchemaField('assoc', 'propid', 1, rename='property_id'),
         SchemaField('assoc', 'gurasid', 3),
-        SchemaField('assoc', 'principaladdresssiteoid', 2, rename='principal_address_site_oid', format='nullable_num'),
+        SchemaField('assoc', 'principaladdresssiteoid', 2, rename='principal_address_site_oid', format='number'),
 
         # no real clue what valnet, can only presume they
         # are a company that does valuations or a data
@@ -73,8 +73,8 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('meta', 'changetype', 2, rename='change_type'),
         SchemaField('meta', 'processstate', 3),
         SchemaField('data', 'urbanity', 3),
-        SchemaField('data', 'principaladdresstype', 2, rename='principle_addresss_type', format='nullable_num'),
-        SchemaField('assoc', 'addressstringoid', 1, rename='addresss_string_oid', format='nullable_num'),
+        SchemaField('data', 'principaladdresstype', 2, rename='principle_addresss_type', format='number'),
+        SchemaField('assoc', 'addressstringoid', 1, rename='addresss_string_oid', format='number'),
         SchemaField('geo', 'Shape__Length', 1, rename='shape_length'),
         SchemaField('geo', 'Shape__Area', 1, rename='shape_area'),
     ],
@@ -108,8 +108,8 @@ SNSW_LOT_SCHEMA = GisSchema(
         SchemaField('meta', 'enddate', 1, rename='end_date', format='timestamp_ms'),
         SchemaField('meta', 'lastupdate', 1, rename='last_update', format='timestamp_ms'),
 
-        SchemaField('data', 'planoid', 1, rename='plan_oid'),
-        SchemaField('data', 'plannumber', 1, rename='plan_number'),
+        SchemaField('data', 'planoid', 1, rename='plan_oid', format='number'),
+        SchemaField('data', 'plannumber', 1, rename='plan_number', format='number'),
         SchemaField('data', 'planlabel', 1, rename='plan_label'),
         SchemaField('data', 'itstitlestatus', 3),
         SchemaField('data', 'itslotid', 3, rename='its_lot_id'),
@@ -118,7 +118,7 @@ SNSW_LOT_SCHEMA = GisSchema(
         SchemaField('data', 'classsubtype', 3),
         SchemaField('data', 'lotnumber', 1, rename='lot_number'),
         SchemaField('data', 'sectionnumber', 1, rename='section_number'),
-        SchemaField('data', 'planlotarea', 1, rename='plan_lot_area'),
+        SchemaField('data', 'planlotarea', 1, rename='plan_lot_area', format='number'),
         SchemaField('data', 'planlotareaunits', 1, rename='plan_lot_area_units'),
 
         SchemaField('assoc', 'msoid', 3),

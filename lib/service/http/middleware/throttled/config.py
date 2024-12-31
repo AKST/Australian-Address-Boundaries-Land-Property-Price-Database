@@ -1,3 +1,7 @@
+from dataclasses import dataclass
 from collections import namedtuple
 
-HostSemaphoreConfig = namedtuple('HostSemaphoreConfig', ['host', 'limit'])
+@dataclass
+class HostSemaphoreConfig:
+    host: str
+    limit: int

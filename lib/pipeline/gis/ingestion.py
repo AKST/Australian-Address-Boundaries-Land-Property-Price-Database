@@ -1,6 +1,8 @@
 import asyncio
 from datetime import datetime
+from dataclasses import dataclass
 import geopandas as gpd
+import numpy
 import pandas as pd
 import warnings
 from logging import getLogger
@@ -11,86 +13,158 @@ from lib.service.database import DatabaseService, PgClientException, log_excepti
 
 from .config import (
     GisProjection,
+    IngestionTaskDescriptor,
     FeaturePageDescription,
     SchemaFieldFormat,
 )
 from .feature_server_client import FeatureServerClient
 from .telemetry import GisPipelineTelemetry
 
+
+@dataclass(frozen=True)
+class GisIngestionConfig:
+    api_workers: int
+    api_worker_backpressure: int
+    db_workers: int
+    chunk_size: Optional[int]
+
 class GisIngestion:
     """
     This Chunk size column exists to
     """
-    chunk_size: Optional[int]
-    _queue: asyncio.Queue[Tuple[GisProjection, FeaturePageDescription, gpd.GeoDataFrame]]
-    _fetch_ts: Set[asyncio.Task]
-    _logger = getLogger(f'{__name__}.GisStream')
+    _logger = getLogger(f'{__name__}.GisIngestion')
+    _stopped = False
     _listeners = 0
+    _fetch_queue: asyncio.Queue[IngestionTaskDescriptor.Fetch]
+    _save_queue: asyncio.Queue[IngestionTaskDescriptor.Save]
+    """
+    These are the tasks spawned by dispatch task.
+    """
+    _bg_ts: Set[asyncio.Task]
 
     def __init__(self: Self,
+                 config: GisIngestionConfig,
                  feature_server: FeatureServerClient,
                  db: DatabaseService,
                  telemetry: GisPipelineTelemetry,
-                 chunk_size: Optional[int] = None):
+                 save_queue: asyncio.Queue[IngestionTaskDescriptor.Save]):
+        self.config = config
         self._db = db
-        self._feature_server = feature_server
-        self._queue = asyncio.Queue()
         self._telemetry = telemetry
-        self._fetch_ts = set()
-        self.chunk_size = chunk_size
+        self._bg_ts = set()
 
-    async def ingest(self: Self, listeners: int):
-        async def child_ingest():
+        self._feature_server = feature_server
+        self._fetch_queue = asyncio.Queue()
+        self._save_queue = save_queue
+
+    @staticmethod
+    def create(config: GisIngestionConfig,
+               feature_server: FeatureServerClient,
+               db: DatabaseService,
+               telemetry: GisPipelineTelemetry):
+        # setting a max queue size here establishes some back
+        # pressure to limit how much ends up getting queued
+        save_queue = asyncio.Queue[IngestionTaskDescriptor.Save](
+            maxsize=config.api_worker_backpressure)
+        return GisIngestion(config, feature_server, db,
+                            telemetry, save_queue)
+
+    def stop(self: Self):
+        self._stopped = True
+        for t in self._bg_ts:
+            if not t.done():
+                t.cancel()
+        self._bg_ts = set()
+
+    def queue_page(self: Self, t_desc: IngestionTaskDescriptor.Fetch) -> None:
+        self._bg_ts.add(asyncio.create_task(self._fetch_queue.put(t_desc)))
+
+    async def ingest(self: Self, tg: asyncio.TaskGroup) -> None:
+        async def ingest_db_work() -> None:
             while self.is_consuming():
                 try:
-                    proj, page, df = await asyncio.wait_for(self._queue.get(), timeout=0.5)
-                    await self._save(proj, page, df)
+                    t_desc = await asyncio.wait_for(self._save_queue.get(), timeout=0.5)
                 except asyncio.TimeoutError:
                     continue
+                await self._save(t_desc)
+                await asyncio.sleep(0)
 
-        await asyncio.gather(*[
-            child_ingest()
-            for i in range(0, listeners)
-        ])
+        async def ingest_api_work() -> None:
+            while self.is_consuming():
+                try:
+                    t_desc = await asyncio.wait_for(self._fetch_queue.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+                await self._fetch(t_desc)
+                await asyncio.sleep(0)
 
-    def dispatch_task(self: Self,
-                      tg: asyncio.TaskGroup,
-                      proj: GisProjection,
-                      page_desc: FeaturePageDescription) -> None:
-        self._fetch_ts.add(tg.create_task(self._fetch(proj, page_desc)))
+        try:
+            tasks = [
+                *[tg.create_task(ingest_db_work()) for i in range(0, self.config.db_workers)],
+                *[tg.create_task(ingest_api_work()) for i in range(0, self.config.api_workers)],
+            ]
+            await asyncio.gather(*tasks)
+        except Exception as e:
+            for t in tasks:
+                t.cancel()
+            self.stop()
+            raise e
 
-    async def _fetch(self: Self, projection: GisProjection, page_desc: FeaturePageDescription):
+    async def _fetch(self: Self, t_desc_fetch: IngestionTaskDescriptor.Fetch):
+        projection, page_desc = t_desc_fetch.projection, t_desc_fetch.page_desc
+        self._telemetry.record_fetch_start(t_desc_fetch)
         page = await self._feature_server.get_page(projection, page_desc)
-        self._telemetry.record_fetched(projection, page_desc.where_clause, len(page))
-        await self._queue.put((projection, page_desc, build_df(projection, page)))
+        self._telemetry.record_fetch_end(t_desc_fetch, len(page))
 
-    async def _save(self: Self, proj: GisProjection, page_desc: FeaturePageDescription, df: gpd.GeoDataFrame):
-        db_relation = proj.schema.db_relation
+        if len(page) != t_desc_fetch.page_desc.expected_results:
+            e_size = t_desc_fetch.page_desc.expected_results
+            # self._logger.warning(f"missing results, {len(page)} {e_size}")
 
-        if not db_relation:
-            self._telemetry.record_saved(proj, page_desc.where_clause, len(df))
-            return
+        t_desc_save = IngestionTaskDescriptor.Save(
+            projection, page_desc, build_df(projection, page))
+        await self._save_queue.put(t_desc_save)
+        self._telemetry.record_save_queue(t_desc_save, len(page))
+
+    async def _save(self: Self, t_desc: IngestionTaskDescriptor.Save):
+        self._telemetry.record_save_start(t_desc, len(t_desc.df))
+        proj, page_desc, df = t_desc.projection, t_desc.page_desc, t_desc.df
+
+        match proj.schema.db_relation:
+            case None:
+                self._telemetry.record_save_skip(t_desc, len(df))
+                return
+            case db_relation:
+                pass
 
         df_copy, query = prepare_query(proj, df)
         async with self._db.async_connect() as conn:
             async with conn.cursor() as cur:
                 slice, rows = [], df_copy.to_records(index=False).tolist()
-                cusor, size = 0, self.chunk_size or len(rows)
+                cusor, size = 0, self.config.chunk_size or len(rows)
                 try:
                     for cursor in range(0, len(rows), size):
                         slice = rows[cursor:cursor + size]
                         await cur.executemany(query, slice)
                 except PgClientException as e:
+                    self.stop()
                     for row in slice:
                         self._logger.error(f"Row {row[:-1]}")
                     log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
                     raise e
             await conn.commit()
-        self._telemetry.record_saved(proj, page_desc.where_clause, len(df))
+        self._telemetry.record_save_end(t_desc, len(t_desc.df))
 
     def is_consuming(self: Self) -> bool:
-        self._fetch_ts -= {t for t in self._fetch_ts if t.done()}
-        return not self._queue.empty() or self._listeners > 0 or bool(self._fetch_ts)
+        if self._stopped:
+            return False
+
+        done_ts = {t for t in self._bg_ts if t.done()}
+        self._bg_ts -= done_ts
+
+        return not self._save_queue.empty() \
+            or not self._fetch_queue.empty() \
+            or self._listeners > 0 \
+            or bool(self._bg_ts)
 
     async def __aenter__(self):
         self._listeners += 1
@@ -99,6 +173,7 @@ class GisIngestion:
     async def __aexit__(self, exc_type, exc_value, traceback):
         self._listeners -= 1
 
+_logger = getLogger(f'{__name__}.util')
 _Formats = Dict[str, SchemaFieldFormat]
 
 def create_placeholder(col: str, fmts: _Formats, crs: int) -> str:
@@ -108,6 +183,12 @@ def create_placeholder(col: str, fmts: _Formats, crs: int) -> str:
     return '%s'
 
 def prepare_query(p: GisProjection, df: gpd.GeoDataFrame) -> Tuple[gpd.GeoDataFrame, str]:
+    def apply_dt(x: Optional[int]) -> Optional[str]:
+        max_ms = 2147483647000
+        if x is None or x > max_ms or numpy.isnan(x):
+            return None
+        return datetime.fromtimestamp(x // 1000).strftime('%Y-%m-%d %H:%M:%S')
+
     fmts: _Formats = { (f.rename or f.name): f.format for f in p.schema.fields if f.format }
     fmts = { 'geometry': 'geometry', **fmts }
 
@@ -120,17 +201,23 @@ def prepare_query(p: GisProjection, df: gpd.GeoDataFrame) -> Tuple[gpd.GeoDataFr
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for k, fmt in fmts.items():
-            match fmt:
-                case 'geometry':
-                    copy[k] = copy[k].apply(lambda geom: geom if geom.is_valid else geom.buffer(0))
-                    copy[k] = copy[k].apply(lambda geom: geom.wkt if geom is not None else None)
-                case 'timestamp_ms':
-                    max_ms = 2147483647000
-                    copy[k] = copy[k].apply(lambda x: \
-                        datetime.fromtimestamp(x // 1000).strftime('%Y-%m-%d %H:%M:%S') if x <= max_ms else None)
-                case 'nullable_num':
-                    copy[k] = copy[k].astype(object)
-                    copy[[k]] = copy[[k]].where(pd.notnull(copy[[k]]), None)
+            try:
+                match fmt:
+                    case 'geometry':
+                        copy[k] = copy[k].apply(lambda geom: geom if geom.is_valid else geom.buffer(0))
+                        copy[k] = copy[k].apply(lambda geom: geom.wkt if geom is not None else None)
+                    case 'timestamp_ms':
+                        max_ms = 2147483647000
+                        copy[k] = copy[k].apply(apply_dt)
+                    case 'text':
+                        copy[k] = copy[k].astype(object)
+                    case 'number':
+                        copy[k] = copy[k].astype(object)
+                        copy[[k]] = copy[[k]].where(pd.notnull(copy[[k]]), None)
+            except Exception as e:
+                with pd.option_context('display.max_columns', None):
+                    _logger.error(f"Failed to transform column '{k}' to '{fmt}'\n{p}\n{copy[k]}\n{copy.head()}\n{copy.info()}")
+                raise e
 
     return copy, query
 

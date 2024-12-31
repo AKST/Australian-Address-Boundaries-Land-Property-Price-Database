@@ -1,5 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
+import geopandas as gpd
 from typing import Optional, Set, Any, Iterator, Literal, List, Tuple, Self
 
 from .predicate import YearMonth, PredicateFunction
@@ -7,10 +8,23 @@ from .predicate import YearMonth, PredicateFunction
 FieldPriority = str | List[str | Tuple[str, int]]
 
 SchemaFieldFormat = Literal[
+    'geometry',
     'timestamp_ms',
-    'nullable_num',
-    'geometry'
+    'number',
+    'text',
 ]
+
+class IngestionTaskDescriptor:
+    @dataclass(frozen=True)
+    class Fetch:
+        projection: 'GisProjection'
+        page_desc: 'FeaturePageDescription'
+
+    @dataclass(frozen=True)
+    class Save:
+        projection: 'GisProjection'
+        page_desc: 'FeaturePageDescription'
+        df: gpd.GeoDataFrame
 
 @dataclass(frozen=True)
 class FeaturePageDescription:

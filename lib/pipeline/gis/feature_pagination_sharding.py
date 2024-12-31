@@ -74,8 +74,13 @@ class RequestSharder:
                 elif count <= limit * 150:
                     self._telemetry.init_clause(self._projection, query, count)
                     for offset in range(0, count, limit):
-                        expected = min(limit, offset % limit)
-                        yield FeaturePageDescription(query, offset, expected, use_cache=_use_cache)
+                        expected = min(limit, count - offset)
+                        yield FeaturePageDescription(
+                            where_clause=query,
+                            offset=offset,
+                            expected_results=expected,
+                            use_cache=_use_cache,
+                        )
                 elif shard.can_shard():
                     shard_count_queue.extend(list(shard.shard()))
                 else:

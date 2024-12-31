@@ -1,15 +1,18 @@
 from datetime import datetime
+from dataclasses import dataclass
+from functools import reduce
 import geopandas as gpd
 from logging import getLogger
 import math
 import pandas as pd
 import time
-from typing import Self
+from typing import List, Optional
 
 from lib.pipeline.gis import (
     FeaturePaginationSharderFactory,
     FeatureServerClient,
     GisIngestion,
+    GisIngestionConfig,
     GisPipeline,
     GisPipelineTelemetry,
     DateRangeParam,
@@ -29,78 +32,37 @@ from lib.service.http.middleware.cache import FileCacher
 from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
-backoff_config = BackoffConfig(RetryPreference(allowed=8))
+@dataclass
+class IngestGisRunConfig:
+    db_workers: int
+    skip_save: bool
+    gis_params: List[DateRangeParam]
 
-class NotebookTimer:
-    def __init__(self, message, state):
-        self._message = message
-        self._start = time.time()
-        self._state = state
+def _parse_date_range(s: Optional[str], clock: ClockService) -> Optional[DateRangeParam]:
+    match s:
+        case None:
+            return None
+        case '':
+            return None
+        case non_null_str:
+            pass
 
-    def add(self, state):
-        for k, v in state.items():
-            self._state[k] += v
+    match [datetime.strptime(s, '%Y%m') for s in non_null_str.split(':')]:
+        case [datetime(year=y1), datetime(year=y2)] if y1 > y2:
+            raise ValueError('first year greater than second')
+        case [datetime(month=m1), datetime(month=m2)] if m1 > m2:
+            raise ValueError('first month greater than second')
+        case [datetime(year=y1, month=m1), datetime(year=y2, month=m2)]:
+            return DateRangeParam(YearMonth(y1, m1), YearMonth(y2, m2), clock)
+        case other:
+            raise ValueError('unknown date format')
 
-    def get_message(self):
-        time_of_day = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        t = int(time.time() - self._start)
-        th, tm, ts = t // 3600, t // 60 % 60, t % 60
-        msg = self._message % self._state
-        return f'{time_of_day} {msg} @ {th}h {tm}m {ts}s'
-
-class IPythonUi:
-    timer: NotebookTimer
-
-    def __init__(self: Self, timer, producer):
-        self.timer = timer
-        self.producer = producer
-
-    def on_loop(self: Self, proj, task, page):
-        from IPython.display import clear_output, display # type: ignore
-        import matplotlib.pyplot as plt
-
-        clear_output(wait=True)
-        self.timer.add({ 'items': len(page), 'count': 1 })
-        print(self.timer.get_message())
-        print(proj.schema.url)
-        print(self.producer.progress(proj, task))
-        if len(page) > 0:
-            fig, ax = plt.subplots(1, 1, figsize=(2, 4))
-            page.plot(ax=ax, column=proj.schema.debug_plot_column)
-            plt.show()
-            display(page.iloc[:1])
-
-    def log(self: Self, m: str):
-        print(m)
-
-class ConsoleUi:
-    timer: NotebookTimer
-    _logger = getLogger(f'{__name__}.ConsoleUi')
-
-    def __init__(self: Self, timer, producer):
-        self.timer = timer
-        self.producer = producer
-
-    def on_loop(self: Self, proj, task, page):
-        self.timer.add({ 'items': len(page), 'count': 1 })
-        self._logger.info(self.timer.get_message())
-        self._logger.info(proj.schema.url)
-        self._logger.info(self.producer.progress(proj, task))
-
-    def log(self: Self, m: str):
-        self._logger.info(m)
-
-def initialise_session(io_service: IoService):
-    return CachedClientSession.create(
-        session=ExpBackoffClientSession.create(
-            session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
-            config=BACKOFF_CONFIG,
-        ),
-        file_cache=FileCacher.create(io=io_service),
-        io_service=io_service,
-    )
-
-async def run(io: IoService, db: DatabaseService, workers: int):
+async def run(
+    io: IoService,
+    db: DatabaseService,
+    clock: ClockService,
+    conf: IngestGisRunConfig,
+) -> None:
     """
     The http client composes a cache layer and a throttling
     layer. Some GIS serves, such as the ones below may end
@@ -116,37 +78,54 @@ async def run(io: IoService, db: DatabaseService, workers: int):
         active requests to one host at a time. The max
         active requests is set on a host basis.
     """
-    clock = ClockService()
-    params = [DateRangeParam(YearMonth(2023, 1), YearMonth(2023, 2), clock)]
-    # params = []
 
-    timer_state = { 'count': 0, 'items': 0 }
-    timer = NotebookTimer('#%(count)s: %(items)s items via', timer_state)
-    clock = ClockService()
-
-    async with initialise_session(io) as session:
+    async with CachedClientSession.create(
+        session=ExpBackoffClientSession.create(
+            session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
+            config=BACKOFF_CONFIG,
+        ),
+        file_cache=FileCacher.create(io),
+        io_service=io,
+    ) as session:
         feature_client = FeatureServerClient(session)
         telemetry = GisPipelineTelemetry.create(clock)
-        ingestion = GisIngestion(feature_client, db, telemetry)
+        ingestion = GisIngestion.create(
+            GisIngestionConfig(
+                api_workers=16,
+                api_worker_backpressure=conf.db_workers ** 2,
+                db_workers=conf.db_workers,
+                chunk_size=None),
+            feature_client,
+            db,
+            telemetry)
         sharder_factory = FeaturePaginationSharderFactory(feature_client, telemetry)
         pipeline = GisPipeline(sharder_factory, ingestion)
 
-        producer_tasks = asyncio.gather(*[
-            pipeline.produce(SNSW_PROP_PROJECTION, params),
-            pipeline.produce(SNSW_LOT_PROJECTION, params),
-            # pipeline.produce(ENSW_ZONE_PROJECTION, params),
-            # pipeline.produce(ENSW_DA_PROJECTION, params),
+        await pipeline.start([
+            (SNSW_PROP_PROJECTION, conf.gis_params),
+            (SNSW_LOT_PROJECTION, conf.gis_params),
         ])
-        await asyncio.sleep(0.01)
-        await asyncio.gather(producer_tasks, ingestion.ingest(workers))
 
-async def run_in_console(open_file_limit: int, db_config: DatabaseConfig, db_conns: int):
+async def run_in_console(
+    open_file_limit: int,
+    db_config: DatabaseConfig,
+    db_conns: int,
+    skip_save: bool,
+    gis_range: Optional[str],
+) -> None:
     io = IoService.create(open_file_limit)
     db = DatabaseService.create(db_config, db_conns)
+    clock = ClockService()
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     await controller.command(Command.Drop(ns='nsw_spatial'))
     await controller.command(Command.Create(ns='nsw_spatial'))
-    await run(io, db, db_conns)
+
+    match _parse_date_range(args.gis_range, ClockService()):
+        case None:
+            params = []
+        case other:
+            params = [other]
+    await run(io, db, clock, IngestGisRunConfig(db_conns, skip_save, params))
 
 if __name__ == '__main__':
     import asyncio
@@ -158,8 +137,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
+    parser.add_argument("--gis-range", type=str)
     parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--db-connections", type=int, default=32)
+    parser.add_argument("--skip-save", action='store_true', required=False)
+    parser.add_argument("--db-connections", type=int, default=16)
 
     args = parser.parse_args()
 
@@ -169,12 +150,22 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
-    file_limit = int(slim * 0.8)
+    http_limits = reduce(lambda acc, it: acc + it.limit, HOST_SEMAPHORE_CONFIG, 0)
+    file_limit = int(slim * 0.8) - (args.db_connections + http_limits)
+    print(file_limit)
 
     db_config = DB_INSTANCE_MAP[args.instance]
 
     try:
-        asyncio.run(run_in_console(file_limit, db_config, args.db_connections))
+        asyncio.run(
+            run_in_console(
+                open_file_limit=file_limit,
+                db_config=db_config,
+                db_conns=args.db_connections,
+                skip_save=args.skip_save,
+                gis_range=args.gis_range,
+            ),
+        )
     except ExceptionGroup as e:
         import psutil
 
