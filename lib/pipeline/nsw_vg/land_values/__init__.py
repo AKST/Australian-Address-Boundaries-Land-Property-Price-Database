@@ -15,7 +15,6 @@ from .ingest import (
     NswVgLvWorker,
     NswVgLvIngestion,
 )
-from .ingest_legacy import NswVgLandValuesRawIngestion as NswVgLandValuesRawIngestionLegacy
 from .pipeline import (
     NswVgLvPipeline,
     WorkerClient as NswVgLvWorkerClient,

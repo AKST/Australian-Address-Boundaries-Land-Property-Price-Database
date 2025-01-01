@@ -16,7 +16,7 @@ from ..schema.update import update_schema, UpdateSchemaConfig
 from .config import NswVgTaskConfig
 from .ingest_property_descriptions import ingest_property_description
 from .ingest_property_sales import ingest_property_sales_rows
-from .ingest_land_values_2 import ingest_land_values
+from .ingest_land_values import ingest_land_values
 
 ZIP_DIR = './_out_zip'
 _logger = logging.getLogger(__name__)
