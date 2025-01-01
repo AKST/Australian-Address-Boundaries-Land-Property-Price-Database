@@ -31,6 +31,7 @@ class IngestConfig:
     nswvg_psi_publish_min: Optional[int]
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig
+    enable_gnaf: bool
 
 async def ingest_all(config: IngestConfig):
     io_service = IoService.create(None)
@@ -135,10 +136,11 @@ async def ingest_all(config: IngestConfig):
         ),
     )
 
-    await ingest_gnaf(
-        GnafConfig(environment.gnaf.publication, config.gnaf_states),
-        db_service,
-    )
+    if config.enable_gnaf:
+        await ingest_gnaf(
+            GnafConfig(environment.gnaf.publication, config.gnaf_states),
+            db_service,
+        )
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)
 
@@ -168,9 +170,10 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
+    ENABLE_GNAF = { 1: True, 2: False }
     NSWVG_MIN_PUB_YEAR = {
         1: None,
-        2: datetime.now().year,
+        2: datetime.now().year - 1,
     }
 
     config = IngestConfig(
@@ -180,6 +183,7 @@ if __name__ == '__main__':
         nswvg_psi_publish_min=NSWVG_MIN_PUB_YEAR[args.instance],
         docker_image_config=INSTANCE_IMAGE_CONF_MAP[args.instance],
         docker_container_config=INSTANCE_CONTAINER_CONF_MAP[args.instance],
+        enable_gnaf=ENABLE_GNAF[args.instance],
     )
 
     asyncio.run(ingest_all(config))
