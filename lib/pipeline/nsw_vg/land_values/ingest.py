@@ -1,133 +1,177 @@
 import asyncio
 import csv
-from datetime import datetime
+from dataclasses import dataclass
 from io import StringIO
 from logging import getLogger
-from typing import List, Self
+from multiprocessing import Queue as MpQueue
+import queue
+from typing import AsyncIterator, Self
 
-from lib.pipeline.nsw_vg.discovery import NswVgTarget
 from lib.service.database import DatabaseService
 from lib.service.io import IoService
 
-from .data import RawLandValueRow
+from .config import (
+    NswVgLvTaskDesc,
+    NswVgLvParentMsg,
+    NswVgLvChildMsg,
+    RawLandValueRow,
+)
 
-class NswVgLandValuesRawIngestion:
-    root_dir: str
-    chunk_size: int
-    _logger = getLogger(f'{__name__}.NswVgLandValuesRawIngestion')
-    _semaphore: asyncio.Semaphore
-    _db: DatabaseService
-    _io: IoService
-    _tg: asyncio.TaskGroup
-    _parse_tasks: List[asyncio.Task]
-    _database_tasks: List[asyncio.Task]
+class NswVgLvWorker:
+    _close_requested: bool = False
+    _stopped: bool = False
 
-    _parsed = 0
-    _ingested = 0
-
+    _logger = getLogger(__name__)
+    _parse_q: asyncio.Queue[NswVgLvTaskDesc.Parse]
+    _load_q: asyncio.Queue[NswVgLvTaskDesc.Load]
 
     def __init__(self: Self,
-                 semaphore,
-                 root_dir,
-                 chunk_size,
-                 io,
-                 db,
-                 tg) -> None:
-        self.root_dir = root_dir
+                 id: int,
+                 ingestion: 'NswVgLvIngestion',
+                 coordinator: 'NswVgLvCoordinatorClient',
+                 load_q: asyncio.Queue[NswVgLvTaskDesc.Load]):
+        self.id = id
+        self._ingestion = ingestion
+        self._coordinator = coordinator
+        self._parse_q = asyncio.Queue()
+        self._load_q = load_q
+
+    @staticmethod
+    def create(id: int,
+               ingestion: 'NswVgLvIngestion',
+               coordinator: 'NswVgLvCoordinatorClient',
+               back_pressure: int):
+        return NswVgLvWorker(id, ingestion, coordinator, asyncio.Queue(maxsize=back_pressure))
+
+
+    async def start(self: Self, size: int):
+        async def read_parse_messages() -> None:
+            while self._keep_running():
+                try:
+                    t_desc = await asyncio.wait_for(self._parse_q.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+
+                self._logger.debug(f'Running task {t_desc}')
+                async for load_desc in self._ingestion.parse(t_desc):
+                    m = NswVgLvParentMsg.FileRowsParsed(self.id, load_desc.file, len(load_desc.rows))
+                    self._coordinator.send_msg(m)
+                    await self._load_q.put(load_desc)
+
+        async def read_load_messages() -> None:
+            while self._keep_running():
+                try:
+                    t_desc = await asyncio.wait_for(self._load_q.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+
+                self._logger.debug(f'Running task {t_desc}')
+                await self._ingestion.load(t_desc)
+                m = NswVgLvParentMsg.FileRowsSaved(self.id, t_desc.file, len(t_desc.rows))
+                self._coordinator.send_msg(m)
+
+        try:
+            self._logger.debug(f'starting loop')
+            await asyncio.gather(
+                self._start_recv(),
+                *[read_parse_messages() for i in range(0, size)],
+                *[read_load_messages() for i in range(0, size)],
+            )
+        except Exception as e:
+            self._stopped = True
+            raise e
+
+    async def _start_recv(self: Self):
+        while not self._close_requested:
+            message = await self._coordinator.recv_msg()
+            self._logger.debug(f'received message, {message}')
+            match message:
+                case NswVgLvChildMsg.RequestClose():
+                    self._close_requested = True
+                case NswVgLvChildMsg.Ingest(task):
+                    await self._parse_q.put(task)
+                case None:
+                    continue
+                case other:
+                    self._logger.warn(f'unknown message {other}')
+
+    def _keep_running(self: Self):
+        if self._stopped:
+            return False
+        if self._close_requested:
+            return not self._parse_q.empty() \
+                or not self._load_q.empty()
+        return True
+
+@dataclass
+class NswVgLvCoordinatorClient:
+    recv_q: MpQueue
+    send_q: MpQueue
+
+    def send_msg(self: Self, msg: NswVgLvParentMsg.Base):
+        self.send_q.put(msg)
+
+    async def recv_msg(self: Self):
+        """
+        It is important to add this timeout otherwise we can
+        block the parent thread from exiting.
+        """
+        try:
+            return await asyncio.to_thread(self.recv_q.get, timeout=0.1)
+        except queue.Empty:
+            return None
+
+class NswVgLvIngestion:
+    _logger = getLogger(f'{__name__}.NswVgLvIngestion')
+
+    def __init__(self: Self,
+                 chunk_size: int,
+                 io: IoService,
+                 db: DatabaseService):
         self.chunk_size = chunk_size
-        self._semaphore = semaphore
-        self._database_tasks = []
-        self._parse_tasks = []
         self._io = io
         self._db = db
-        self._tg = tg
 
-    async def ingest_raw_target(self: Self, target: NswVgTarget) -> None:
-        fpath = f'{self.root_dir}/{target.zip_dst}'
-        files = [
-            f'{self.root_dir}/{target.zip_dst}/{f}'
-            for f in sorted(await self._io.ls_dir(fpath))
-        ]
-        self._parse_tasks = [
-            self._tg.create_task(self.ingest_raw_file(f, target.datetime))
-            for f in files
-        ]
-        try:
-            await asyncio.gather(*self._parse_tasks)
-            await asyncio.gather(*self._database_tasks)
-        except Exception as e:
-            raise e
-
-    async def ingest_raw_file(self: Self,
-                              file_path: str,
-                              source_date: datetime) -> None:
-        if not file_path.endswith("csv"):
-            return
-
-        file_data = await self._tg.create_task(self.__get_data(file_path))
-        quasi_file = StringIO(file_data)
-
-        queue = []
+    async def parse(self: Self, task: NswVgLvTaskDesc.Parse) -> AsyncIterator[NswVgLvTaskDesc.Load]:
+        quasi_file = StringIO(await self._get_data(task.file))
+        offset = 0
+        batch = []
         for index, row_raw in enumerate(csv.DictReader(quasi_file)):
-            self._parsed += 1
-
-            row = RawLandValueRow.from_row(
+            batch.append(RawLandValueRow.from_row(
                 row_raw,
                 index + 1,
-                file_path,
-                source_date,
-            )
+                task.file,
+                task.target.datetime,
+            ))
 
-            queue.append(row)
+            if len(batch) >= self.chunk_size:
+                yield NswVgLvTaskDesc.Load(task.file, offset, batch)
+                await asyncio.sleep(0)
+                offset += self.chunk_size
+                batch = []
 
-            if len(queue) >= self.chunk_size:
-                task = self._tg.create_task(self.__ingest(file_path, queue))
-                self._database_tasks.append(task)
-                await asyncio.sleep(0.001)
-                queue = []
+        if batch:
+            yield NswVgLvTaskDesc.Load(task.file, offset, batch)
 
-        if queue:
-            task = self._tg.create_task(self.__ingest(file_path, queue))
-            self._database_tasks.append(task)
-
-        self._logger.info(f'Parsed {file_path}')
-
-    async def __ingest(self: Self, f: str, rows: List[RawLandValueRow]) -> None:
-        columns = rows[0].db_columns()
+    async def load(self: Self, task: NswVgLvTaskDesc.Load):
+        columns = task.rows[0].db_columns()
         column_str = ', '.join(columns)
         values_str = ', '.join(['%s'] * len(columns))
-        values = [[getattr(row, name) for name in columns] for row in rows]
+        values = [[getattr(row, name) for name in columns] for row in task.rows]
 
         try:
-            async with (
-                self._semaphore,
-                self._db.async_connect(timeout=None) as c,
-                c.cursor() as cursor
-            ):
-                await cursor.executemany(f"""
-                    INSERT INTO nsw_vg_raw.land_value_row ({column_str})
-                    VALUES ({values_str})
-                """, values)
-                self._ingested += len(values)
-
-                progress = self._ingested / self._parsed
-                self._logger.info(f'written {progress:.2%} ({self._ingested} / {self._parsed})')
+            async with self._db.async_connect() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.executemany(f"""
+                        INSERT INTO nsw_vg_raw.land_value_row ({column_str})
+                        VALUES ({values_str})
+                    """, values)
         except Exception as e:
-            self._logger.exception(e)
-            self._logger.error(f'failed to ingest {f}')
-            await self.__kill()
+            self._logger.error(f'failed to ingest {task.file}')
             raise e
 
-    async def __get_data(self: Self, f: str) -> str:
+    async def _get_data(self: Self, f: str) -> str:
         try:
             return await self._io.f_read(f, encoding='utf-8')
         except UnicodeDecodeError:
             return await self._io.f_read(f, encoding='ISO-8859-1')
-
-    async def __kill(self: Self) -> None:
-        for t in self._parse_tasks:
-            t.cancel()
-        for t in self._database_tasks:
-            t.cancel()
-
-

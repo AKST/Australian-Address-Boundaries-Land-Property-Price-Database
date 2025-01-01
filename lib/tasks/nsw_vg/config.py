@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from lib.pipeline.nsw_vg.config import *
+from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
 from lib.service.database import DatabaseConfig
 
 class NswVgTaskConfig:
@@ -29,9 +30,24 @@ class NswVgTaskConfig:
     class LvIngest:
         truncate_raw_earlier: bool = field(default=False)
 
+    class LandValue:
+        @dataclass
+        class Child:
+            chunk_size: int
+            debug: bool
+            db_config: DatabaseConfig
+            db_conn: int
+
+        @dataclass
+        class Main:
+            truncate_raw_earlier: bool
+            discovery_mode: NswVgLvCsvDiscoveryMode
+            child_cfg: 'NswVgTaskConfig.LandValue.Child'
+            child_n: int
+
     @dataclass
     class Ingestion:
-        load_raw_land_values: Optional['NswVgTaskConfig.LvIngest']
+        load_raw_land_values: Optional['NswVgTaskConfig.LandValue.Main']
         load_raw_property_sales: Optional['NswVgTaskConfig.PsiIngest']
         deduplicate: Optional['NswVgTaskConfig.Dedup']
         property_descriptions: Optional['NswVgTaskConfig.PropDescIngest']

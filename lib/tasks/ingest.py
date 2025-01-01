@@ -92,8 +92,16 @@ async def ingest_all(config: IngestConfig):
         db_service,
         io_service,
         NswVgTaskConfig.Ingestion(
-            load_raw_land_values=NswVgTaskConfig.LvIngest(
+            load_raw_land_values=NswVgTaskConfig.LandValue.Main(
+                discovery_mode='latest',
                 truncate_raw_earlier=False,
+                child_n=6,
+                child_cfg=NswVgTaskConfig.LandValue.Child(
+                    debug=False,
+                    db_conn=8,
+                    chunk_size=1000,
+                    db_config=db_service_config,
+                ),
             ),
             load_raw_property_sales=NswVgTaskConfig.PsiIngest(
                 worker_count=6,

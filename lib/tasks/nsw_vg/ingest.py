@@ -5,6 +5,8 @@ import logging
 from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
+from lib.service.static_environment import StaticEnvironmentInitialiser
+from lib.tasks.fetch_static_files import get_session
 from lib.tooling.schema.controller import SchemaController
 from lib.tooling.schema.discovery import SchemaDiscovery
 from lib.tooling.schema.type import Command
@@ -14,7 +16,7 @@ from ..schema.update import update_schema, UpdateSchemaConfig
 from .config import NswVgTaskConfig
 from .ingest_property_descriptions import ingest_property_description
 from .ingest_property_sales import ingest_property_sales_rows
-from .ingest_land_values import ingest_land_values
+from .ingest_land_values_2 import ingest_land_values
 
 ZIP_DIR = './_out_zip'
 _logger = logging.getLogger(__name__)
@@ -28,8 +30,9 @@ async def ingest_nswvg(
 ):
     if config.load_raw_land_values:
         lv_conf = config.load_raw_land_values
-        lv_target = environment.land_value.latest
-        await ingest_land_values(db, io, lv_target, lv_conf)
+        async with get_session(io) as session:
+            static_env = StaticEnvironmentInitialiser.create(io, session)
+            await ingest_land_values(lv_conf, io, db, clock, session, static_env)
 
     if config.load_raw_property_sales:
         ps_conf = config.load_raw_property_sales
@@ -129,6 +132,10 @@ if __name__ == '__main__':
     parser.add_argument("--main-db-pool-size", type=int, default=8)
 
     parser.add_argument("--load-land-values", action='store_true', default=False)
+    parser.add_argument("--lv-workers", action='store_true', default=1)
+    parser.add_argument("--lv-worker-debug", action='store_true', default=False)
+    parser.add_argument("--lv-worker-db-pool-size", type=int, default=1)
+    parser.add_argument("--lv-worker-chunk-size", type=int, default=1000)
     parser.add_argument("--lv-truncate-earlier", action='store_true', default=False)
 
     parser.add_argument("--load-property-sales", action='store_true', default=False)
@@ -136,7 +143,7 @@ if __name__ == '__main__':
     parser.add_argument("--ps-publish-max", type=int, default=None)
     parser.add_argument("--ps-download-min", type=date.fromisoformat, default=None)
     parser.add_argument("--ps-download-max", type=date.fromisoformat, default=None)
-    parser.add_argument("--ps-workers", type=int, default=None)
+    parser.add_argument("--ps-workers", type=int, default=1)
     parser.add_argument("--ps-worker-debug", type=int, default=False)
     parser.add_argument("--ps-worker-file-limit", type=int, default=None)
     parser.add_argument("--ps-worker-db-pool-size", type=int, default=None)
@@ -172,8 +179,16 @@ if __name__ == '__main__':
 
     load_land_values = None
     if args.load_land_values:
-        load_land_values = NswVgTaskConfig.LvIngest(
-            truncate_raw_earlier=args.lv_truncate_earlier
+        load_land_values = NswVgTaskConfig.LandValue.Main(
+            discovery_mode='latest',
+            truncate_raw_earlier=args.lv_truncate_earlier,
+            child_n=args.lv_workers,
+            child_cfg=NswVgTaskConfig.LandValue.Child(
+                debug=args.lv_worker_debug,
+                db_conn=args.lv_worker_db_pool_size,
+                db_config=db_config,
+                chunk_size=args.lv_worker_chunk_size,
+            ),
         )
 
 

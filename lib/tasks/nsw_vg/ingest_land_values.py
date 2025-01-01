@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 import logging
 
-from lib.pipeline.nsw_vg.land_values.ingest import NswVgLandValuesRawIngestion
+from lib.pipeline.nsw_vg.land_values import NswVgLandValuesRawIngestionLegacy
 from lib.pipeline.nsw_vg.discovery import NswVgTarget
 from lib.service.database import DatabaseService
 from lib.service.io import IoService
@@ -23,7 +23,7 @@ async def ingest_land_values(
         await controller.command(Command.Drop(ns='nsw_vg', range=range(2, 3)))
         await controller.command(Command.Create(ns='nsw_vg', range=range(2, 3)))
     async with asyncio.TaskGroup() as tg:
-        ingest = NswVgLandValuesRawIngestion(
+        ingest = NswVgLandValuesRawIngestionLegacy(
             asyncio.Semaphore(db.pool_size),
             _ZIPDIR,
             1000,

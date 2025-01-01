@@ -85,7 +85,7 @@ class NswVgPsIngestionCoordinator:
                     self._telemetry.count(value)
                     self._telemetry.log_if_necessary()
                 case other:
-                    self._logger.warn(f'unknown message {other} from {sender}')
+                    self._logger.warn(f'unknown message {other}')
 
     def _find_next_child(self: Self) -> NswVgPsChildClient:
         return min(self._children, key=lambda c: c.status().queued)
