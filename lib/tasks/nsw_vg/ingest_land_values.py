@@ -116,6 +116,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="nsw vg lv ingestion")
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--debug-worker", action='store_true', default=False)
+    parser.add_argument('--discovery-mode', choices=['each-year', 'all', 'latest'], default='latest')
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--workers", type=int, required=True)
     parser.add_argument("--worker-db-conn", type=int, default=8)
@@ -132,7 +133,7 @@ if __name__ == '__main__':
     db_config = DB_INSTANCE_MAP[args.instance]
 
     cfg = NswVgTaskConfig.LandValue.Main(
-        discovery_mode='latest',
+        discovery_mode=args.discovery_mode,
         truncate_raw_earlier=args.truncate_raw_earlier,
         child_n=args.workers,
         child_cfg=NswVgTaskConfig.LandValue.Child(
