@@ -38,4 +38,4 @@ SELECT c.district_code, n.district_name
   LEFT JOIN (SELECT DISTINCT ON (district_code) district_code, district_name
                FROM nsw_vg_raw.land_value_row
               WHERE district_name IS NOT NULL) as n USING (district_code)
-    ON CONFLICT (valuation_district_code) DO NOTHING;
+    ON CONFLICT DO NOTHING;

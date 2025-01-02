@@ -7,13 +7,11 @@ from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.service.static_environment import StaticEnvironmentInitialiser
 from lib.tasks.fetch_static_files import get_session
-from lib.tooling.schema.controller import SchemaController
-from lib.tooling.schema.discovery import SchemaDiscovery
 from lib.tooling.schema.type import Command
 
 from ..fetch_static_files import Environment, get_session, initialise
-from ..schema.update import update_schema, UpdateSchemaConfig
 from .config import NswVgTaskConfig
+from .ingest_deduplicate import ingest_deduplicate
 from .ingest_property_descriptions import ingest_property_description
 from .ingest_property_sales import ingest_property_sales_rows
 from .ingest_land_values import ingest_land_values
@@ -40,7 +38,7 @@ async def ingest_nswvg(
 
     if config.deduplicate:
         dedup_conf = config.deduplicate
-        await ingest_nswvg_deduplicate(db, io, dedup_conf)
+        await ingest_deduplicate(db, io, dedup_conf)
 
     if config.property_descriptions:
         try:
@@ -48,72 +46,6 @@ async def ingest_nswvg(
         except Exception as e:
             _logger.exception(e)
             _logger.error('failed to ingest all property descriptions')
-
-async def ingest_nswvg_deduplicate(
-    db: DatabaseService,
-    io: IoService,
-    config: NswVgTaskConfig.Dedup,
-):
-    logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
-    scripts = [
-        './sql/nsw_vg/tasks/from_raw_derive/001_identifiers.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/001_from_land_values.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/002_from_psi.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/003_from_psi_archive.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/004_rematerialize.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/004_ingest_psi_pre_2001.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/005_cleanup.sql',
-    ]
-
-    if 1 > config.run_from or len(scripts) < config.run_from:
-        raise ValueError(f'dedup run from {config.run_from} is out of scope')
-    else:
-        scripts = scripts[config.run_from - 1:config.run_till]
-
-    discovery = SchemaDiscovery.create(io)
-    controller = SchemaController(io, db, discovery)
-
-    async def run_commands(commands: List[Command.BaseCommand]):
-        for c in commands:
-            await controller.command(c)
-
-    if config.truncate:
-        await run_commands([
-            Command.Truncate(ns='nsw_vg', cascade=True, range=range(4, 5)),
-            Command.Truncate(ns='nsw_gnb', cascade=True),
-            Command.Truncate(ns='nsw_lrs', cascade=True),
-            Command.Truncate(ns='nsw_planning', cascade=True),
-            Command.Truncate(ns='meta', cascade=True),
-        ])
-
-    if config.drop_dst_schema:
-        await run_commands([
-            Command.Drop(ns='nsw_vg', range=range(4, 5)),
-            Command.Drop(ns='nsw_gnb'),
-            Command.Drop(ns='nsw_lrs'),
-            Command.Drop(ns='nsw_planning'),
-            Command.Drop(ns='meta'),
-            Command.Create(ns='meta'),
-            Command.Create(ns='nsw_planning'),
-            Command.Create(ns='nsw_lrs'),
-            Command.Create(ns='nsw_gnb'),
-            Command.Create(ns='nsw_vg', range=range(4, 5)),
-        ])
-
-    async with db.async_connect() as c, c.cursor() as cursor:
-        for script_path in scripts:
-            logger.info(f'running {script_path}')
-            await cursor.execute(await io.f_read(script_path))
-
-    logger.info('finished deduplicating')
-
-    if config.drop_raw:
-        raise NotImplementedError()
 
 if __name__ == '__main__':
     import argparse
