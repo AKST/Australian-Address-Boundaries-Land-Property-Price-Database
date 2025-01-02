@@ -5,7 +5,7 @@ from datetime import datetime
 from logging import getLogger
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Self
 
 from lib.service.clock import ClockService
 from lib.service.io import IoService
@@ -116,16 +116,16 @@ class FileCacher:
             if state['version'] != CACHE_VERSION:
                 raise Exception("cache doesn't match version")
             self._state = state['files']
-        except Exception as e:
+        except:
             self._logger.error("Failed to save cache state, possibly corrupted")
-            raise e
+            raise
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self: Self, exc_type, exc_value, traceback):
         await self._save_cache_state()
         return False
 
-    async def _save_cache_state(self):
+    async def _save_cache_state(self: Self):
         state = { 'version': CACHE_VERSION, 'files': self._state }
         await self._io.f_write(self._config_path, json.dumps(state, indent=1))
 
@@ -154,13 +154,13 @@ class RequestCache:
     cache_dir: str
 
     @property
-    def location(self):
+    def location(self: Self):
         return f'{self.cache_dir}/{self.file_name}'
 
-    def has_expired(self, now: datetime):
+    def has_expired(self: Self, now: datetime):
         return self.expire.has_expired(self.age, now)
 
-    def to_json(self):
+    def to_json(self: Self):
         age = self.age.strftime(_date_format)
         return {
             'expire': str(self.expire),
@@ -172,10 +172,10 @@ class RequestCache:
 class RequestCacheFactory:
     cache_dir: str
 
-    def create(self, expire, fname, age):
+    def create(self: Self, expire, fname, age) -> RequestCache:
         return RequestCache(expire, fname, age, self.cache_dir)
 
-    def from_json(self, json):
+    def from_json(self: Self, json) -> RequestCache:
         return RequestCache(
             CacheExpire.parse_expire(json['expire']),
             json['location'],
