@@ -8,8 +8,8 @@ from typing import Self, Optional, List, Tuple, Dict
 from lib.service.clock import ClockService
 from .config import GisProjection, IngestionTaskDescriptor
 
-def safe_div(a, b):
-    return (a/b) if b > 0 else 0
+def _p(a, b):
+    return ((a/b) if b > 0 else 0) * 100.0
 
 @dataclass
 class ShardStatistics:
@@ -51,12 +51,10 @@ class ShardStatistics:
         e_n = self.save_started - self.save_completed
         f_n = self.save_completed
 
-        return f'Queued ({a_n}, {safe_div(a_n, self.shard_size):.2f}%) ' \
-               f'Fetching ({str(b_n).rjust(4)}, {safe_div(b_n, self.fetch_started):.2f}%) ' \
-               f'Blocked ({str(c_n).rjust(4)}, {safe_div(c_n, self.fetch_completed):.2f}%) ' \
-               f'Queued ({d_n}, {safe_div(d_n, self.save_queued):.2f}%) ' \
-               f'Saving ({e_n}, {safe_div(e_n, self.save_started):.2f}%) '  \
-               f'Done ({f_n}, {safe_div(f_n, self.shard_size):.2f}%)' \
+        return f'Queued ({a_n}, {_p(a_n, self.shard_size):.2f}%) ' \
+               f'Fetching ({str(b_n).rjust(4)}) Blocked ({str(c_n).rjust(4)}) ' \
+               f'Queued ({str(d_n).rjust(4)}) Saving ({str(e_n).rjust(4)}) '  \
+               f'Done ({f_n}, {_p(f_n, self.shard_size):.2f}%)' \
 
     def count(self):
         return f'Total {self.shard_size} '\
