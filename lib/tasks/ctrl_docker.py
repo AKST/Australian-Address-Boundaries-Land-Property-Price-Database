@@ -59,8 +59,7 @@ async def run_controller(instruction: DockerCtrlInstruction, db: DatabaseService
 if __name__ == '__main__':
     import asyncio
     import argparse
-    from lib.service.database.defaults import DB_INSTANCE_MAP
-    from lib.service.docker.defaults import INSTANCE_IMAGE_CONF_MAP, INSTANCE_CONTAINER_CONF_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="db start stop tool")
     parser.add_argument('--nuke-image', action='store_true', default=False)
@@ -89,28 +88,26 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    db_conf = DB_INSTANCE_MAP[args.instance]
-    img_conf = INSTANCE_IMAGE_CONF_MAP[args.instance]
-    container_conf = INSTANCE_CONTAINER_CONF_MAP[args.instance]
+    instance_cfg = INSTANCE_CFG[args.instance]
 
     async def main(instruction: DockerCtrlInstruction):
         docker = DockerService.create()
-        db = DatabaseService.create(db_conf, 1)
+        db = DatabaseService.create(instance_cfg.database, 1)
         await run_controller(instruction, db, docker)
 
     match args.command:
         case 'start':
             asyncio.run(main(DockerStart(
-                image=img_conf,
-                container=container_conf,
+                image=instance_cfg.docker_image,
+                container=instance_cfg.docker_container,
                 wait_for_database=args.wait_for_database,
                 reinitialise_image=args.nuke_image,
                 reinitialise_container=args.nuke_container,
             )))
         case 'stop':
             asyncio.run(main(DockerStop(
-                image=img_conf,
-                container=container_conf,
+                image=instance_cfg.docker_image,
+                container=instance_cfg.docker_container,
                 drop_image=args.nuke_image,
                 drop_container=args.nuke_container,
                 throw_if_not_found=args.throw_if_not_found

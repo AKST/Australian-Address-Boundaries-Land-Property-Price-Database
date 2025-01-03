@@ -138,7 +138,7 @@ if __name__ == '__main__':
     import logging
     import resource
 
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
         raise ValueError(f"file limit of {file_limit} is just too small")
 
 
-    db_config = DB_INSTANCE_MAP[args.instance]
+    instance_cfg = INSTANCE_CFG[args.instance]
 
     try:
         match _parse_date_range(args.gis_range, ClockService()):
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         asyncio.run(
             run_in_console(
                 open_file_limit=file_limit,
-                db_config=db_config,
+                db_config=instance_cfg.database,
                 config=cfg,
             ),
         )

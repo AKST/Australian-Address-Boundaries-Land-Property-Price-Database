@@ -38,7 +38,7 @@ def spawn_worker(config: WorkerProcessConfig, semaphore: SemaphoreT, worker_debu
 
 if __name__ == '__main__':
     import argparse
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
             worker_debug=args.debug_worker,
             workers=args.workers,
             sub_workers=args.sub_workers,
-            db_config=DB_INSTANCE_MAP[args.instance],
+            db_config=INSTANCE_CFG[args.instance].database,
         ),
     ))
 

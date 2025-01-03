@@ -54,7 +54,7 @@ if __name__ == '__main__':
     import resource
     import sys
     from datetime import date
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
     from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG, PropertySalesIngestion
     from lib.pipeline.nsw_vg.property_sales.orchestration import NswVgPsiSupervisorConfig, NswVgPsiWorkerConfig, NswVgPsiWorkerLogConfig
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
-    db_config = DB_INSTANCE_MAP[args.instance]
+    instance_cfg = INSTANCE_CFG[args.instance]
 
     load_land_values = None
     if args.load_land_values:
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             child_cfg=NswVgTaskConfig.LandValue.Child(
                 debug=args.lv_worker_debug,
                 db_conn=args.lv_worker_db_pool_size,
-                db_config=db_config,
+                db_config=instance_cfg.database,
                 chunk_size=args.lv_worker_chunk_size,
             ),
         )
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         load_raw_property_sales = NswVgTaskConfig.PsiIngest(
             worker_count=args.ps_workers,
             worker_config=NswVgPsiWorkerConfig(
-                db_config=DB_INSTANCE_MAP[args.instance],
+                db_config=instance_cfg.database,
                 db_pool_size=args.ps_worker_db_pool_size,
                 db_batch_size=args.ps_worker_db_batch_size,
                 file_limit=args.ps_worker_file_limit,
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     property_description_config = None
     if args.nswlrs_propdesc:
         property_description_config = NswVgTaskConfig.PropDescIngest(
-            db_config=DB_INSTANCE_MAP[args.instance],
+            db_config=instance_cfg.database,
             worker_debug=args.nswlrs_propdesc_child_debug,
             workers=args.nswlrs_propdesc_workers,
             sub_workers=args.nswlrs_propdesc_subworkers,
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     asyncio.run(_cli_main(
         file_limit,
         args.main_db_pool_size,
-        DB_INSTANCE_MAP[args.instance],
+        instance_cfg.database,
         config,
     ))
 

@@ -85,7 +85,7 @@ if __name__ == '__main__':
     import argparse
     import resource
 
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--instance", type=int, required=True)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
-    db_conf = DB_INSTANCE_MAP[args.instance]
+    db_conf = INSTANCE_CFG[args.instance].database
 
     main_logger = logging.getLogger(f'{__name__}::init')
     main_logger.debug(f'operating on instance #{args.instance}')

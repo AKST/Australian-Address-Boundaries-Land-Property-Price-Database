@@ -150,8 +150,7 @@ if __name__ == '__main__':
     import argparse
     import resource
 
-    from lib.service.database.defaults import DB_INSTANCE_MAP
-    from lib.service.docker.defaults import INSTANCE_IMAGE_CONF_MAP, INSTANCE_CONTAINER_CONF_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -164,13 +163,10 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    docker_image_conf = INSTANCE_IMAGE_CONF_MAP[args.instance]
-    docker_container_conf = INSTANCE_CONTAINER_CONF_MAP[args.instance]
-
+    instance_cfg = INSTANCE_CFG[args.instance]
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
-    ENABLE_GNAF = { 1: True, 2: False }
     NSWVG_MIN_PUB_YEAR = {
         1: None,
         2: datetime.now().year - 1,
@@ -178,12 +174,12 @@ if __name__ == '__main__':
 
     config = IngestConfig(
         io_file_limit=file_limit,
-        db_config=DB_INSTANCE_MAP[args.instance],
+        db_config=instance_cfg.database,
         gnaf_states=GNAF_STATE_INSTANCE_MAP[args.instance],
         nswvg_psi_publish_min=NSWVG_MIN_PUB_YEAR[args.instance],
-        docker_image_config=INSTANCE_IMAGE_CONF_MAP[args.instance],
-        docker_container_config=INSTANCE_CONTAINER_CONF_MAP[args.instance],
-        enable_gnaf=ENABLE_GNAF[args.instance],
+        docker_image_config=instance_cfg.docker_image,
+        docker_container_config=instance_cfg.docker_container,
+        enable_gnaf=instance_cfg.enable_gnaf,
     )
 
     asyncio.run(ingest_all(config))

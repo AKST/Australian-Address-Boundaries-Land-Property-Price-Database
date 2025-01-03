@@ -18,7 +18,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.service.io import IoService
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
     from .fetch_static_files import get_session, initialise
 
     parser = argparse.ArgumentParser(description="Initialise nswvg db schema")
@@ -33,11 +33,11 @@ if __name__ == '__main__':
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
-    db_conf = DB_INSTANCE_MAP[args.instance]
+    instance_cfg = INSTANCE_CFG[args.instance]
     gnaf_states = defaults.GNAF_STATE_INSTANCE_MAP[args.instance]
 
     async def main() -> None:
-        db = DatabaseService.create(db_conf, 32)
+        db = DatabaseService.create(instance_cfg.database, 32)
         io = IoService.create(file_limit)
         async with get_session(io) as session:
             env = await initialise(io, session)

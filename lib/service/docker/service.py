@@ -78,22 +78,20 @@ class DockerContainer:
         self.image = image
         self.config = config
 
-    def prepare(self: Self, config: DatabaseConfig):
+    def prepare(self: Self, db_config: DatabaseConfig):
         try:
             self._get_container()
         except NotFound:
+            environment = {
+                'POSTGRES_DB': db_config.dbname,
+                'POSTGRES_USER': db_config.user,
+                'POSTGRES_PASSWORD': db_config.password,
+            }
             self.image._build_container(
-                name=self.config.container_name,
-                labels={"project": self.config.project_name},
-                environment={
-                    'POSTGRES_DB': config.dbname,
-                    'POSTGRES_USER': config.user,
-                    'POSTGRES_PASSWORD': config.password,
-                },
-                ports={'5432/tcp': config.port},
-                volumes=self.config.volumes,
-                command=self.config.command,
+                environment=environment,
+                ports={'5432/tcp': db_config.port},
                 detach=True,
+                **self.config.docker_kwargs(),
             )
 
     def start(self: Self):

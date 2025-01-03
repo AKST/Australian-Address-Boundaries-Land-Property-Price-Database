@@ -45,7 +45,7 @@ if __name__ == '__main__':
     import logging
     import resource
 
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
 
     from .fetch_static_files import get_session, initialise
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
             format=f'[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         )
 
-    db_config = DB_INSTANCE_MAP[args.instance]
+    db_config = INSTANCE_CFG[args.instance].database
     config = AbsIngestionConfig(
         ingest_sources=[ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES],
         worker_count=args.workers,

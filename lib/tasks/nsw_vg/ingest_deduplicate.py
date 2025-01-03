@@ -79,7 +79,7 @@ if __name__ == '__main__':
     import asyncio
     import argparse
 
-    from lib.service.database.defaults import DB_INSTANCE_MAP
+    from lib.defaults import INSTANCE_CFG
 
     parser = argparse.ArgumentParser(description="Ingest NSW VG Data")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     parser.add_argument("--initial-truncate", action='store_true', default=False)
     parser.add_argument("--drop-raw", action='store_true', default=False)
     parser.add_argument("--run-from", type=int, default=1)
-    parser.add_argument("--run-till", type=int, default=12)
+    parser.add_argument("--run-till", type=int, default=len(all_scripts))
 
     args = parser.parse_args()
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     logging.debug(args)
-    db_config = DB_INSTANCE_MAP[args.instance]
+    db_config = INSTANCE_CFG[args.instance].database
     config = NswVgTaskConfig.Dedup(
         run_from=args.run_from,
         run_till=args.run_till,
