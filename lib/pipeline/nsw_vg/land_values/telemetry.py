@@ -4,6 +4,7 @@ from logging import getLogger
 from typing import Dict, Self, Tuple
 
 from lib.service.clock import ClockService
+from lib.utility.format import fmt_time_elapsed
 
 @dataclass
 class WorkerStatistics:
@@ -85,7 +86,6 @@ class NswVgLvTelemetry:
 
     def _log_status(self: Self, event: str):
         total, workers = self.get_total()
-        t = int(self._clock.time() - self._start_time)
-        th, tm, ts = t // 3600, t // 60 % 60, t % 60
+        t = fmt_time_elapsed(self._start_time, self._clock.time(), 'hms')
         self.total_state = total
-        self._logger.info(f"{event.rjust(10)} ({th}h {tm}m {ts}s) {str(total)}")
+        self._logger.info(f"{event.rjust(10)} ({t}) {str(total)}")

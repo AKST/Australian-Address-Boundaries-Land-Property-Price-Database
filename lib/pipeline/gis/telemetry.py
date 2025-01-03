@@ -6,6 +6,7 @@ from pprint import pformat
 from typing import Self, Optional, List, Tuple, Dict
 
 from lib.service.clock import ClockService
+from lib.utility.format import fmt_time_elapsed
 from .config import GisProjection, IngestionTaskDescriptor
 
 def _p(a, b):
@@ -140,8 +141,7 @@ class GisPipelineTelemetry:
 
     def _log_status(self: Self, event: str):
         total = self.get_total()
-        t = int(self._clock.time() - self._start_time)
-        th, tm, ts = t // 3600, t // 60 % 60, t % 60
+        t = fmt_time_elapsed(self._start_time, self._clock.time(), 'hms')
         self.total_state = total
-        self._logger.info(f"{event.rjust(11)} ({th}h {tm}m {ts}s) " \
+        self._logger.info(f"{event.rjust(11)} ({t}) " \
                           f"{total.count()}\n{total.chain()}")
