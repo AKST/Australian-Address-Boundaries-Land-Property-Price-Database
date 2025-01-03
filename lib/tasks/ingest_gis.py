@@ -6,17 +6,18 @@ from logging import getLogger
 import math
 import pandas as pd
 import time
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from lib.pipeline.gis import (
+    BACKOFF_CONFIG,
     FeaturePaginationSharderFactory,
     FeatureServerClient,
+    FeatureExpBackoff,
     GisIngestion,
     GisIngestionConfig,
     GisPipeline,
     GisPipelineTelemetry,
     DateRangeParam,
-    BACKOFF_CONFIG,
     HOST_SEMAPHORE_CONFIG,
     ENSW_DA_PROJECTION,
     SNSW_LOT_PROJECTION,
@@ -27,8 +28,13 @@ from lib.pipeline.gis import (
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.service.clock import ClockService
-from lib.service.http import CachedClientSession, ThrottledClientSession, ExpBackoffClientSession
-from lib.service.http.middleware.cache import FileCacher
+from lib.service.http import (
+    CachedClientSession,
+    ExpBackoffClientSession,
+    HostSemaphoreConfig,
+    HttpLocalCache,
+    ThrottledClientSession,
+)
 from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
@@ -37,6 +43,10 @@ class IngestGisRunConfig:
     db_workers: int
     skip_save: bool
     gis_params: List[DateRangeParam]
+    exp_backoff_attempts: int
+
+def http_limits_of(ss: List[HostSemaphoreConfig]) -> int:
+    return reduce(lambda acc, it: acc + it.limit, ss, 0)
 
 def _parse_date_range(s: Optional[str], clock: ClockService) -> Optional[DateRangeParam]:
     match s:
@@ -79,20 +89,23 @@ async def run(
         active requests is set on a host basis.
     """
 
+    http_file_cache = HttpLocalCache.create(io)
     async with CachedClientSession.create(
         session=ExpBackoffClientSession.create(
             session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
             config=BACKOFF_CONFIG,
         ),
-        file_cache=FileCacher.create(io),
+        file_cache=http_file_cache,
         io_service=io,
     ) as session:
-        feature_client = FeatureServerClient(session)
+        feature_client = FeatureServerClient(
+            FeatureExpBackoff(cfg.exp_backoff_attempts),
+            clock, session, http_file_cache)
         telemetry = GisPipelineTelemetry.create(clock)
         ingestion = GisIngestion.create(
             GisIngestionConfig(
-                api_workers=16,
-                api_worker_backpressure=conf.db_workers,
+                api_workers=http_limits_of(HOST_SEMAPHORE_CONFIG),
+                api_worker_backpressure=conf.db_workers * 4,
                 db_workers=conf.db_workers,
                 chunk_size=None),
             feature_client,
@@ -109,23 +122,15 @@ async def run(
 async def run_in_console(
     open_file_limit: int,
     db_config: DatabaseConfig,
-    db_conns: int,
-    skip_save: bool,
-    gis_range: Optional[str],
+    config: IngestGisRunConfig,
 ) -> None:
     io = IoService.create(open_file_limit)
-    db = DatabaseService.create(db_config, db_conns)
+    db = DatabaseService.create(db_config, config.db_workers)
     clock = ClockService()
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     await controller.command(Command.Drop(ns='nsw_spatial'))
     await controller.command(Command.Create(ns='nsw_spatial'))
-
-    match _parse_date_range(args.gis_range, ClockService()):
-        case None:
-            params = []
-        case other:
-            params = [other]
-    await run(io, db, clock, IngestGisRunConfig(db_conns, skip_save, params))
+    await run(io, db, clock, cfg)
 
 if __name__ == '__main__':
     import asyncio
@@ -140,7 +145,8 @@ if __name__ == '__main__':
     parser.add_argument("--gis-range", type=str)
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--skip-save", action='store_true', required=False)
-    parser.add_argument("--db-connections", type=int, default=16)
+    parser.add_argument("--db-connections", type=int, default=32)
+    parser.add_argument("--exp-backoff-attempts", type=int, default=8)
 
     args = parser.parse_args()
 
@@ -150,25 +156,41 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
-    http_limits = reduce(lambda acc, it: acc + it.limit, HOST_SEMAPHORE_CONFIG, 0)
-    file_limit = int(slim * 0.8) - (args.db_connections + http_limits)
+    file_limit = int(slim * 0.8) - (args.db_connections + http_limits_of(HOST_SEMAPHORE_CONFIG))
+    if file_limit < 1:
+        raise ValueError(f"file limit of {file_limit} is just too small")
+
 
     db_config = DB_INSTANCE_MAP[args.instance]
 
     try:
+        match _parse_date_range(args.gis_range, ClockService()):
+            case other if other is not None:
+                params = [other]
+            case None:
+                params = []
+        cfg = IngestGisRunConfig(
+            args.db_connections,
+            args.skip_save,
+            params,
+            args.exp_backoff_attempts,
+        )
         asyncio.run(
             run_in_console(
                 open_file_limit=file_limit,
                 db_config=db_config,
-                db_conns=args.db_connections,
-                skip_save=args.skip_save,
-                gis_range=args.gis_range,
+                config=cfg,
             ),
         )
-    except ExceptionGroup as e:
-        import psutil
+    except ExceptionGroup as eg:
+        def is_cancelled_error(exc: BaseException) -> bool:
+            return isinstance(exc, asyncio.CancelledError)
 
-        process = psutil.Process()
+        cancelled_errors, remaining_eg = eg.split(is_cancelled_error)
 
-        print(f'io open files {process.num_fds()}, limits {(slim, hlim)}')
-        raise e
+        if remaining_eg:
+            for e in remaining_eg.exceptions:
+                logging.exception(e)
+            raise remaining_eg
+        else:
+            raise eg

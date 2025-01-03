@@ -114,11 +114,6 @@ class GisIngestion:
         self._telemetry.record_fetch_start(t_desc_fetch)
         page = await self._feature_server.get_page(projection, page_desc)
         self._telemetry.record_fetch_end(t_desc_fetch, len(page))
-
-        if len(page) != t_desc_fetch.page_desc.expected_results:
-            e_size = t_desc_fetch.page_desc.expected_results
-            # self._logger.warning(f"missing results, {len(page)} {e_size}")
-
         t_desc_save = IngestionTaskDescriptor.Save(
             projection, page_desc, build_df(projection, page))
         await self._save_queue.put(t_desc_save)
@@ -147,6 +142,10 @@ class GisIngestion:
                 except PgClientException as e:
                     self.stop()
                     log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
+                    await self._feature_server.forget_page_cache(proj, page_desc)
+                    raise e
+                except Exception as e:
+                    await self._feature_server.forget_page_cache(proj, page_desc)
                     raise e
             await conn.commit()
         self._telemetry.record_save_end(t_desc, len(t_desc.df))

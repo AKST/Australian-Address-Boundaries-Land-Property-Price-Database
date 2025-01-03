@@ -27,6 +27,6 @@ class ClockService(AbstractClockService):
     def time(self):
         return time()
 
-    async def sleep(self, ms: int):
-        await asyncio.sleep(ms)
+    async def sleep(self, seconds: float | int):
+        await asyncio.sleep(seconds)
 

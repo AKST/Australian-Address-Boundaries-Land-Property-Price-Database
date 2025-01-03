@@ -81,7 +81,34 @@ class FileCacher:
 
         return None, False
 
-    async def write(self, url: str, meta: InstructionHeaders, data: str):
+    async def forget_by_clause(self, clauses: List[str]):
+        if self._state is None:
+            return
+
+        url_to_rm: List[str] = []
+        locations: List[str] = []
+        for url, value in self._state.items():
+            if any([c not in url for c in clauses]):
+                continue
+
+            for fmt in self.parse_state(self._state, url).values():
+                locations.append(fmt.location)
+            url_to_rm.append(url)
+
+        for url in url_to_rm:
+            del self._state[url]
+        self._logger.info("Removed the following from cache: \n" \
+            + "\n - " + '\n - '.join(url_to_rm) \
+            + "\n\nNow deleteing from cache dir")
+        await self._save_cache_state()
+        for l in locations:
+            await self._io.f_delete(l)
+
+    async def write(self: Self,
+                    url: str,
+                    meta: InstructionHeaders,
+                    data: str,
+                    attempt=0) -> Dict[str, 'RequestCache']:
         if self._state is None:
             raise ValueError('write occured while state was not initialised')
 
@@ -100,15 +127,21 @@ class FileCacher:
         self._state[url] = fmts
 
         await self._save_cache_state()
-        return self.parse_state(self._state, url)
 
-    def parse_state(self, state, key):
+        if url in self._state:
+            return self.parse_state(self._state, url)
+        elif attempt == 0:
+            return await self.write(url, meta, data, 1)
+        else:
+            raise ValueError('cache has entered weird state')
+
+    def parse_state(self: Self, state: Dict[Any, Any], key: str) -> Dict[str, 'RequestCache']:
         return {
             fmt: self._rc_factory.from_json(s)
             for fmt, s in state[key].items()
         }
 
-    async def __aenter__(self):
+    async def __aenter__(self: Self):
         try:
             if not await self._io.f_exists(self._config_path):
                 await self._io.f_write(self._config_path, STATE_INIT)

@@ -6,7 +6,7 @@ from .defaults import (
     SNSW_PROP_PROJECTION,
     ENSW_ZONE_PROJECTION,
 )
-from .feature_server_client import FeatureServerClient
+from .feature_server_client import FeatureServerClient, FeatureExpBackoff
 from .feature_pagination_sharding import FeaturePaginationSharderFactory
 from .ingestion import GisIngestion, GisIngestionConfig
 from .predicate import *

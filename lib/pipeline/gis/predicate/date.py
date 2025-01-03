@@ -10,14 +10,14 @@ from .base import PredicateFunction, PredicateParam
 
 @dataclass
 class DateRangeParamFactory:
-    clock: ClockService
+    clock: ClockService = field(repr=False)
     def create(self, start: 'YearMonth', end: 'YearMonth', scope: str) -> 'DateRangeParam':
         return DateRangeParam(start, end, scope=scope, clock=self.clock)
 
 @dataclass
 class DatePredicateFunction(PredicateFunction):
     default_range: Tuple[int, int]
-    _factory: DateRangeParamFactory
+    _factory: DateRangeParamFactory = field(repr=False)
 
     def __init__(self,
                  field: str,
@@ -41,7 +41,7 @@ class DatePredicateFunction(PredicateFunction):
 class DateRangeParam(PredicateParam):
     start: 'YearMonth'
     end: 'YearMonth'
-    _clock: ClockService
+    _clock: ClockService = field(repr=False)
 
     def __init__(self, start, end, clock: ClockService, scope=None):
         super().__init__('date', scope=scope)
