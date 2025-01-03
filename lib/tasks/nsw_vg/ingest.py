@@ -33,12 +33,15 @@ async def ingest_nswvg(
             await ingest_land_values(lv_conf, io, db, clock, session, static_env)
 
     if config.load_raw_property_sales:
-        ps_conf = config.load_raw_property_sales
-        await ingest_property_sales_rows(environment, clock, io, ps_conf)
+        await ingest_property_sales_rows(
+            environment,
+            clock,
+            io,
+            config.load_raw_property_sales,
+        )
 
     if config.deduplicate:
-        dedup_conf = config.deduplicate
-        await ingest_deduplicate(db, io, dedup_conf)
+        await ingest_deduplicate(db, io, clock, config.deduplicate)
 
     if config.property_descriptions:
         try:

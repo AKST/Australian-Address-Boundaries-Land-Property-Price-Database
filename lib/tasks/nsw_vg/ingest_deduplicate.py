@@ -1,6 +1,7 @@
 import logging
 from typing import List
 
+from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tooling.schema.controller import SchemaController
@@ -9,31 +10,37 @@ from lib.tooling.schema.type import Command
 
 from .config import NswVgTaskConfig
 
+all_scripts = [
+    './sql/nsw_vg/tasks/from_raw_derive/001_identifiers.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/001_from_land_values.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/002_from_psi.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/003_from_psi_archive.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/004_rematerialize.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/001_legal_descriptions.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/002_property_area.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/003_land_valuation.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/004_zone_observation.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/005_strata_plan.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/004_ingest_psi_pre_2001.sql',
+    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/005_cleanup.sql',
+]
+
 async def ingest_deduplicate(
     db: DatabaseService,
     io: IoService,
+    clock: ClockService,
     config: NswVgTaskConfig.Dedup,
 ):
     logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
-    scripts = [
-        './sql/nsw_vg/tasks/from_raw_derive/001_identifiers.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/001_from_land_values.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/002_from_psi.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/003_from_psi_archive.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/004_addresses/004_rematerialize.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/004_ingest_psi_pre_2001.sql',
-        './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/005_cleanup.sql',
-    ]
 
-    if 1 > config.run_from or len(scripts) < config.run_from:
+    if 1 > config.run_from or len(all_scripts) < config.run_from:
         raise ValueError(f'dedup run from {config.run_from} is out of scope')
     else:
-        scripts = scripts[config.run_from - 1:config.run_till]
+        scripts = all_scripts[config.run_from - 1:config.run_till]
 
     discovery = SchemaDiscovery.create(io)
     controller = SchemaController(io, db, discovery)
@@ -66,8 +73,14 @@ async def ingest_deduplicate(
         ])
 
     async with db.async_connect() as c, c.cursor() as cursor:
-        for script_path in scripts:
-            logger.info(f'running {script_path}')
+        start_time = clock.time()
+        for i, script_path in enumerate(scripts):
+            u2 = lambda t: str(t).rjust(2)
+            t = int(clock.time() - start_time)
+            th, tm, ts = t // 3600, t // 60 % 60, t % 60
+            pos = config.run_from + i
+            _, short_name = script_path.split('from_raw_derive/')
+            logger.info(f'({u2(th)}h {u2(tm)}m {u2(ts)}s) running [#{pos}] {short_name}')
             await cursor.execute(await io.f_read(script_path))
 
     logger.info('finished deduplicating')
@@ -109,6 +122,7 @@ if __name__ == '__main__':
     )
 
     async def _cli_main() -> None:
+        clock = ClockService()
         io = IoService.create(None)
         db = DatabaseService.create(
             db_config,
@@ -116,7 +130,7 @@ if __name__ == '__main__':
         )
         try:
             await db.open()
-            await ingest_deduplicate(db, io, config)
+            await ingest_deduplicate(db, io, clock, config)
         finally:
             await db.close()
 
