@@ -89,7 +89,7 @@ async def run(
         active requests is set on a host basis.
     """
 
-    http_file_cache = HttpLocalCache.create(io)
+    http_file_cache = HttpLocalCache.create(io, 'gis')
     async with CachedClientSession.create(
         session=ExpBackoffClientSession.create(
             session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),

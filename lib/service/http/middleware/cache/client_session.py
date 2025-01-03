@@ -2,7 +2,15 @@ import asyncio
 from dataclasses import dataclass, field
 import json
 from logging import getLogger, Logger
-from typing import Any, Dict, Optional, Tuple, AsyncIterator, AsyncGenerator
+from typing import (
+    Any,
+    AsyncIterator,
+    AsyncGenerator,
+    Dict,
+    Literal,
+    Optional,
+    Tuple,
+)
 
 from lib.service.io import IoService
 from lib.service.http import ConnectionError
@@ -23,22 +31,19 @@ class CachedClientSession(AbstractClientSession):
         self._create_get_request = create_get_request
 
     @staticmethod
-    def create(session: AbstractClientSession | None = None,
-               file_cache: FileCacher | None = None,
-               io_service: IoService | None = None):
+    def create(file_cache: FileCacher,
+               io_service: IoService,
+               session: AbstractClientSession | None):
         session = session or ClientSession.create()
-        cache = file_cache or FileCacher.create(None)
         logger = getLogger(f'{__name__}.CachedGet')
-
         create_get_request = lambda url, headers, meta: CachedGetResponse(
-            _io=io_service or IoService.create(None),
+            _io=io_service,
             _config=(url, headers, meta),
             _logger=logger,
             _session=session,
-            _cache=cache,
+            _cache=file_cache,
         )
-
-        return CachedClientSession(session, cache, create_get_request)
+        return CachedClientSession(session, file_cache, create_get_request)
 
     def get(self, url, headers=None):
         if not isinstance(url, str):

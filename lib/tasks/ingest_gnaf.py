@@ -39,7 +39,7 @@ if __name__ == '__main__':
     async def main() -> None:
         db = DatabaseService.create(instance_cfg.database, 32)
         io = IoService.create(file_limit)
-        async with get_session(io) as session:
+        async with get_session(io, 'env-gnaf-cli') as session:
             env = await initialise(io, session)
 
         if env.gnaf.publication is None:

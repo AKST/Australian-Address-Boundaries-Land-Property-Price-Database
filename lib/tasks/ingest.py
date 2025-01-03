@@ -36,7 +36,7 @@ class IngestConfig:
 async def ingest_all(config: IngestConfig):
     io_service = IoService.create(None)
 
-    async with get_session(io_service) as session:
+    async with get_session(io_service, 'env') as session:
         environment = await initialise(io_service, session)
 
     docker_service = DockerService.create()

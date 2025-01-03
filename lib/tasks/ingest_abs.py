@@ -32,7 +32,7 @@ async def _main(config: AbsIngestionConfig,
         db = DatabaseService.create(db_conf, 32)
         io = IoService.create(file_limit)
 
-        async with get_session(io) as session:
+        async with get_session(io, 'env-abs-cli') as session:
             await initialise(io, session)
         try:
             await db.open()

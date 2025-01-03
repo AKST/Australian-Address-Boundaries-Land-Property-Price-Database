@@ -35,16 +35,15 @@ async def cli_main(cfg: NswVgTaskConfig.LandValue.Main) -> None:
     db = DatabaseService.create(cfg.child_cfg.db_config, 1)
     clock = ClockService()
 
-    async with get_session(io) as session:
-        static_env = StaticEnvironmentInitialiser.create(io, session)
-        await ingest_land_values(cfg, io, db, clock, session, static_env)
+    async with get_session(io, 'lv') as session:
+        await ingest_land_values(cfg, io, db, clock, session)
 
 async def ingest_land_values(cfg: NswVgTaskConfig.LandValue.Main,
                     io: IoService,
                     db: DatabaseService,
                     clock: ClockService,
-                    session: AbstractClientSession,
-                    static_env: StaticEnvironmentInitialiser) -> None:
+                    session: AbstractClientSession) -> None:
+    static_env = StaticEnvironmentInitialiser.create(io, session)
     logger = logging.getLogger(f'{__name__}.spawn')
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     if cfg.truncate_raw_earlier:

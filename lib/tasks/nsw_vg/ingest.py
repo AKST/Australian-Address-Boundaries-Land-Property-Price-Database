@@ -5,7 +5,6 @@ import logging
 from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
-from lib.service.static_environment import StaticEnvironmentInitialiser
 from lib.tasks.fetch_static_files import get_session
 from lib.tooling.schema.type import Command
 
@@ -28,9 +27,8 @@ async def ingest_nswvg(
 ):
     if config.load_raw_land_values:
         lv_conf = config.load_raw_land_values
-        async with get_session(io) as session:
-            static_env = StaticEnvironmentInitialiser.create(io, session)
-            await ingest_land_values(lv_conf, io, db, clock, session, static_env)
+        async with get_session(io, 'lv') as session:
+            await ingest_land_values(lv_conf, io, db, clock, session)
 
     if config.load_raw_property_sales:
         await ingest_property_sales_rows(
@@ -202,7 +200,7 @@ if __name__ == '__main__':
             parent_db_pool_limit,
         )
 
-        async with get_session(io) as session:
+        async with get_session(io, 'env-nswvg-cli') as session:
             environment = await initialise(io, session)
 
         try:
