@@ -97,6 +97,9 @@ class FileCacher:
 
         for url in url_to_rm:
             del self._state[url]
+        else:
+            return
+
         self._logger.info("Removed the following from cache: \n" \
             + "\n - " + '\n - '.join(url_to_rm) \
             + "\n\nNow deleteing from cache dir")
