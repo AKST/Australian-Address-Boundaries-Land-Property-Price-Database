@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import shutil
 from typing import AsyncIterator, AsyncGenerator, Tuple, List, Optional
 from zipfile import ZipFile
 
@@ -88,6 +89,9 @@ class IoService:
 
     async def f_delete(self, file_path: str):
         await asyncio.to_thread(os.remove, file_path)
+
+    async def rmtree(self, file_path: str):
+        await asyncio.to_thread(shutil.rmtree, file_path)
 
     async def f_exists(self, file_path: str) -> bool:
         return await asyncio.to_thread(Path(file_path).exists)

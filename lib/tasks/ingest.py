@@ -1,14 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
+import shutil
 from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
 from lib.pipeline.abs import *
 from lib.pipeline.gnaf.config import GnafConfig, GnafState
-from lib.pipeline.gnaf.defaults import GNAF_STATE_INSTANCE_MAP
 from lib.pipeline.gnaf.init_schema import init_target_schema
 from lib.pipeline.nsw_vg.config import *
+from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
 from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG
 from lib.service.clock import ClockService
 from lib.service.docker import DockerService, ImageConfig, ContainerConfig
@@ -29,6 +30,8 @@ class IngestConfig:
     db_config: DatabaseConfig
     gnaf_states: Set[GnafState]
     nswvg_psi_publish_min: Optional[int]
+    nswvg_lv_depth: NswVgLvCsvDiscoveryMode
+    docker_volume: str
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig
     enable_gnaf: bool
@@ -40,6 +43,7 @@ async def ingest_all(config: IngestConfig):
         environment = await initialise(io_service, session)
 
     docker_service = DockerService.create()
+    docker_service.resert_volume(config.docker_volume)
     image = docker_service.create_image(config.docker_image_config)
     image.prepare()
 
@@ -94,21 +98,21 @@ async def ingest_all(config: IngestConfig):
         io_service,
         NswVgTaskConfig.Ingestion(
             load_raw_land_values=NswVgTaskConfig.LandValue.Main(
-                discovery_mode='latest',
+                discovery_mode=config.nswvg_lv_depth,
                 truncate_raw_earlier=False,
-                child_n=6,
+                child_n=8,
                 child_cfg=NswVgTaskConfig.LandValue.Child(
                     debug=False,
-                    db_conn=8,
+                    db_conn=16,
                     chunk_size=1000,
                     db_config=db_service_config,
                 ),
             ),
             load_raw_property_sales=NswVgTaskConfig.PsiIngest(
-                worker_count=6,
+                worker_count=8,
                 worker_config=NswVgPsiWorkerConfig(
                     db_config=db_service_config,
-                    db_pool_size=4,
+                    db_pool_size=16,
                     db_batch_size=1000,
                     file_limit=None,
                     ingestion_config=NSW_VG_PS_INGESTION_CONFIG,
@@ -129,7 +133,7 @@ async def ingest_all(config: IngestConfig):
             ),
             property_descriptions=NswVgTaskConfig.PropDescIngest(
                 worker_debug=False,
-                workers=6,
+                workers=8,
                 sub_workers=8,
                 db_config=db_service_config,
             ),
@@ -170,15 +174,18 @@ if __name__ == '__main__':
     NSWVG_MIN_PUB_YEAR = {
         1: None,
         2: datetime.now().year - 1,
+        3: datetime.now().year - 1,
     }
 
     config = IngestConfig(
         io_file_limit=file_limit,
         db_config=instance_cfg.database,
-        gnaf_states=GNAF_STATE_INSTANCE_MAP[args.instance],
         nswvg_psi_publish_min=NSWVG_MIN_PUB_YEAR[args.instance],
+        nswvg_lv_depth=instance_cfg.nswvg_lv_discovery_mode,
+        docker_volume=instance_cfg.docker_volume,
         docker_image_config=instance_cfg.docker_image,
         docker_container_config=instance_cfg.docker_container,
+        gnaf_states=instance_cfg.gnaf_states,
         enable_gnaf=instance_cfg.enable_gnaf,
     )
 

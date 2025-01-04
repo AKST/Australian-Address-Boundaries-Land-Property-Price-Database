@@ -27,10 +27,10 @@ class ContainerConfig:
 
         if self.shared_memory:
             kwargs['shm_size'] = self.shared_memory
-        if self.cpu_count:
-            kwargs['cpus'] = self.cpu_count
-        if self.memory_limit:
-            kwargs['mem_limit'] = self.memory_limit
+        # if self.cpu_count:
+        #     kwargs['cpus'] = self.cpu_count
+        # if self.memory_limit:
+        #     kwargs['mem_limit'] = self.memory_limit
 
         return kwargs
 

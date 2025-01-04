@@ -20,6 +20,23 @@ class DockerService:
         client = docker.from_env()
         return DockerService(client)
 
+    def resert_volume(self: Self, volume_name: str):
+        for container in self.docker.containers.list(all=True):
+            if any((
+                mount["Name"] == volume_name
+                for mount in container.attrs["Mounts"]
+                if 'Name' in mount
+            )):
+                container.stop()
+                container.remove(force=True)
+        try:
+            existing_volume = self.docker.volumes.get(volume_name)
+            existing_volume.remove()
+        except docker.errors.NotFound:
+            pass
+
+        self.docker.volumes.create(name=volume_name)
+
     def create_image(self: Self, config: ImageConfig) -> 'DockerImage':
         return DockerImage(self.docker, config)
 

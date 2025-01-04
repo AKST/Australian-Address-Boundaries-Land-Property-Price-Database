@@ -7,6 +7,7 @@ from lib.service.io import IoService
 from lib.tooling.schema.controller import SchemaController
 from lib.tooling.schema.discovery import SchemaDiscovery
 from lib.tooling.schema.type import Command
+from lib.utility.format import fmt_time_elapsed
 
 from .config import NswVgTaskConfig
 
@@ -72,16 +73,18 @@ async def ingest_deduplicate(
             Command.Create(ns='nsw_vg', range=range(4, 5)),
         ])
 
-    async with db.async_connect() as c, c.cursor() as cursor:
+    async with (
+        db.async_connect() as conn,
+        conn.cursor() as cursor,
+    ):
         start_time = clock.time()
         for i, script_path in enumerate(scripts):
-            u2 = lambda t: str(t).rjust(2)
-            t = int(clock.time() - start_time)
-            th, tm, ts = t // 3600, t // 60 % 60, t % 60
+            t = fmt_time_elapsed(start_time, clock.time(), format="hms")
             pos = config.run_from + i
             _, short_name = script_path.split('from_raw_derive/')
-            logger.info(f'({u2(th)}h {u2(tm)}m {u2(ts)}s) running [#{pos}] {short_name}')
+            logger.info(f'({t}) running [#{pos}] {short_name}')
             await cursor.execute(await io.f_read(script_path))
+            await conn.commit()
 
     logger.info('finished deduplicating')
 

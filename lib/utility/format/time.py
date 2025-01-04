@@ -9,8 +9,8 @@ def time_elapsed(s_time: float | int,
             return f'{t}s'
         case 'ms':
             tm, ts = t // 60, t % 60
-            return f'{tm}m {str(ts).rjust(2)}s'
+            return f'{tm}m {ts}s'
         case 'hms':
             th, tm, ts = t // 3600, t // 60 % 60, t % 60
-            return f'{th}hr {str(tm).rjust(2)}m {str(ts).rjust(2)}s'
+            return f'{th}hr {tm}m {ts}s'
 

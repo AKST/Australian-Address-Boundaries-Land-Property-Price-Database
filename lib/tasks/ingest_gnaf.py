@@ -1,4 +1,4 @@
-from lib.pipeline.gnaf import defaults, ingest, GnafConfig
+from lib.pipeline.gnaf import ingest, GnafConfig
 from lib.service.database import DatabaseService
 
 async def ingest_gnaf(config: GnafConfig, db: DatabaseService) -> None:
@@ -34,7 +34,6 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
     instance_cfg = INSTANCE_CFG[args.instance]
-    gnaf_states = defaults.GNAF_STATE_INSTANCE_MAP[args.instance]
 
     async def main() -> None:
         db = DatabaseService.create(instance_cfg.database, 32)
@@ -45,7 +44,7 @@ if __name__ == '__main__':
         if env.gnaf.publication is None:
             raise ValueError('no gnaf publication')
 
-        config = GnafConfig(env.gnaf.publication, gnaf_states)
+        config = GnafConfig(env.gnaf.publication, instance_cfg.gnaf_states)
         await ingest_gnaf(config, db)
 
     asyncio.run(main())
