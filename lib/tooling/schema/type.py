@@ -75,10 +75,22 @@ class Stmt:
     class CreateIndex(Op):
         index_name: str
 
+        @property
+        def is_concurrent(self: Self) -> bool:
+            return self.expr_tree.args['concurrently']
+
 @dataclass
 class SchemaSyntax:
     expr_tree: List[Expression] = field(repr=False)
     operations: List[Stmt.Op]
+
+    @property
+    def can_be_used_in_transaction(self: Self) -> bool:
+        return not any(
+            operation.is_concurrent
+            for operation in self.operations
+            if isinstance(operation, Stmt.CreateIndex)
+        )
 
 @dataclass
 class SqlFileMetaData:
@@ -88,6 +100,14 @@ class SqlFileMetaData:
     step: int
     name: Optional[str]
     contents: Optional[SchemaSyntax]
+
+    @property
+    def is_known_to_be_transaction_unsafe(self: Self) -> bool:
+        match self.contents:
+            case None:
+                return False
+            case contents:
+                return not self.contents.can_be_used_in_transaction
 
     def path(self: Self) -> str:
         step_s = f'{self.step:03}'

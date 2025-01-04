@@ -15,6 +15,7 @@ from ..discovery import sql_as_operations
     "CREATE TYPE abc AS ENUM ('A', 'B', 'C')",
     "CREATE TYPE s.abc AS ENUM ('A', 'B', 'C')",
     "CREATE INDEX idx_a ON a (id)",
+    "CREATE INDEX CONCURRENTLY idx_a ON a (id)",
     "CREATE INDEX idx_a ON s.a (id)",
     "CREATE INDEX IF NOT EXISTS idx_a ON a (id)",
     "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)",
@@ -24,3 +25,18 @@ from ..discovery import sql_as_operations
 def test_expr_as_op(snapshot, sql: str):
     operations = sql_as_operations(sql)
     snapshot.assert_match(pformat(operations, width=150), 'schema')
+
+
+def test_normal_index():
+    sql = "CREATE INDEX idx_a ON a (id)"
+    schema = sql_as_operations(sql)
+    create_index = next(o for o in schema.operations)
+    assert not create_index.is_concurrent
+    assert schema.can_be_used_in_transaction
+
+def test_concurrent_index():
+    sql = "CREATE INDEX CONCURRENTLY idx_a ON a (id)"
+    schema = sql_as_operations(sql)
+    create_index = next(o for o in schema.operations)
+    assert create_index.is_concurrent
+    assert not schema.can_be_used_in_transaction

@@ -66,9 +66,9 @@ CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
 -- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
 --     FOR VALUES WITH (MODULUS 8, REMAINDER 7);
 
-CREATE INDEX idx_land_value_row_id_name_land_value_row
+CREATE INDEX CONCURRENTLY idx_land_value_row_id_name_land_value_row
     ON nsw_vg_raw.land_value_row(land_value_row_id);
-CREATE INDEX idx_source_file_name_land_value_row
+CREATE INDEX CONCURRENTLY idx_source_file_name_land_value_row
     ON nsw_vg_raw.land_value_row(source_file_name);
 -- CREATE INDEX idx_source_file_name_land_value_row
 --     ON nsw_vg_raw.land_value_row(property_description IS NULL);
@@ -80,9 +80,9 @@ CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row_source(
     FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
 );
 
-CREATE INDEX idx_land_value_row_source_a
+CREATE INDEX CONCURRENTLY idx_land_value_row_source_a
     ON nsw_vg_raw.land_value_row_source(land_value_row_id);
-CREATE INDEX idx_land_value_row_source_b
+CREATE INDEX CONCURRENTLY idx_land_value_row_source_b
     ON nsw_vg_raw.land_value_row_source(source_id);
 
 CREATE UNLOGGED TABLE nsw_vg_raw.land_value_effective_date (

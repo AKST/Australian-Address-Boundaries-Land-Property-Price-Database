@@ -21,6 +21,7 @@ from ..discovery import sql_as_operations
     (False, "CREATE TYPE abc AS ENUM ('A', 'B', 'C')"),
     (False, "CREATE TYPE s.abc AS ENUM ('A', 'B', 'C')"),
     (False, "CREATE INDEX IF NOT EXISTS idx_a ON a (id)"),
+    (False, "CREATE INDEX CONCURRENTLY idx_a ON a (id)"),
     (False, "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)"),
     (False, "CREATE TABLE c PARTITION OF a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),
     (False, "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),

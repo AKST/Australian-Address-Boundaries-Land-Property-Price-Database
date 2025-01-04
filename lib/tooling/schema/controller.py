@@ -1,4 +1,5 @@
 from logging import getLogger
+import psycopg
 from typing import List, Set, Self, Type
 
 from lib.service.io import IoService
@@ -48,6 +49,12 @@ class SchemaController:
 
         async with self._db.async_connect() as conn, conn.cursor() as cursor:
             for file in file_list:
+                if file.is_known_to_be_transaction_unsafe:
+                    await conn.commit()
+                    await conn.set_autocommit(True)
+                elif conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE:
+                    await conn.set_autocommit(False)
+
                 if command.run_raw_schema:
                     sql_text = await self._io.f_read(file.file_name)
                     self._logger.debug(f'running {file.file_name}')
