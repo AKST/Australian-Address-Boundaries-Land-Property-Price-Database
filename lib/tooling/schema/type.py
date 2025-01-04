@@ -56,6 +56,11 @@ class Stmt:
         table_name: str
 
     @dataclass
+    class CreateTablePartition(Op):
+        schema_name: Optional[str]
+        paritition_name: str
+
+    @dataclass
     class CreateView(Op):
         schema_name: Optional[str]
         view_name: str

@@ -8,6 +8,10 @@ from ..discovery import sql_as_operations
 
 @pytest.mark.parametrize("omit_foreign_keys,sql", [
     (False, "CREATE SCHEMA s"),
+    (False, "CREATE UNLOGGED TABLE a (b_id INT)"),
+    (False, "CREATE UNLOGGED TABLE s.a (b_id INT)"),
+    (True, "CREATE UNLOGGED TABLE a (b_id INT)"),
+    (True, "CREATE UNLOGGED TABLE s.a (b_id INT)"),
     (False, "CREATE TABLE a (b_id INT, FOREIGN KEY (b_id) REFERENCES b(b_id))"),
     (False, "CREATE TABLE s.a (b_id INT, FOREIGN KEY (b_id) REFERENCES b(b_id))"),
     (True, "CREATE TABLE a (b_id INT, FOREIGN KEY (b_id) REFERENCES b(b_id))"),
@@ -18,6 +22,8 @@ from ..discovery import sql_as_operations
     (False, "CREATE TYPE s.abc AS ENUM ('A', 'B', 'C')"),
     (False, "CREATE INDEX IF NOT EXISTS idx_a ON a (id)"),
     (False, "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)"),
+    (False, "CREATE TABLE c PARTITION OF a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),
+    (False, "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),
 ])
 def test_create(snapshot, omit_foreign_keys: bool, sql: str):
     codegen = list(create(sql_as_operations(sql), omit_foreign_keys))

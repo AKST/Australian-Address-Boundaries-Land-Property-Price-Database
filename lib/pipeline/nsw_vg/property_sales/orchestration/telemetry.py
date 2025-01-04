@@ -15,8 +15,7 @@ class IngestionSample(AbstractSample):
     def __str__(self: Self) -> str:
         if int(self.parsed):
             p = round(self.ingested / self.parsed, 6) * 100
-            return '(parsed: %s, ingested: %s, processed: %s %%)' % \
-                (self.parsed, self.ingested, p)
+            return f'(parsed: {self.parsed}, ingested: {self.ingested} [{p:.2f}%])'
         else:
             return f'(parsed: {self.parsed}, ingested: {self.ingested})'
 

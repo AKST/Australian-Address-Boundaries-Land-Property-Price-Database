@@ -4,6 +4,7 @@ from logging import Logger, getLogger
 from typing import Optional, Self, Tuple, TypeVar, Generic
 
 from lib.service.clock import AbstractClockService
+from lib.utility.format import fmt_time_elapsed
 from .state import AbstractSample, SamplingConfig, Sample, SampleState
 
 T = TypeVar('T', bound=AbstractSample)
@@ -39,9 +40,8 @@ class Sampler(SampleState[T]):
             self.logger.info(self.get_message(next_log))
 
     def get_message(self: Self, sample: Sample[T]) -> str:
-        t = int(self.clock.time() - self.start_time)
-        th, tm, ts = t // 3600, t // 60 % 60, t % 60
-        return f'({th}h {tm}m {ts}s) {self.state}'
+        t = fmt_time_elapsed(self.start_time, self.clock.time(), format="hms")
+        return f'({t}) {self.state}'
 
     def _snapshot_log(self: Self) -> Sample[T]:
         last_log = self.last_log

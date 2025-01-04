@@ -4,7 +4,15 @@ from logging import getLogger
 from os.path import relpath, basename
 from sqlglot import parse as parse_sql, Expression
 import sqlglot.expressions as sql_expr
-from typing import cast, List, Optional, Set, Self, Type
+from typing import (
+    cast,
+    List,
+    Optional,
+    Self,
+    Set,
+    Type,
+    Tuple,
+)
 
 from lib.service.io import IoService
 from lib.utility.concurrent import fmap
@@ -105,6 +113,31 @@ def sql_as_operations(file_data: str) -> SchemaSyntax:
     generator_b = [(expr, op) for expr, op in generator_a if op is not None]
     return SchemaSyntax(*partition(generator_b))
 
+def get_identifiers(name: Expression) -> Tuple[Optional[str], str]:
+    from sqlglot.expressions import (
+        Identifier as Id,
+        Table as T,
+        Schema as S
+    )
+    match name:
+        case S(this=T(this=Id(this=name), db=schema)):
+            return (schema or None), name
+        case T(this=Id(this=name)):
+            return None, name
+    raise ValueError(f'unknown expression, {name}')
+
+def is_create_partition(expr: sql_expr.Create) -> bool:
+    if expr.args['properties'] is None:
+        return False
+    return any(
+        isinstance(property, sql_expr.PartitionedOfProperty)
+        for property in expr.args['properties'].expressions
+    )
+
+def get_prop(expr, Type):
+    es = expr.args['properties'].expressions
+    return next((e for e in es if isinstance(e, Type)))
+
 def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
     match expr:
         case sql_expr.Create(kind="SCHEMA", this=schema_def):
@@ -118,9 +151,11 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
             t_name = schema.this.this
             s_name = schema.db or None
             return Stmt.CreateView(expr, s_name, t_name, materialized)
-        case sql_expr.Create(kind="TABLE", this=schema):
-            t_name = schema.this.this.this
-            s_name = schema.this.db or None
+        case sql_expr.Create(kind="TABLE", this=id_info) if is_create_partition(expr):
+            s_name, p_name = get_identifiers(id_info)
+            return Stmt.CreateTablePartition(expr, s_name, p_name)
+        case sql_expr.Create(kind="TABLE", this=id_info):
+            s_name, t_name = get_identifiers(id_info)
             return Stmt.CreateTable(expr, s_name, t_name)
         case sql_expr.Create(kind="INDEX", this=schema):
             t_name = schema.this.this
