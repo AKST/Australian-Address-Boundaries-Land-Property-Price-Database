@@ -1,9 +1,9 @@
-FROM postgres:12
+FROM postgres:16
 
 # Install required packages for PostGIS
 RUN apt-get update && apt-get install -y \
-    postgresql-12-postgis-3 \
-    postgresql-12-postgis-3-scripts \
+    postgresql-16-postgis-3 \
+    postgresql-16-postgis-3-scripts \
     && rm -rf /var/lib/apt/lists/*
 
 # Enable PostGIS
@@ -22,3 +22,4 @@ RUN chmod +x /docker-entrypoint-initdb.d/init_postgis.sh
 
 # Expose default PostgreSQL port
 EXPOSE 5432
+
