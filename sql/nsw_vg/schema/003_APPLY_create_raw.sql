@@ -5,7 +5,7 @@
 --   - `CURRENT_DATE()` is `source_file.date_recorded`
 --   - `basis_date_N` is `event.effective_date`
 --
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
     ps_row_a_legacy_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     file_path TEXT NOT NULL UNIQUE,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy (
 CREATE INDEX idx_file_path_ps_row_a_legacy
     ON nsw_vg_raw.ps_row_a_legacy(file_path);
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
     ps_row_b_legacy_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     file_path TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy (
 -- # Non Legacy
 --
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
     ps_row_a_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     year_of_sale INT NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a (
 CREATE INDEX idx_file_path_ps_row_a
     ON nsw_vg_raw.ps_row_a(file_path);
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     ps_row_b_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     file_path TEXT NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b (
     UNIQUE (file_path, position)
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c (
     ps_row_c_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     file_path TEXT,
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c (
     UNIQUE (file_path, position)
 );
 
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d (
     ps_row_d_id BIGSERIAL PRIMARY KEY,
     position bigint NOT NULL,
     file_path TEXT,

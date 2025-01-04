@@ -55,8 +55,6 @@ CREATE TABLE IF NOT EXISTS meta.source_byte_position (
 CREATE INDEX idx_file_source_id_byte_position_source_byte_position
     ON meta.source_byte_position(file_source_id, source_byte_position);
 
--- CREATE VIEW
-
 -- This is a general data type to record the effective date of an
 -- observation, here are some examples:
 --

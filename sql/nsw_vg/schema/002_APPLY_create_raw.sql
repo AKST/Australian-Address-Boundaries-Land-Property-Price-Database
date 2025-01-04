@@ -4,7 +4,7 @@
 --   - `CURRENT_DATE()` is `source_file.date_recorded`
 --   - `basis_date_N` is `event.effective_date`
 --
-CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     land_value_row_id BIGSERIAL PRIMARY KEY,
     district_code INT NOT NULL,
     district_name TEXT,
@@ -47,8 +47,46 @@ CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
 
     UNIQUE (property_id, source_date)
 );
+-- ) PARTITION BY HASH (property_id);
+--
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 0);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 1);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 2);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 3);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 4);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 5);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 6);
+-- CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
+--     FOR VALUES WITH (MODULUS 8, REMAINDER 7);
 
 CREATE INDEX idx_land_value_row_id_name_land_value_row
     ON nsw_vg_raw.land_value_row(land_value_row_id);
 CREATE INDEX idx_source_file_name_land_value_row
     ON nsw_vg_raw.land_value_row(source_file_name);
+-- CREATE INDEX idx_source_file_name_land_value_row
+--     ON nsw_vg_raw.land_value_row(property_description IS NULL);
+
+CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row_source(
+    land_value_row_id bigint PRIMARY KEY,
+    source_id bigint UNIQUE NOT NULL,
+    FOREIGN KEY (land_value_row_id) REFERENCES nsw_vg_raw.land_value_row(land_value_row_id),
+    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
+);
+
+CREATE INDEX idx_land_value_row_source_a
+    ON nsw_vg_raw.land_value_row_source(land_value_row_id);
+CREATE INDEX idx_land_value_row_source_b
+    ON nsw_vg_raw.land_value_row_source(source_id);
+
+CREATE UNLOGGED TABLE nsw_vg_raw.land_value_effective_date (
+    land_value_row_id BIGSERIAL PRIMARY KEY,
+    property_id INT NOT NULL,
+    effective_date DATE NOT NULL
+);

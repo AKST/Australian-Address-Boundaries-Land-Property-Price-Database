@@ -113,7 +113,8 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         ),
     ),
     3: InstanceCfg(
-        nswvg_lv_discovery_mode='each-year',
+        #nswvg_lv_discovery_mode='each-year',
+        nswvg_lv_discovery_mode='latest',
         gnaf_states=set(),
         enable_gnaf=False,
         database=DatabaseConfig(
