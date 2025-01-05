@@ -14,4 +14,4 @@ class InstanceCfg:
     docker_image: ImageConfig
     enable_gnaf: bool
     gnaf_states: Set[GnafState]
-    nswvg_lv_discovery_mode: NswVgLvCsvDiscoveryMode
+    nswvg_lv_discovery_mode: NswVgLvCsvDiscoveryMode.T

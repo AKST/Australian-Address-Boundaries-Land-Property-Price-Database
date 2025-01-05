@@ -30,7 +30,7 @@ class IngestConfig:
     db_config: DatabaseConfig
     gnaf_states: Set[GnafState]
     nswvg_psi_publish_min: Optional[int]
-    nswvg_lv_depth: NswVgLvCsvDiscoveryMode
+    nswvg_lv_depth: NswVgLvCsvDiscoveryMode.T
     docker_volume: str
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig

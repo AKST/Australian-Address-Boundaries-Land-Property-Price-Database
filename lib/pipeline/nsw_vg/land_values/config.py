@@ -1,15 +1,34 @@
+from abc import ABC
 from dataclasses import dataclass, fields, field
 from typing import (
     Dict,
     List,
-    Self,
+    Literal,
     Optional,
+    Self,
+    Set,
+    Tuple,
+    Union,
 )
 
 from lib.pipeline.nsw_vg.raw_data.rows import *
 from lib.pipeline.nsw_vg.raw_data.zoning import ZoningKind
 
 from ..discovery import NswVgTarget
+
+class DiscoveryMode:
+    class T(ABC): pass
+    class Latest(T): pass
+    class EachYear(T): pass
+    class All(T): pass
+
+    @dataclass
+    class EachNthYear(T):
+        n: int
+
+    @dataclass
+    class TheseYears(T):
+        years: Set[int]
 
 class NswVgLvTaskDesc:
     class Base:

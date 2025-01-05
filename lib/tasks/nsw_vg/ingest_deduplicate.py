@@ -36,7 +36,7 @@ async def ingest_deduplicate(
     clock: ClockService,
     config: NswVgTaskConfig.Dedup,
 ):
-    logger = logging.getLogger(f'{__name__}.ingest_nswvg_deduplicate')
+    logger = logging.getLogger(__name__)
 
     if 1 > config.run_from or len(all_scripts) < config.run_from:
         raise ValueError(f'dedup run from {config.run_from} is out of scope')

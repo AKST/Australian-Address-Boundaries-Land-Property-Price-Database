@@ -2,6 +2,7 @@ import os
 from typing import Dict, Set
 
 from lib.pipeline.gnaf.config import GnafState
+from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
 from lib.service.database.config import *
 from lib.service.docker.config import *
 from .config import InstanceCfg
@@ -53,7 +54,7 @@ def _create_mounted_dirs(
 
 INSTANCE_CFG: Dict[int, InstanceCfg] = {
     1: InstanceCfg(
-        nswvg_lv_discovery_mode='latest',
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         gnaf_states=ALL_STATES,
         enable_gnaf=True,
         database=DatabaseConfig(
@@ -83,7 +84,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         ),
     ),
     2: InstanceCfg(
-        nswvg_lv_discovery_mode='latest',
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         gnaf_states={'NSW'},
         enable_gnaf=True,
         database=DatabaseConfig(
@@ -114,7 +115,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
     ),
     3: InstanceCfg(
         #nswvg_lv_discovery_mode='each-year',
-        nswvg_lv_discovery_mode='latest',
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         gnaf_states=set(),
         enable_gnaf=False,
         database=DatabaseConfig(

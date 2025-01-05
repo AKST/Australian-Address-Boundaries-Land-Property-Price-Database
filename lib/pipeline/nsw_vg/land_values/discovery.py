@@ -7,10 +7,9 @@ from lib.service.io import IoService
 from lib.service.static_environment import StaticEnvironmentInitialiser
 
 from ..discovery import NswVgPublicationDiscovery, NSWVG_LV_DISCOVERY_CFG
-from .config import NswVgLvTaskDesc
+from .config import NswVgLvTaskDesc, DiscoveryMode
 from .telemetry import NswVgLvTelemetry
-
-DiscoveryMode = Literal['latest', 'each-year', 'all']
+from .util import select_targets
 
 @dataclass(frozen=True)
 class Config:
@@ -31,16 +30,10 @@ class CsvDiscovery:
         self._env = static_environment
 
     async def files(self: Self) -> AsyncIterator[NswVgLvTaskDesc.Parse]:
-        all_targets = await self._web_discovery.load_links(NSWVG_LV_DISCOVERY_CFG)
-
-        match self.config.kind:
-            case 'latest':
-                targets = all_targets[-1:]
-            case 'each-year':
-                month = all_targets[-1].datetime.month
-                targets = [t for t in all_targets if t.datetime.month == month]
-            case 'all':
-                targets = all_targets
+        targets = select_targets(
+            self.config.kind,
+            await self._web_discovery.load_links(NSWVG_LV_DISCOVERY_CFG),
+        )
 
         async for target in self._env.with_targets(targets):
             root = f'{self.config.root_dir}/{target.zip_dst}'

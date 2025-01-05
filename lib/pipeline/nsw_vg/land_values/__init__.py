@@ -3,11 +3,11 @@ from .config import (
     NswVgLvChildMsg,
     NswVgLvParentMsg,
     RawLandValueRow,
+    DiscoveryMode as NswVgLvCsvDiscoveryMode,
 )
 from .discovery import (
     Config as NswVgLvCsvDiscoveryConfig,
     CsvDiscovery as NswVgLvCsvDiscovery,
-    DiscoveryMode as NswVgLvCsvDiscoveryMode,
 )
 
 from .ingest import (
