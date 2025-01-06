@@ -16,7 +16,8 @@ SELECT DISTINCT ON (property_id, base_date)
        lv_entries.basis,
        lv_entries.authority,
        lv_entries.land_value
-  FROM pg_temp.sourced_raw_land_values as lv_ids
+  FROM nsw_vg_raw.land_value_row
+  LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date)
   LEFT JOIN LATERAL (
     SELECT
       property_id,

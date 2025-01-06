@@ -7,6 +7,7 @@ SELECT source_id,
        effective_date,
        property_id,
        zone_code
-  FROM pg_temp.sourced_raw_land_values
+  FROM nsw_vg_raw.land_value_row
+  LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date)
   WHERE zone_standard = 'ep&a_2006';
 

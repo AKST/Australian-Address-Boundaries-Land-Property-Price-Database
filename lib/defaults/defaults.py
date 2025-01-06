@@ -10,8 +10,8 @@ from .config import InstanceCfg
 ALL_STATES: Set[GnafState] = { 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'OT', 'ACT' }
 
 _docker_image_name = 'gnaf_pg_gis_db'
-_docker_image_tag_1 = "20241004_10_28"
-_docker_image_tag_2 = "20241004_10_28"
+_docker_image_tag_1 = "20250106_11_39"
+_docker_image_tag_2 = "20250106_11_39"
 _docker_image_tag_3 = "20250106_11_39"
 _docker_container_name_1 = 'gnaf_db_prod'
 _docker_container_name_2 = 'gnaf_db_test'

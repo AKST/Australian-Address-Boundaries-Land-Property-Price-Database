@@ -45,7 +45,7 @@ if __name__ == '__main__':
     parser.add_argument("--debug-worker", action='store_true', default=False)
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--workers", type=int, required=True)
-    parser.add_argument("--sub_workers", type=int, required=True)
+    parser.add_argument("--sub-workers", type=int, required=True)
 
     args = parser.parse_args()
 

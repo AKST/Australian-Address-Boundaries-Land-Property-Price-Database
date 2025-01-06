@@ -13,7 +13,8 @@
 CREATE TYPE nsw_lrs.legal_description_kind AS ENUM ('initial', '> 2004-08-17');
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
-  legal_description_id BIGSERIAL PRIMARY KEY,
+  LIKE meta.event INCLUDING ALL,
+  legal_description_id UUID NOT NULL,
   legal_description TEXT NOT NULL,
   legal_description_kind nsw_lrs.legal_description_kind NOT NULL,
   property_id INT NOT NULL,
@@ -26,8 +27,24 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   UNIQUE (effective_date, property_id, strata_lot_number)
-) INHERITS (meta.event);
 
+) PARTITION BY HASH (property_id);
+
+
+DO $$
+DECLARE
+  total INT := 8;
+BEGIN
+  FOR partition IN 0..(total - 1) LOOP
+    EXECUTE format(
+      'CREATE TABLE nsw_lrs.legal_description_p%s PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS %s, REMAINDER %s)',
+      partition, total, partition
+    );
+  END LOOP;
+END $$;
+
+CREATE INDEX legal_description_id_idx
+    ON nsw_lrs.legal_description (legal_description_id);
 CREATE INDEX idx_property_id_legal_description
     ON nsw_lrs.legal_description(property_id);
 CREATE INDEX idx_normalised_property_id_legal_description

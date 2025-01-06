@@ -83,8 +83,8 @@ class PropDescIngestionSupervisor:
             no_of_quantiles = workers * sub_workers
             self._logger.info(f"Finding quantiles (count {no_of_quantiles})")
             await cursor.execute(f"""
-                SELECT segment, MIN(source_id), MAX(source_id)
-                FROM (SELECT source_id, NTILE({no_of_quantiles}) OVER (ORDER BY source_id) AS segment
+                SELECT segment, MIN(property_id), MAX(property_id)
+                FROM (SELECT property_id, NTILE({no_of_quantiles}) OVER (ORDER BY property_id) AS segment
                         FROM nsw_lrs.legal_description
                        WHERE legal_description_kind = '> 2004-08-17'
                          AND strata_lot_number IS NULL) t
@@ -242,8 +242,8 @@ class PropDescIngestionWorker:
               LEFT JOIN meta.source_byte_position USING (source_id)
               LEFT JOIN meta.file_source USING (file_source_id)
              WHERE legal_description_kind = '> 2004-08-17'
-               {f"AND source_id >= {q.start}" if q.start else ''}
-               {f"AND source_id < {q.end}" if q.end else ''}
+               {f"AND property_id >= {q.start}" if q.start else ''}
+               {f"AND property_id < {q.end}" if q.end else ''}
                AND strata_lot_number IS NULL;
         """)
         self._semaphore.release()

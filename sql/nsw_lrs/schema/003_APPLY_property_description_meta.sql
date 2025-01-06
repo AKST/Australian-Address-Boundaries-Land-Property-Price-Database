@@ -33,9 +33,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_
 -- This is the remains after processing the property description.
 --
 CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_remains (
-  legal_description_id bigint NOT NULL,
-  legal_description_remains TEXT NOT NULL,
+  legal_description_id UUID NOT NULL,
+  legal_description_remains TEXT NOT NULL
 
-  FOREIGN KEY (legal_description_id)
-      REFERENCES nsw_lrs.legal_description(legal_description_id)
+  -- FOREIGN KEY (legal_description_id)
+  --     REFERENCES nsw_lrs.legal_description(legal_description_id)
 );

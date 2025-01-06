@@ -7,26 +7,7 @@ CREATE OR REPLACE FUNCTION pg_temp.sqm_area(
         WHEN 'M' THEN area
         ELSE NULL
     END;
-$$ LANGUAGE sql;
-
---
--- # Init Temp Tables
---
-
-CREATE TEMP TABLE pg_temp.lv_effective_dates AS
-  SELECT land_value_row_id, property_id, COALESCE(base_date_1, source_date) AS effective_date
-    FROM nsw_vg_raw.land_value_row;
-
-CREATE TEMP TABLE pg_temp.sourced_raw_land_values AS
-SELECT source_id,
-       r.*,
-       effective_date
-  FROM nsw_vg_raw.land_value_row as r
-  LEFT JOIN pg_temp.lv_effective_dates USING (land_value_row_id)
-  LEFT JOIN nsw_vg_raw.land_value_row_source USING (land_value_row_id);
-
-CREATE INDEX idx_sourced_raw_land_values_source_date_property_id
-    ON pg_temp.sourced_raw_land_values(source_date, property_id);
+$$ LANGUAGE sql PARALLEL SAFE;
 
 --
 -- # Init Temp tables
@@ -60,15 +41,18 @@ WITH
            ) AS score
       FROM with_baseline_information)
 
-SELECT source_id, file_source_id, b.*,
-       (land_value_row_id IS NOT NULL) as seen_in_land_values
+SELECT c.source_id,
+       d.file_source_id,
+       b.*,
+       (e.source_id IS NOT NULL) as seen_in_land_values
   INTO TEMP TABLE pg_temp.sourced_raw_property_sales_b
   FROM with_rank r
   LEFT JOIN with_baseline_information AS b USING (ps_row_b_id)
-  LEFT JOIN nsw_vg_raw.ps_row_b_source USING (ps_row_b_id)
-  LEFT JOIN meta.source_file USING (source_id)
-  LEFT JOIN pg_temp.lv_effective_dates lv USING (property_id, effective_date)
+  LEFT JOIN nsw_vg_raw.ps_row_b_source AS c USING (ps_row_b_id)
+  LEFT JOIN meta.source_file AS d USING (source_id)
+  LEFT JOIN nsw_vg_raw.land_value_row_complement AS e USING (property_id, effective_date)
   WHERE r.score = 1;
+
 
 CREATE INDEX idx_sourced_raw_property_sales_b_sale_counter
     ON pg_temp.sourced_raw_property_sales_b(file_source_id, sale_counter, property_id);
@@ -79,13 +63,15 @@ CREATE INDEX idx_sourced_raw_property_sales_b_sale_counter
 
 WITH
   sourced_raw_property_sales_c AS (
-    SELECT source_id, file_source_id, r.*
+    SELECT source_id,
+           file_source_id,
+           r.*
       FROM nsw_vg_raw.ps_row_c as r
       LEFT JOIN nsw_vg_raw.ps_row_c_source USING (ps_row_c_id)
       LEFT JOIN meta.source_file USING (source_id)),
 
   aggregated AS (
-    SELECT MIN(source_id) as source_id,
+    SELECT (ARRAY_AGG(source_id ORDER BY position))[1] as source_id,
            file_source_id,
            sale_counter,
            STRING_AGG(property_description, '' ORDER BY position) AS full_property_description

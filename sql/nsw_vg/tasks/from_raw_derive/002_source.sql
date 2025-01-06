@@ -12,22 +12,23 @@ SET parallel_tuple_cost = 0;
 
 SET session_replication_role = 'replica';
 
-INSERT INTO nsw_vg_raw.land_value_row_source(land_value_row_id, source_id)
-  SELECT land_value_row_id, nextval('meta.source_source_id_seq')
-  FROM nsw_vg_raw.land_value_row a;
+INSERT INTO nsw_vg_raw.land_value_row_complement(property_id, source_date, effective_date, source_id)
+  SELECT property_id,
+         source_date,
+         COALESCE(base_date_1, source_date),
+         uuid_generate_v4()
+  FROM nsw_vg_raw.land_value_row;
 
-INSERT INTO meta.source(source_id)
-  SELECT source_id
-  FROM nsw_vg_raw.land_value_row_source a;
+INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.land_value_row_complement;
 
 SET session_replication_role = 'origin';
 
 CREATE TEMP TABLE pg_temp.lv_uningested_files AS
   WITH unique_files AS (
     SELECT DISTINCT ON (source_file_name) source_file_name, source_date
-    FROM nsw_vg_raw.land_value_row_source
-    LEFT JOIN nsw_vg_raw.land_value_row USING (land_value_row_id))
-  SELECT *, nextval('meta.file_source_file_source_id_seq') AS file_source_id
+    FROM nsw_vg_raw.land_value_row_complement
+    LEFT JOIN nsw_vg_raw.land_value_row USING (property_id, source_date))
+  SELECT *, uuid_generate_v4() AS file_source_id
   FROM unique_files;
 
 INSERT INTO meta.file_source(file_source_id, file_path, date_recorded, date_published)
@@ -36,8 +37,8 @@ INSERT INTO meta.file_source(file_source_id, file_path, date_recorded, date_publ
 
 INSERT INTO meta.source_file_line(source_id, file_source_id, source_file_line)
   SELECT source_id, file_source_id, source_line_number
-  FROM nsw_vg_raw.land_value_row_source
-  LEFT JOIN nsw_vg_raw.land_value_row USING (land_value_row_id)
+  FROM nsw_vg_raw.land_value_row_complement
+  LEFT JOIN nsw_vg_raw.land_value_row USING (property_id, source_date)
   JOIN pg_temp.lv_uningested_files USING (source_file_name);
 
 DROP TABLE pg_temp.lv_uningested_files;
@@ -51,27 +52,27 @@ DROP TABLE pg_temp.lv_uningested_files;
 SET session_replication_role = 'replica';
 
 INSERT INTO nsw_vg_raw.ps_row_a_legacy_source(ps_row_a_legacy_id, source_id)
-  SELECT ps_row_a_legacy_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_a_legacy_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_a_legacy;
 
 INSERT INTO nsw_vg_raw.ps_row_b_legacy_source(ps_row_b_legacy_id, source_id)
-  SELECT ps_row_b_legacy_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_b_legacy_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_b_legacy;
 
 INSERT INTO nsw_vg_raw.ps_row_a_source(ps_row_a_id, source_id)
-  SELECT ps_row_a_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_a_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_a;
 
 INSERT INTO nsw_vg_raw.ps_row_b_source(ps_row_b_id, source_id)
-  SELECT ps_row_b_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_b_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_b;
 
 INSERT INTO nsw_vg_raw.ps_row_c_source(ps_row_c_id, source_id)
-  SELECT ps_row_c_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_c_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_c;
 
 INSERT INTO nsw_vg_raw.ps_row_d_source(ps_row_d_id, source_id)
-  SELECT ps_row_d_id, nextval('meta.source_source_id_seq')
+  SELECT ps_row_d_id, uuid_generate_v4()
   FROM nsw_vg_raw.ps_row_d;
 
 --
@@ -96,7 +97,7 @@ CREATE TEMP TABLE pg_temp.psl_uningested_files AS
     SELECT DISTINCT ON (file_path) file_path, date_provided
     FROM nsw_vg_raw.ps_row_a_legacy_source
     LEFT JOIN nsw_vg_raw.ps_row_a_legacy USING (ps_row_a_legacy_id))
-  SELECT *, nextval('meta.file_source_file_source_id_seq') AS file_source_id
+  SELECT *, uuid_generate_v4() AS file_source_id
   FROM unique_files;
 
 CREATE TEMP TABLE pg_temp.ps_uningested_files AS
@@ -104,7 +105,7 @@ CREATE TEMP TABLE pg_temp.ps_uningested_files AS
     SELECT DISTINCT ON (file_path) file_path, date_provided
     FROM nsw_vg_raw.ps_row_a_source
     LEFT JOIN nsw_vg_raw.ps_row_a USING (ps_row_a_id))
-  SELECT *, nextval('meta.file_source_file_source_id_seq') AS file_source_id
+  SELECT *, uuid_generate_v4() AS file_source_id
   FROM unique_files;
 
 --
@@ -169,9 +170,17 @@ DROP TABLE pg_temp.ps_uningested_files;
 --
 -- # End
 --
+-- Validate constraints, get names of constraints via this SQL
+--
+-- ```sql
+-- SELECT constraint_name, constraint_type
+--   FROM information_schema.table_constraints
+--   WHERE table_name = 'your_table_name'
+--     AND table_schema = 'your_schema_name';
+-- ```
+--
 
-ALTER TABLE nsw_vg_raw.land_value_row_source VALIDATE CONSTRAINT land_value_row_source_source_id_fkey;
-ALTER TABLE nsw_vg_raw.land_value_row_source VALIDATE CONSTRAINT land_value_row_source_land_value_row_id_fkey;
+ALTER TABLE nsw_vg_raw.land_value_row_complement VALIDATE CONSTRAINT land_value_row_complement_source_id_fkey;
 
 ALTER TABLE nsw_vg_raw.ps_row_a_legacy_source VALIDATE CONSTRAINT ps_row_a_legacy_source_ps_row_a_legacy_id_fkey;
 ALTER TABLE nsw_vg_raw.ps_row_a_legacy_source VALIDATE CONSTRAINT ps_row_a_legacy_source_source_id_fkey;

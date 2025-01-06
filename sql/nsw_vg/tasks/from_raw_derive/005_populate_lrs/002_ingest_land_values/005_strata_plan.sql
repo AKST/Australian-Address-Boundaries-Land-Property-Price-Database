@@ -8,6 +8,7 @@ SELECT DISTINCT ON (effective_date, property_id)
     effective_date,
     property_id,
     (property_type = 'UNDERSP') as under_strata_plan
-  FROM pg_temp.sourced_raw_land_values
+  FROM nsw_vg_raw.land_value_row
+  LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date)
   WHERE property_type IS NOT NULL;
 

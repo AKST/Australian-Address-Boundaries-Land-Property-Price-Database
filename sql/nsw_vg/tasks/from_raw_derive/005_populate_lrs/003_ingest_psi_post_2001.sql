@@ -54,6 +54,7 @@ INSERT INTO nsw_lrs.legal_description(
   property_id,
   strata_lot_number,
   legal_description,
+  legal_description_id,
   legal_description_kind)
 SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
     source_id,
@@ -61,6 +62,7 @@ SELECT DISTINCT ON (effective_date, property_id, strata_lot_number)
     property_id,
     strata_lot_number,
     full_property_description,
+    uuid_generate_v4(),
     (case
       when date_provided > '2004-08-17' then '> 2004-08-17'
       else 'initial'

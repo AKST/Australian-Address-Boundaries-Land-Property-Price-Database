@@ -41,7 +41,7 @@ class NswVgTaskConfig:
         @dataclass
         class Main:
             truncate_raw_earlier: bool
-            discovery_mode: NswVgLvCsvDiscoveryMode
+            discovery_mode: NswVgLvCsvDiscoveryMode.T
             child_cfg: 'NswVgTaskConfig.LandValue.Child'
             child_n: int
 

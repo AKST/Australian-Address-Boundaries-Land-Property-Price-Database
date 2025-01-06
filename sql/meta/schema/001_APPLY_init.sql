@@ -1,11 +1,11 @@
 CREATE SCHEMA IF NOT EXISTS meta;
 
 CREATE TABLE IF NOT EXISTS meta.source (
-  source_id BIGSERIAL PRIMARY KEY
+  source_id UUID PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS meta.file_source (
-  file_source_id SERIAL PRIMARY KEY,
+  file_source_id UUID PRIMARY KEY,
   file_path TEXT NOT NULL UNIQUE,
 
   --
@@ -30,8 +30,8 @@ CREATE INDEX idx_date_published_file_source
 
 
 CREATE TABLE IF NOT EXISTS meta.source_file (
-  source_id bigint NOT NULL,
-  file_source_id bigint NOT NULL,
+  source_id UUID NOT NULL,
+  file_source_id UUID NOT NULL,
   UNIQUE (source_id, file_source_id)
 );
 
@@ -66,7 +66,12 @@ CREATE INDEX idx_file_source_id_byte_position_source_byte_position
 --      - The effective_date is the date this is recorded and known to be true.
 --
 CREATE TABLE IF NOT EXISTS meta.event (
-  source_id bigint NOT NULL,
+  source_id UUID NOT NULL,
   effective_date DATE NOT NULL,
   FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
 );
+
+CREATE INDEX idx_meta_event_effective_date_desc
+    ON meta.event(effective_date DESC);
+CREATE INDEX idx_meta_event_source_id
+    ON meta.event(source_id);

@@ -40,7 +40,7 @@ WITH sourced_raw_land_values AS (
          upper(suburb_name) as locality_name,
          source_date, postcode
     FROM nsw_vg_raw.land_value_row as r
-    LEFT JOIN nsw_vg_raw.land_value_row_source USING (land_value_row_id))
+    LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date))
 
 INSERT INTO nsw_gnb.address (
   source_id,
