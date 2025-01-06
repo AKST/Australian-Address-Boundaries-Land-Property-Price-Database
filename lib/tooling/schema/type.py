@@ -76,6 +76,11 @@ class Stmt:
         type_name: str
 
     @dataclass
+    class CreateFunction(Op):
+        schema_name: Optional[str]
+        type_name: str
+
+    @dataclass
     class CreateIndex(Op):
         index_name: str
 

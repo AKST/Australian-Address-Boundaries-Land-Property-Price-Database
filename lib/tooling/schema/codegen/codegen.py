@@ -28,6 +28,8 @@ def create(commands: SchemaSyntax, omit_foreign_keys: bool) -> Iterator[str]:
                 yield copy.sql(dialect='postgres')
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 yield expr.sql(dialect='postgres')
+            case Stmt.CreateFunction(expr, schema_name, name):
+                yield expr.sql(dialect='postgres')
             case Stmt.CreateIndex(expr, name):
                 yield expr.sql(dialect='postgres')
             case Stmt.CreateView(expr, schema_name, name):
@@ -48,6 +50,8 @@ def drop(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
                 yield f'DROP TYPE IF EXISTS {_id(schema_name, name)}{sfx}'
             case Stmt.CreateTable(expr, schema_name, name):
                 yield f'DROP TABLE IF EXISTS {_id(schema_name, name)}{sfx}'
+            case Stmt.CreateFunction(expr, schema_name, name):
+                yield f'DROP FUNCTION IF EXISTS {_id(schema_name, name)}{sfx}'
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 yield f'DROP TABLE IF EXISTS {_id(schema_name, name)}{sfx}'
             case Stmt.CreateIndex(expr, name):
@@ -73,6 +77,8 @@ def truncate(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
                 yield f'TRUNCATE TABLE {_id(schema_name, name)}{sfx}'
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 yield f'TRUNCATE TABLE {_id(schema_name, name)}{sfx}'
+            case Stmt.CreateFunction(expr, schema_name, name):
+                continue
             case Stmt.CreateIndex(expr, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
@@ -100,6 +106,8 @@ def add_foreign_keys(contents: SchemaSyntax) -> Iterator[str]:
                         col
                     } FOREIGN KEY ({col}) REFERENCES {rel}({rel_col});"
             case Stmt.CreateTablePartition(expr, schema_name, name):
+                continue
+            case Stmt.CreateFunction(expr, schema_name, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
                 continue
@@ -154,6 +162,8 @@ async def make_fk_map(contents: SchemaSyntax, cursor: AsyncCursor) -> FkMap:
                 result = await cursor.fetchall()
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 out[(Stmt.CreateTablePartition, _id(schema_name, name))] = None
+            case Stmt.CreateFunction(expr, schema_name, name):
+                out[(Stmt.CreateFunction, _id(schema_name, name))] = None
             case Stmt.CreateView(expr, schema_name, name, materialized):
                 out[(Stmt.CreateView, name)] = None
             case Stmt.OpaqueDoBlock(expr):

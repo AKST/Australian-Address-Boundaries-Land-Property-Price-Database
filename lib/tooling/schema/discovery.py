@@ -117,13 +117,16 @@ def get_identifiers(name: Expression) -> Tuple[Optional[str], str]:
     from sqlglot.expressions import (
         Identifier as Id,
         Table as T,
-        Schema as S
+        Schema as S,
+        Dot,
     )
     match name:
         case S(this=T(this=Id(this=name), db=schema)):
             return (schema or None), name
         case T(this=Id(this=name)):
             return None, name
+        case Dot(this=Id(this=name), expression=Id(this=schema)):
+            return (schema or None), name
     raise ValueError(f'unknown expression, {name}')
 
 def is_create_partition(expr: sql_expr.Create) -> bool:
@@ -160,6 +163,9 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
         case sql_expr.Create(kind="INDEX", this=schema):
             t_name = schema.this.this
             return Stmt.CreateIndex(expr, t_name)
+        case sql_expr.Create(kind="FUNCTION", this=id_info):
+            s_name, t_name = get_identifiers(id_info.this)
+            return Stmt.CreateFunction(expr, s_name, t_name)
         case sql_expr.Command(this="CREATE", expression=e):
             match re.findall(f'\w+', e.lower()):
                 case ['type', s_name, t_name, 'as', *_]:
