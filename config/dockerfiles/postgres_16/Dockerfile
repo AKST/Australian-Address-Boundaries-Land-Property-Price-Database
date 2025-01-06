@@ -15,6 +15,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE EXTENSION IF NOT EXISTS postgis;\n\
     CREATE EXTENSION IF NOT EXISTS postgis_topology;\n\
     CREATE EXTENSION IF NOT EXISTS tablefunc;\n\
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";\n\
 EOSQL\n' > /docker-entrypoint-initdb.d/init_postgis.sh
 
 # Make sure the script is executable
