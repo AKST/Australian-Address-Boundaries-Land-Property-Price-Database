@@ -47,6 +47,10 @@ class Stmt:
         expr_tree: Expression = field(repr=False)
 
     @dataclass
+    class OpaqueDoBlock(Op):
+        pass
+
+    @dataclass
     class CreateSchema(Op):
         schema_name: str
 

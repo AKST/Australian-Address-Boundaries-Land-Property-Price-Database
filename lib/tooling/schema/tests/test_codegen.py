@@ -25,6 +25,7 @@ from ..discovery import sql_as_operations
     (False, "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)"),
     (False, "CREATE TABLE c PARTITION OF a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),
     (False, "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"),
+    (False, "DO $$ DECLARE total INT := 1; FOR i in 0..total LOOP\n EXECUTE 'select 1';\nEND LOOP; END $$;"),
 ])
 def test_create(snapshot, omit_foreign_keys: bool, sql: str):
     codegen = list(create(sql_as_operations(sql), omit_foreign_keys))

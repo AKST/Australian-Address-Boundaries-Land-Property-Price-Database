@@ -32,6 +32,8 @@ def create(commands: SchemaSyntax, omit_foreign_keys: bool) -> Iterator[str]:
                 yield expr.sql(dialect='postgres')
             case Stmt.CreateView(expr, schema_name, name):
                 yield expr.sql(dialect='postgres')
+            case Stmt.OpaqueDoBlock(expr):
+                yield expr.sql(dialect='postgres')
             case other:
                 raise TypeError(f'have not handled {other}')
 
@@ -53,6 +55,8 @@ def drop(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
             case Stmt.CreateView(expr, schema_name, name, materialized):
                 kind = 'MATERIALIZED VIEW' if materialized else 'view'
                 yield f'DROP {kind} IF EXISTS {_id(schema_name, name)}{sfx}'
+            case Stmt.OpaqueDoBlock(expr):
+                continue
             case other:
                 raise TypeError(f'have not handled {other}')
 
@@ -72,6 +76,8 @@ def truncate(commands: SchemaSyntax, cascade: bool = False) -> Iterator[str]:
             case Stmt.CreateIndex(expr, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
+            case Stmt.OpaqueDoBlock(expr):
                 continue
             case other:
                 raise TypeError(f'have not handled {other}')
@@ -96,6 +102,8 @@ def add_foreign_keys(contents: SchemaSyntax) -> Iterator[str]:
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
+            case Stmt.OpaqueDoBlock(expr):
                 continue
             case other:
                 raise TypeError(f'have not handled {other}')
@@ -148,6 +156,8 @@ async def make_fk_map(contents: SchemaSyntax, cursor: AsyncCursor) -> FkMap:
                 out[(Stmt.CreateTablePartition, _id(schema_name, name))] = None
             case Stmt.CreateView(expr, schema_name, name, materialized):
                 out[(Stmt.CreateView, name)] = None
+            case Stmt.OpaqueDoBlock(expr):
+                continue
             case other:
                 raise TypeError(f'have not handled {other}')
     return out
@@ -172,6 +182,8 @@ def remove_foreign_keys(contents: SchemaSyntax, table_fks: FkMap) -> Iterator[st
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
+            case Stmt.OpaqueDoBlock(expr):
                 continue
             case other:
                 raise TypeError(f'have not handled {other}')

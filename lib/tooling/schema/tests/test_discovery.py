@@ -21,6 +21,7 @@ from ..discovery import sql_as_operations
     "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)",
     "CREATE TABLE c PARTITION OF a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
     "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
+    "DO $$ DECLARE total INT := 1; FOR i in 0..total LOOP\n EXECUTE 'select 1';\nEND LOOP; END $$;",
 ])
 def test_expr_as_op(snapshot, sql: str):
     operations = sql_as_operations(sql)

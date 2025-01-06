@@ -1,0 +1,3 @@
+['DO $$ DECLARE total INT := 1; FOR i in 0..total LOOP\n'
+ " EXECUTE 'select 1';\n"
+ 'END LOOP; END $$']

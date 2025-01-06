@@ -168,6 +168,8 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
                     return Stmt.CreateType(expr, None, t_name)
                 case other:
                     raise TypeError(f'unknown command {repr(other)}')
+        case sql_expr.Command(this="DO", expression=e):
+            return Stmt.OpaqueDoBlock(expr)
         case sql_expr.Alter(kind="TABLE", this=sql_expr.Table(this=t_name, db=s_name)):
             return None
         case sql_expr.Semicolon():
