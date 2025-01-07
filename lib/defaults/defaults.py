@@ -54,7 +54,7 @@ def _create_mounted_dirs(
 
 INSTANCE_CFG: Dict[int, InstanceCfg] = {
     1: InstanceCfg(
-        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.EachNthYear(4, include_first=True),
         gnaf_states=ALL_STATES,
         enable_gnaf=True,
         database=DatabaseConfig(
@@ -115,7 +115,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
     ),
     3: InstanceCfg(
         #nswvg_lv_discovery_mode='each-year',
-        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.TheseYears({2024, 2020}),
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.EachNthYear(4, include_first=True),
         gnaf_states=set(),
         enable_gnaf=False,
         database=DatabaseConfig(
@@ -131,7 +131,6 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
             project_name=_docker_project_label,
             volumes=_create_mounted_dirs(
                 data_volume_name='vol_gnaf_db_test_2',
-                # postgres_config='20241015_config',
                 postgres_config='concurrent_config_20250104',
             ),
             command=_COMMAND_ON_RUN,
