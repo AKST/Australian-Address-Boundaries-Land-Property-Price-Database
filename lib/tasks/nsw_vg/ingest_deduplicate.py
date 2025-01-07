@@ -38,10 +38,12 @@ async def ingest_deduplicate(
 ):
     logger = logging.getLogger(__name__)
 
-    if 1 > config.run_from or len(all_scripts) < config.run_from:
+    run_from = config.run_from or 1
+    run_till = config.run_till or len(all_scripts)
+    if 1 > run_from or len(all_scripts) < run_from:
         raise ValueError(f'dedup run from {config.run_from} is out of scope')
     else:
-        scripts = all_scripts[config.run_from - 1:config.run_till]
+        scripts = all_scripts[run_from - 1:run_till]
 
     discovery = SchemaDiscovery.create(io)
     controller = SchemaController(io, db, discovery)
@@ -81,7 +83,7 @@ async def ingest_deduplicate(
         start_time = clock.time()
         for i, script_path in enumerate(scripts):
             t = fmt_time_elapsed(start_time, clock.time(), format="hms")
-            pos = config.run_from + i
+            pos = (config.run_from or 1) + i
             _, short_name = script_path.split('from_raw_derive/')
             logger.info(f'({t}) running [#{pos}] {short_name}')
             await cursor.execute(await io.f_read(script_path))

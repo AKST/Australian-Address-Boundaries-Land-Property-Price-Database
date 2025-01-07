@@ -131,8 +131,8 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
             project_name=_docker_project_label,
             volumes=_create_mounted_dirs(
                 data_volume_name='vol_gnaf_db_test_2',
-                postgres_config='20241015_config',
-                # postgres_config='concurrent_config_20250104',
+                # postgres_config='20241015_config',
+                postgres_config='concurrent_config_20250104',
             ),
             command=_COMMAND_ON_RUN,
             shared_memory='256mb',

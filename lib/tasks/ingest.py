@@ -128,8 +128,8 @@ async def ingest_all(config: IngestConfig):
                 ),
             ),
             deduplicate=NswVgTaskConfig.Dedup(
-                run_from=1,
-                run_till=12,
+                run_from=None,
+                run_till=None,
             ),
             property_descriptions=NswVgTaskConfig.PropDescIngest(
                 worker_debug=False,
@@ -162,6 +162,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    logging.getLogger('sqlglot').setLevel(logging.ERROR)
+    logging.getLogger('psycopg.pool').setLevel(logging.ERROR)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
