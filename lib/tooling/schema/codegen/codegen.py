@@ -126,7 +126,7 @@ def reindex(commands: SchemaSyntax, allowed: Set[EntityKind]):
                 continue
             case Stmt.CreateTable(expr, schema_name, name):
                 if 'table' in allowed:
-                    yield f'REINDEX SCHEMA {_id(schema_name, name)}'
+                    yield f'REINDEX TABLE {_id(schema_name, name)}'
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 continue
             case Stmt.CreateFunction(expr, schema_name, name):
