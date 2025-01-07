@@ -25,6 +25,7 @@ class DiscoveryMode:
     @dataclass
     class EachNthYear(T):
         n: int
+        include_first: bool
 
     @dataclass
     class TheseYears(T):
@@ -35,10 +36,10 @@ class DiscoveryMode:
         match t:
             case 'all': return DiscoveryMode.All()
             case 'each-year': return DiscoveryMode.EachYear()
-            case 'evert-2nd-year': return DiscoveryMode.EachNthYear(2)
-            case 'evert-3rd-year': return DiscoveryMode.EachNthYear(3)
-            case 'evert-4th-year': return DiscoveryMode.EachNthYear(4)
-            case 'every-5th-year': return DiscoveryMode.EachNthYear(5)
+            case 'evert-2nd-year': return DiscoveryMode.EachNthYear(2, False)
+            case 'evert-3rd-year': return DiscoveryMode.EachNthYear(3, False)
+            case 'evert-4th-year': return DiscoveryMode.EachNthYear(4, False)
+            case 'every-5th-year': return DiscoveryMode.EachNthYear(5, False)
             case 'latest': return DiscoveryMode.Latest()
             case other:
                 raise ValueError(f'unknown lv discovery mode {t}')

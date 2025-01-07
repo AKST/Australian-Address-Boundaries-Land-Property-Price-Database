@@ -21,10 +21,14 @@ def select_targets(mode: DiscoveryMode.T, all_targets: List[NswVgTarget]) -> Lis
         case DiscoveryMode.EachYear():
             month = latest().datetime.month
             return [t for t in sorted_targets() if t.datetime.month == month]
-        case DiscoveryMode.EachNthYear(n):
+        case DiscoveryMode.EachNthYear(n, include_first):
             month = latest().datetime.month
-            targets = [t for t in sorted_targets() if t.datetime.month == month]
-            return [t for i, t in enumerate(targets) if i % n == 0]
+            targets_sorted = sorted_targets()
+            targets = [t for t in targets_sorted if t.datetime.month == month]
+            targets = [t for i, t in enumerate(targets) if i % n == 0]
+            if include_first and targets[-1] != targets_sorted[-1]:
+                targets.append(targets_sorted[-1])
+            return targets
         case DiscoveryMode.TheseYears(year_set):
             month = latest().datetime.month
             return [

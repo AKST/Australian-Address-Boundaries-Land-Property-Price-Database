@@ -47,11 +47,10 @@ def test_select_each_year() -> None:
         NswVgTarget('k', 'k', 'k', None, datetime(2014, 12, 1)),
     ]
 
-
-def test_select_each_nth_year() -> None:
+def test_select_each_nth_year_ordering() -> None:
     for targets in [
-        select_targets(DiscoveryMode.EachNthYear(2), make_targets()),
-        select_targets(DiscoveryMode.EachNthYear(2), list(reversed(make_targets()))),
+        select_targets(DiscoveryMode.EachNthYear(2, False), make_targets()),
+        select_targets(DiscoveryMode.EachNthYear(2, False), list(reversed(make_targets()))),
     ]:
         assert targets == [
             NswVgTarget('a', 'a', 'a', None, datetime(2024, 12, 1)),
@@ -61,3 +60,13 @@ def test_select_each_nth_year() -> None:
             NswVgTarget('i', 'i', 'i', None, datetime(2016, 12, 1)),
             NswVgTarget('k', 'k', 'k', None, datetime(2014, 12, 1)),
         ]
+
+def test_select_each_nth_year_plus_first() -> None:
+    mode = DiscoveryMode.EachNthYear(4, include_first=True)
+    assert select_targets(mode, make_targets()) == [
+        NswVgTarget('a', 'a', 'a', None, datetime(2024, 12, 1)),
+        NswVgTarget('e', 'e', 'e', None, datetime(2020, 12, 1)),
+        NswVgTarget('i', 'i', 'i', None, datetime(2016, 12, 1)),
+        NswVgTarget('k', 'k', 'k', None, datetime(2014, 1, 1)),
+    ]
+
