@@ -104,5 +104,5 @@ class AnnualSalePriceDiscovery(NswVgBulkSalesScrapeAttempt):
                          directory_page=ps_download_page,
                          css_class_path=[('div', 'annual'),
                                          ('a', 'btn-sales-data')],
-                         cache_period='delta:weeks:4',
+                         cache_period='till_next_day_of_week:Tuesday',
                          date_fmt='%Y')

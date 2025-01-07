@@ -115,7 +115,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
     ),
     3: InstanceCfg(
         #nswvg_lv_discovery_mode='each-year',
-        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.TheseYears({2024, 2020}),
         gnaf_states=set(),
         enable_gnaf=False,
         database=DatabaseConfig(

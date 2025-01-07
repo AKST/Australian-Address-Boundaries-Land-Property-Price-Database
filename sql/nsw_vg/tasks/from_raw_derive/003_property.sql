@@ -6,6 +6,8 @@
 -- but both will be  needed for subsequent steps.
 --
 
+SET session_replication_role = 'replica';
+
 INSERT INTO nsw_lrs.property(property_id)
 SELECT *
   FROM (
@@ -18,4 +20,6 @@ SELECT *
   WHERE property_id IS NOT NULL
     ON CONFLICT (property_id) DO NOTHING;
 
+SET session_replication_role = 'origin';
 
+SELECT meta.check_constraints('nsw_lrs', 'property');

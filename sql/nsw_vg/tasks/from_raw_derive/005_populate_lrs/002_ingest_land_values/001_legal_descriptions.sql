@@ -2,6 +2,8 @@
 -- # Ingest Land Values
 --
 
+SET session_replication_role = 'replica';
+
 INSERT INTO nsw_lrs.legal_description(
   source_id,
   effective_date,
@@ -19,3 +21,6 @@ SELECT source_id,
   LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date)
   WHERE property_description IS NOT NULL;
 
+SET session_replication_role = 'origin';
+
+SELECT meta.check_constraints('nsw_lrs', 'legal_description');

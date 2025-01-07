@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from os.path import join as join_path
 from sqlglot import Expression
-from typing import Dict, List, Literal, Optional, Self
+from typing import Dict, List, Literal, Optional, Self, Set
+
+EntityKind = Literal['table', 'schema']
 
 SchemaNamespace = Literal[
     'abs',
@@ -24,6 +26,10 @@ class Command:
     class Create(BaseCommand):
         omit_foreign_keys: bool = field(default=False)
         run_raw_schema: bool = field(default=False)
+
+    @dataclass
+    class ReIndex(BaseCommand):
+        allowed: Set[EntityKind] = field(default_factory=lambda: set())
 
     @dataclass
     class AddForeignKeys(BaseCommand):

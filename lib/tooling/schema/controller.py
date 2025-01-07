@@ -33,6 +33,8 @@ class SchemaController:
                 await self.drop(command)
             case Command.Truncate() as command:
                 await self.truncate(command)
+            case Command.ReIndex() as command:
+                await self.reindex(command)
             case Command.AddForeignKeys() as command:
                 await self.add_foreign_keys(command)
             case Command.RemoveForeignKeys() as command:
@@ -97,6 +99,18 @@ class SchemaController:
                 for operation in codegen.truncate(file.contents, command.cascade):
                     self._logger.debug(operation)
                     await cursor.execute(operation)
+
+    async def reindex(self: Self, command: Command.ReIndex) -> None:
+        file_list = await self._discovery.files(command.ns, command.range, load_syn=True)
+        async with self._db.async_connect() as conn:
+            await conn.set_autocommit(True)
+            for file in reversed(file_list):
+                if file.contents is None:
+                    raise TypeError()
+
+                for operation in codegen.reindex(file.contents, command.allowed):
+                    self._logger.debug(operation)
+                    await conn.execute(operation)
 
     async def add_foreign_keys(self: Self, command: Command.AddForeignKeys) -> None:
         file_list = await self._discovery.files(command.ns, command.range, load_syn=True)

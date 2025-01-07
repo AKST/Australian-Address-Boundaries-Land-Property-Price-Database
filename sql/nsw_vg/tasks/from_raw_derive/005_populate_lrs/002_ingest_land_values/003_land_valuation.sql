@@ -1,3 +1,5 @@
+SET session_replication_role = 'replica';
+
 INSERT INTO nsw_vg.land_valuation(
     source_id,
     effective_date,
@@ -29,4 +31,8 @@ SELECT DISTINCT ON (property_id, base_date)
     AS lv_entries USING (property_id, source_id)
   WHERE land_value IS NOT NULL
   ORDER BY property_id, base_date, source_date DESC;
+
+SET session_replication_role = 'origin';
+
+SELECT meta.check_constraints('nsw_vg', 'land_valuation');
 

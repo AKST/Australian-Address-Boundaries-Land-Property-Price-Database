@@ -1,1 +1,10 @@
-from .codegen import create, drop, truncate, add_foreign_keys, make_fk_map, remove_foreign_keys, FkMap
+from .codegen import (
+    add_foreign_keys,
+    create,
+    drop,
+    FkMap,
+    make_fk_map,
+    reindex,
+    remove_foreign_keys,
+    truncate,
+)

@@ -13,7 +13,7 @@ from .util import select_targets
 
 @dataclass(frozen=True)
 class Config:
-    kind: DiscoveryMode
+    kind: DiscoveryMode.T
     root_dir: str
 
 class CsvDiscovery:

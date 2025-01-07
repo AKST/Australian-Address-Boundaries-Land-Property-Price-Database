@@ -73,6 +73,7 @@ async def ingest_deduplicate(
             Command.Create(ns='nsw_vg', range=range(4, 5)),
         ])
 
+
     async with (
         db.async_connect() as conn,
         conn.cursor() as cursor,
@@ -84,9 +85,18 @@ async def ingest_deduplicate(
             _, short_name = script_path.split('from_raw_derive/')
             logger.info(f'({t}) running [#{pos}] {short_name}')
             await cursor.execute(await io.f_read(script_path))
-            await conn.commit()
 
     logger.info('finished deduplicating')
+
+    await run_commands([
+        Command.ReIndex(ns='nsw_vg', allowed={'table'}),
+        Command.ReIndex(ns='nsw_gnb', allowed={'table'}),
+        Command.ReIndex(ns='nsw_lrs', allowed={'table'}),
+        Command.ReIndex(ns='nsw_planning', allowed={'table'}),
+        Command.ReIndex(ns='meta', allowed={'table'}),
+    ])
+
+    logger.info('finished reindexing')
 
     if config.drop_raw:
         raise NotImplementedError()
@@ -109,6 +119,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    logging.getLogger('sqlglot').setLevel(logging.ERROR)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format='[main][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',

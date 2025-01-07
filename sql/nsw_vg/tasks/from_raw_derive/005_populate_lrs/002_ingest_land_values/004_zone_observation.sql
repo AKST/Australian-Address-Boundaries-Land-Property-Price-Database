@@ -1,3 +1,5 @@
+SET session_replication_role = 'replica';
+
 INSERT INTO nsw_lrs.zone_observation(
     source_id,
     effective_date,
@@ -11,3 +13,6 @@ SELECT source_id,
   LEFT JOIN nsw_vg_raw.land_value_row_complement USING (property_id, source_date)
   WHERE zone_standard = 'ep&a_2006';
 
+SET session_replication_role = 'origin';
+
+SELECT meta.check_constraints('nsw_lrs', 'zone_observation');

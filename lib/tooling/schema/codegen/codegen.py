@@ -1,9 +1,9 @@
 from collections import namedtuple
 from sqlglot import expressions, Expression
 from psycopg import AsyncCursor
-from typing import Dict, Iterator, List, Optional, Tuple, Type
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Type
 
-from ..type import Stmt, SchemaSyntax
+from ..type import Stmt, SchemaSyntax, EntityKind
 
 def _id(schema: Optional[str], name: str) -> str:
     match schema:
@@ -108,6 +108,30 @@ def add_foreign_keys(contents: SchemaSyntax) -> Iterator[str]:
             case Stmt.CreateTablePartition(expr, schema_name, name):
                 continue
             case Stmt.CreateFunction(expr, schema_name, name):
+                continue
+            case Stmt.CreateView(expr, schema_name, name, materialized):
+                continue
+            case Stmt.OpaqueDoBlock(expr):
+                continue
+            case other:
+                raise TypeError(f'have not handled {other}')
+
+def reindex(commands: SchemaSyntax, allowed: Set[EntityKind]):
+    for operation in reversed(commands.operations):
+        match operation:
+            case Stmt.CreateSchema(expr, schema_name):
+                if 'schema' in allowed:
+                    yield f'REINDEX SCHEMA {schema_name}'
+            case Stmt.CreateType(expr, schema_name, name):
+                continue
+            case Stmt.CreateTable(expr, schema_name, name):
+                if 'table' in allowed:
+                    yield f'REINDEX SCHEMA {_id(schema_name, name)}'
+            case Stmt.CreateTablePartition(expr, schema_name, name):
+                continue
+            case Stmt.CreateFunction(expr, schema_name, name):
+                continue
+            case Stmt.CreateIndex(expr, name):
                 continue
             case Stmt.CreateView(expr, schema_name, name, materialized):
                 continue
