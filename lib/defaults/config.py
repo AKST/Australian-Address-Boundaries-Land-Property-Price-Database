@@ -15,3 +15,4 @@ class InstanceCfg:
     enable_gnaf: bool
     gnaf_states: Set[GnafState]
     nswvg_lv_discovery_mode: NswVgLvCsvDiscoveryMode.T
+    nswvg_psi_min_pub_year: Optional[int]

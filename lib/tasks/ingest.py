@@ -173,16 +173,10 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
-    NSWVG_MIN_PUB_YEAR = {
-        1: None,
-        2: datetime.now().year - 1,
-        3: datetime.now().year - 1,
-    }
-
     config = IngestConfig(
         io_file_limit=file_limit,
         db_config=instance_cfg.database,
-        nswvg_psi_publish_min=NSWVG_MIN_PUB_YEAR[args.instance],
+        nswvg_psi_publish_min=instance_cfg.nswvg_psi_min_pub_year,
         nswvg_lv_depth=instance_cfg.nswvg_lv_discovery_mode,
         docker_volume=instance_cfg.docker_volume,
         docker_image_config=instance_cfg.docker_image,
