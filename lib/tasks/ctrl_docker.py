@@ -12,6 +12,10 @@ class DockerCtrlInstruction(abc.ABC):
     container: ContainerConfig
 
 @dataclass
+class DockerRestart(DockerCtrlInstruction):
+    wait_for_database: bool
+
+@dataclass
 class DockerStart(DockerCtrlInstruction):
     wait_for_database: bool
     reinitialise_image: bool
@@ -25,6 +29,13 @@ class DockerStop(DockerCtrlInstruction):
 
 async def run_controller(instruction: DockerCtrlInstruction, db: DatabaseService, docker: DockerService):
     match instruction:
+        case DockerRestart(container=c_conf, image=i_conf):
+            image = docker.create_image(i_conf)
+            container = docker.create_container(image, c_conf)
+            container.stop()
+            container.start()
+            if instruction.wait_for_database:
+                await db.wait_till_running()
         case DockerStart(container=c_conf, image=i_conf):
             if instruction.reinitialise_image:
                 docker.create_image(i_conf).nuke()
