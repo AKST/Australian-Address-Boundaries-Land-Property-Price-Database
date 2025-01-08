@@ -1,56 +1,32 @@
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_legacy_source(
-    ps_row_a_legacy_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_a_legacy_id) REFERENCES nsw_vg_raw.ps_row_a_legacy(ps_row_a_legacy_id),
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row_complement(
+    property_id INT NOT NULL,
+    source_date DATE NOT NULL,
+    effective_date DATE NOT NULL,
+    source_id UUID NOT NULL,
     FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
+) PARTITION BY HASH (property_id);
 
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_legacy_source(
-    ps_row_b_legacy_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_b_legacy_id) REFERENCES nsw_vg_raw.ps_row_b_legacy(ps_row_b_legacy_id),
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
+CREATE INDEX idx_land_value_row_complement_a
+    ON nsw_vg_raw.land_value_row_complement(property_id, source_id);
+CREATE INDEX idx_land_value_row_complement_b
+    ON nsw_vg_raw.land_value_row_complement(source_id);
+CREATE INDEX idx_land_value_row_complement_c
+    ON nsw_vg_raw.land_value_row_complement(effective_date DESC);
 
-CREATE INDEX idx_ps_row_a_legacy_source_a ON nsw_vg_raw.ps_row_a_legacy_source(ps_row_a_legacy_id);
-CREATE INDEX idx_ps_row_a_legacy_source_b ON nsw_vg_raw.ps_row_a_legacy_source(source_id);
-CREATE INDEX idx_ps_row_b_legacy_source_a ON nsw_vg_raw.ps_row_b_legacy_source(ps_row_b_legacy_id);
-CREATE INDEX idx_ps_row_b_legacy_source_b ON nsw_vg_raw.ps_row_b_legacy_source(source_id);
-
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_a_source(
-    ps_row_a_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_a_id) REFERENCES nsw_vg_raw.ps_row_a(ps_row_a_id),
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
-
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_b_source(
-    ps_row_b_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_b_id) REFERENCES nsw_vg_raw.ps_row_b(ps_row_b_id),
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
-
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_c_source(
-    ps_row_c_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_c_id) REFERENCES nsw_vg_raw.ps_row_c(ps_row_c_id),
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
-
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.ps_row_d_source(
-    ps_row_d_id bigint UNIQUE NOT NULL,
-    source_id UUID UNIQUE NOT NULL,
-    FOREIGN KEY (ps_row_d_id) REFERENCES nsw_vg_raw.ps_row_d(ps_row_d_id),
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-);
-
-CREATE INDEX idx_ps_row_a_source_a ON nsw_vg_raw.ps_row_a_source(ps_row_a_id);
-CREATE INDEX idx_ps_row_a_source_b ON nsw_vg_raw.ps_row_a_source(source_id);
-CREATE INDEX idx_ps_row_b_source_a ON nsw_vg_raw.ps_row_b_source(ps_row_b_id);
-CREATE INDEX idx_ps_row_b_source_b ON nsw_vg_raw.ps_row_b_source(source_id);
-CREATE INDEX idx_ps_row_c_source_a ON nsw_vg_raw.ps_row_c_source(ps_row_c_id);
-CREATE INDEX idx_ps_row_c_source_b ON nsw_vg_raw.ps_row_c_source(source_id);
-CREATE INDEX idx_ps_row_d_source_a ON nsw_vg_raw.ps_row_d_source(ps_row_d_id);
-CREATE INDEX idx_ps_row_d_source_b ON nsw_vg_raw.ps_row_d_source(source_id);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p1 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 0);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p2 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 1);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p3 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 2);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p4 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 3);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p5 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 4);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p6 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 5);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p7 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 6);
+CREATE TABLE nsw_vg_raw.land_value_row_complement_p8 PARTITION OF nsw_vg_raw.land_value_row_complement
+    FOR VALUES WITH (MODULUS 8, REMAINDER 7);
 

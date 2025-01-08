@@ -12,22 +12,30 @@ from lib.utility.format import fmt_time_elapsed
 from .config import NswVgTaskConfig
 
 all_scripts = [
-    './sql/nsw_vg/tasks/from_raw_derive/001_identifiers.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/002_source.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/003_property.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/001_from_land_values.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/002_from_psi.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/003_from_psi_archive.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/004_addresses/004_rematerialize.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/001_setup.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/001_legal_descriptions.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/002_property_area.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/003_land_valuation.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/004_zone_observation.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/002_ingest_land_values/005_strata_plan.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/003_ingest_psi_post_2001.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/004_ingest_psi_pre_2001.sql',
-    './sql/nsw_vg/tasks/from_raw_derive/005_populate_lrs/005_cleanup.sql',
+    f'./sql/nsw_vg/tasks/from_raw_derive/{script}.sql'
+    for script in [
+        '001_identifiers',
+        '002_source',
+        '003_property',
+        '004_addresses/001_from_land_values',
+        '004_addresses/002_from_psi',
+        '004_addresses/003_from_psi_archive',
+        '004_addresses/004_rematerialize',
+        '005_populate_lrs/001_setup',
+        '005_populate_lrs/002_ingest_land_values/001_legal_descriptions',
+        '005_populate_lrs/002_ingest_land_values/002_property_area',
+        '005_populate_lrs/002_ingest_land_values/003_land_valuation',
+        '005_populate_lrs/002_ingest_land_values/004_zone_observation',
+        '005_populate_lrs/002_ingest_land_values/005_strata_plan',
+        '005_populate_lrs/003_ingest_psi_post_2001/001_notice_of_sale',
+        '005_populate_lrs/003_ingest_psi_post_2001/002_legal_descriptions',
+        '005_populate_lrs/003_ingest_psi_post_2001/003_property_area',
+        '005_populate_lrs/003_ingest_psi_post_2001/004_primary_purpose',
+        '005_populate_lrs/003_ingest_psi_post_2001/005_nature_of_property',
+        '005_populate_lrs/003_ingest_psi_post_2001/006_zone_observation',
+        '005_populate_lrs/004_ingest_psi_pre_2001',
+        '005_populate_lrs/005_cleanup',
+    ]
 ]
 
 async def ingest_deduplicate(
@@ -63,7 +71,7 @@ async def ingest_deduplicate(
 
     if config.drop_dst_schema:
         await run_commands([
-            Command.Drop(ns='nsw_vg', range=range(4, 5)),
+            Command.Drop(ns='nsw_vg', range=range(4, 6)),
             Command.Drop(ns='nsw_gnb'),
             Command.Drop(ns='nsw_lrs'),
             Command.Drop(ns='nsw_planning'),
@@ -72,7 +80,7 @@ async def ingest_deduplicate(
             Command.Create(ns='nsw_planning'),
             Command.Create(ns='nsw_lrs'),
             Command.Create(ns='nsw_gnb'),
-            Command.Create(ns='nsw_vg', range=range(4, 5)),
+            Command.Create(ns='nsw_vg', range=range(4, 6)),
         ])
 
 

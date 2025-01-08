@@ -4,7 +4,7 @@
 --   - `CURRENT_DATE()` is `source_file.date_recorded`
 --   - `basis_date_N` is `event.effective_date`
 --
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
+CREATE TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     district_code INT NOT NULL,
     district_name TEXT,
     property_id INT NOT NULL,
@@ -47,57 +47,25 @@ CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row (
     UNIQUE (property_id, source_date)
 ) PARTITION BY HASH (property_id);
 
-CREATE TABLE land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 0);
-CREATE TABLE land_value_row_p2 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 1);
-CREATE TABLE land_value_row_p3 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 2);
-CREATE TABLE land_value_row_p4 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 3);
-CREATE TABLE land_value_row_p5 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 4);
-CREATE TABLE land_value_row_p6 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 5);
-CREATE TABLE land_value_row_p7 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 6);
-CREATE TABLE land_value_row_p8 PARTITION OF nsw_vg_raw.land_value_row
-    FOR VALUES WITH (MODULUS 8, REMAINDER 7);
-
 CREATE INDEX idx_land_value_row_pk
     ON nsw_vg_raw.land_value_row(property_id, source_date);
 CREATE INDEX idx_land_value_row_source_file_name
     ON nsw_vg_raw.land_value_row(source_file_name);
 
-CREATE UNLOGGED TABLE IF NOT EXISTS nsw_vg_raw.land_value_row_complement(
-    property_id INT NOT NULL,
-    source_date DATE NOT NULL,
-    effective_date DATE NOT NULL,
-    source_id UUID NOT NULL,
-    FOREIGN KEY (source_id) REFERENCES meta.source(source_id)
-) PARTITION BY HASH (property_id);
-
-CREATE TABLE land_value_row_complement_p1 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p1 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 0);
-CREATE TABLE land_value_row_complement_p2 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p2 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 1);
-CREATE TABLE land_value_row_complement_p3 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p3 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 2);
-CREATE TABLE land_value_row_complement_p4 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p4 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 3);
-CREATE TABLE land_value_row_complement_p5 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p5 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 4);
-CREATE TABLE land_value_row_complement_p6 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p6 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 5);
-CREATE TABLE land_value_row_complement_p7 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p7 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 6);
-CREATE TABLE land_value_row_complement_p8 PARTITION OF nsw_vg_raw.land_value_row_complement
+CREATE TABLE nsw_vg_raw.land_value_row_p8 PARTITION OF nsw_vg_raw.land_value_row
     FOR VALUES WITH (MODULUS 8, REMAINDER 7);
-
-CREATE INDEX idx_land_value_row_complement_a
-    ON nsw_vg_raw.land_value_row_complement(property_id, source_id);
-CREATE INDEX idx_land_value_row_complement_b
-    ON nsw_vg_raw.land_value_row_complement(source_id);
-CREATE INDEX idx_land_value_row_complement_c
-    ON nsw_vg_raw.land_value_row_complement(effective_date DESC);
 
