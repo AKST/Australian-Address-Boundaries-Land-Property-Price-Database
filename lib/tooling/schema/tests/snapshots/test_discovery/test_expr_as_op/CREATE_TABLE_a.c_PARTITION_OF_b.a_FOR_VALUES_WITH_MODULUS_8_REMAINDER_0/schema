@@ -1,0 +1,1 @@
+SchemaSyntax(operations=[Stmt.CreateTablePartition(schema_name='a', paritition_name='c')])

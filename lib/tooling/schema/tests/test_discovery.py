@@ -21,12 +21,20 @@ from ..discovery import sql_as_operations
     "CREATE INDEX IF NOT EXISTS idx_a ON s.a (id)",
     "CREATE TABLE c PARTITION OF a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
     "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
+    "CREATE TABLE a.c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
     "DO $$ DECLARE total INT := 1; FOR i in 0..total LOOP\n EXECUTE 'select 1';\nEND LOOP; END $$;",
 ])
 def test_expr_as_op(snapshot, sql: str):
     operations = sql_as_operations(sql)
     snapshot.assert_match(pformat(operations, width=150), 'schema')
 
+
+def test_schema_for_parition():
+    sql = \
+        "CREATE TABLE a.c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)"
+    schema = sql_as_operations(sql)
+    create_parition = next(o for o in schema.operations)
+    assert create_parition.schema_name == 'a'
 
 def test_normal_index():
     sql = "CREATE INDEX idx_a ON a (id)"

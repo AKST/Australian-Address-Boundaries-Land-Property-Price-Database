@@ -113,16 +113,18 @@ def sql_as_operations(file_data: str) -> SchemaSyntax:
     generator_b = [(expr, op) for expr, op in generator_a if op is not None]
     return SchemaSyntax(*partition(generator_b))
 
-def get_identifiers(name: Expression) -> Tuple[Optional[str], str]:
+def get_identifiers(name_expr: Expression) -> Tuple[Optional[str], str]:
     from sqlglot.expressions import (
         Identifier as Id,
         Table as T,
         Schema as S,
         Dot,
     )
-    match name:
+    match name_expr:
         case S(this=T(this=Id(this=name), db=schema)):
             return (schema or None), name
+        case T(this=Id(this=name), args={'db': Id(this=schema) }):
+            return schema, name
         case T(this=Id(this=name)):
             return None, name
         case Dot(this=Id(this=name), expression=Id(this=schema)):
