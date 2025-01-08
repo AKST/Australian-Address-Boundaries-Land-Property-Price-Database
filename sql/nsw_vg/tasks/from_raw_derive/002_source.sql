@@ -18,8 +18,6 @@ INSERT INTO nsw_vg_raw.land_value_row_complement(property_id, source_date, effec
 
 INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.land_value_row_complement;
 
-SET session_replication_role = 'origin';
-
 CREATE TEMP TABLE pg_temp.lv_uningested_files AS
   WITH unique_files AS (
     SELECT DISTINCT ON (source_file_name) source_file_name, source_date
@@ -45,8 +43,6 @@ DROP TABLE pg_temp.lv_uningested_files;
 --
 -- ## Create Source links
 --
-
-SET session_replication_role = 'replica';
 
 INSERT INTO nsw_vg_raw.ps_row_a_legacy_source(ps_row_a_legacy_id, source_id)
   SELECT ps_row_a_legacy_id, uuid_generate_v4()
@@ -82,8 +78,6 @@ INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.ps_row_a_sou
 INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.ps_row_b_source;
 INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.ps_row_c_source;
 INSERT INTO meta.source(source_id) SELECT source_id FROM nsw_vg_raw.ps_row_d_source;
-
-SET session_replication_role = 'origin';
 
 --
 -- ## Create Temp Table
@@ -177,18 +171,13 @@ DROP TABLE pg_temp.ps_uningested_files;
 -- ```
 --
 
-ALTER TABLE nsw_vg_raw.land_value_row_complement VALIDATE CONSTRAINT land_value_row_complement_source_id_fkey;
+SET session_replication_role = 'origin';
 
-ALTER TABLE nsw_vg_raw.ps_row_a_legacy_source VALIDATE CONSTRAINT ps_row_a_legacy_source_ps_row_a_legacy_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_a_legacy_source VALIDATE CONSTRAINT ps_row_a_legacy_source_source_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_b_legacy_source VALIDATE CONSTRAINT ps_row_b_legacy_source_ps_row_b_legacy_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_b_legacy_source VALIDATE CONSTRAINT ps_row_b_legacy_source_source_id_fkey;
+SELECT meta.check_constraints('nsw_vg_raw', 'land_value_row_complement');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_a_legacy_source');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_b_legacy_source');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_a_source');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_b_source');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_c_source');
+SELECT meta.check_constraints('nsw_vg_raw', 'ps_row_d_source');
 
-ALTER TABLE nsw_vg_raw.ps_row_a_source VALIDATE CONSTRAINT ps_row_a_source_ps_row_a_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_a_source VALIDATE CONSTRAINT ps_row_a_source_source_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_b_source VALIDATE CONSTRAINT ps_row_b_source_ps_row_b_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_b_source VALIDATE CONSTRAINT ps_row_b_source_source_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_c_source VALIDATE CONSTRAINT ps_row_c_source_ps_row_c_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_c_source VALIDATE CONSTRAINT ps_row_c_source_source_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_d_source VALIDATE CONSTRAINT ps_row_d_source_ps_row_d_id_fkey;
-ALTER TABLE nsw_vg_raw.ps_row_d_source VALIDATE CONSTRAINT ps_row_d_source_source_id_fkey;
