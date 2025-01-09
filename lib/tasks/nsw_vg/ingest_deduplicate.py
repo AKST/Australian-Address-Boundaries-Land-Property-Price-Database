@@ -28,7 +28,7 @@ all_scripts = [
         '005_populate_lrs/002_ingest_land_values/004_zone_observation',
         '005_populate_lrs/002_ingest_land_values/005_strata_plan',
         '005_populate_lrs/003_ingest_psi_post_2001/001_notice_of_sale',
-        '005_populate_lrs/003_ingest_psi_post_2001/002_legal_descriptions',
+        '005_populate_lrs/003_ingest_psi_post_2001/002_legal_description',
         '005_populate_lrs/003_ingest_psi_post_2001/003_property_area',
         '005_populate_lrs/003_ingest_psi_post_2001/004_primary_purpose',
         '005_populate_lrs/003_ingest_psi_post_2001/005_nature_of_property',
