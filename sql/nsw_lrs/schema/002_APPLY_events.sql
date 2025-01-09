@@ -53,13 +53,14 @@ CREATE INDEX idx_effective_date_legal_description
     ON nsw_lrs.legal_description(effective_date DESC);
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.archived_legal_description (
+  LIKE meta.event INCLUDING ALL,
   legal_description_id BIGSERIAL PRIMARY KEY,
   legal_description TEXT NOT NULL,
   property_id INT NOT NULL,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   UNIQUE (property_id, effective_date)
-) INHERITS (meta.event);
+);
 
 --
 -- ## Property Area
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.archived_legal_description (
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   strata_lot_number INT,
   sqm_area FLOAT NOT NULL,
@@ -80,7 +82,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_area (
 
   UNIQUE (property_id, strata_lot_number, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 CREATE INDEX idx_property_id_property_area
     ON nsw_lrs.property_area(property_id);
@@ -96,18 +98,20 @@ CREATE INDEX idx_effective_date_property_area
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_under_strata_plan(
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   under_strata_plan BOOL NOT NULL,
 
   UNIQUE (property_id, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 --
 -- ## Nature of Property
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.nature_of_property(
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   nature_of_property nsw_lrs.property_nature NOT NULL,
   strata_lot_number INT,
@@ -119,7 +123,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.nature_of_property(
 
   UNIQUE (property_id, effective_date, strata_lot_number),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 CREATE INDEX idx_property_id_nature_of_property
     ON nsw_lrs.property_area(property_id);
@@ -132,6 +136,7 @@ CREATE INDEX idx_normalised_property_id_nature_of_property
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
+  LIKE meta.event INCLUDING ALL,
   primary_purpose_id INT NOT NULL,
   property_id INT NOT NULL,
   strata_lot_number INT,
@@ -144,7 +149,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.property_primary_purpose(
   UNIQUE (property_id, effective_date, strata_lot_number),
   FOREIGN KEY (primary_purpose_id) REFERENCES nsw_lrs.primary_purpose(primary_purpose_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 CREATE INDEX idx_property_id_property_primary_purpose
     ON nsw_lrs.property_area(property_id);
@@ -157,11 +162,12 @@ CREATE INDEX idx_normalised_property_id_property_primary_purpose
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.zone_observation(
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   zone_code varchar(4) NOT NULL,
   UNIQUE (property_id, effective_date),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 CREATE INDEX idx_effecitve_date_zone_observation
     ON nsw_lrs.zone_observation(effective_date DESC);
@@ -174,18 +180,20 @@ CREATE INDEX idx_effecitve_date_zone_observation
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.described_dimensions (
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   dimension_description TEXT NOT NULL,
   UNIQUE (property_id, dimension_description, effective_date),
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) inherits (meta.event);
+);
 
 --
 -- ## Notice of Sale
 --
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale (
+  LIKE meta.event INCLUDING ALL,
   notice_of_sale_id BIGSERIAL PRIMARY KEY,
   property_id int NOT NULL,
   purchase_price FLOAT,
@@ -207,7 +215,7 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale (
 
   UNIQUE (dealing_number, property_id, strata_lot_number),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) INHERITS (meta.event);
+);
 
 CREATE INDEX idx_property_id_notice_of_sale
     ON nsw_lrs.property_area(property_id);
@@ -216,6 +224,7 @@ CREATE INDEX idx_normalised_property_id_notice_of_sale
     ON nsw_lrs.property_area(normalised_property_id);
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_archived (
+  LIKE meta.event INCLUDING ALL,
   notice_of_sale_archived_id BIGSERIAL PRIMARY KEY,
   property_id int NOT NULL,
   purchase_price FLOAT,
@@ -227,5 +236,5 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.notice_of_sale_archived (
 
   UNIQUE (property_id, contract_date, purchase_price),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id)
-) INHERITS (meta.event);
+);
 

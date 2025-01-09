@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS nsw_gnb.street (
 );
 
 CREATE TABLE IF NOT EXISTS nsw_gnb.address (
+  LIKE meta.event INCLUDING ALL,
   address_id BIGSERIAL PRIMARY KEY,
   property_id int NOT NULL,
   strata_lot_number int,
@@ -37,7 +38,7 @@ CREATE TABLE IF NOT EXISTS nsw_gnb.address (
   FOREIGN KEY (locality_id) REFERENCES nsw_gnb.locality(locality_id),
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   UNIQUE (property_id, strata_lot_number, effective_date)
-) INHERITS (meta.event);
+);
 
 CREATE INDEX idx_property_id_address
     ON nsw_gnb.address(normalised_property_id);

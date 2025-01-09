@@ -13,13 +13,14 @@
 -- as partial parcels shared between different properties.
 --
 CREATE TABLE IF NOT EXISTS nsw_lrs.property_parcel_assoc (
+  LIKE meta.event INCLUDING ALL,
   property_id INT NOT NULL,
   parcel_id varchar(20) NOT NULL,
   partial BOOLEAN NOT NULL,
 
   FOREIGN KEY (property_id) REFERENCES nsw_lrs.property(property_id),
   FOREIGN KEY (parcel_id) REFERENCES nsw_lrs.parcel(parcel_id)
-) INHERITS (meta.event);
+);
 
 CREATE UNIQUE INDEX IF NOT EXISTS nsw_lrs_property_parcel_unique_parcel_id_when_not_partial
   ON nsw_lrs.property_parcel_assoc(parcel_id, effective_date)

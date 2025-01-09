@@ -83,6 +83,7 @@ def _child_proc_entry(
             format=f'[{idx}]{worker_config.log_config.format}',
             datefmt=worker_config.log_config.datefmt)
 
+    logging.getLogger('psycopg.pool').setLevel(logging.ERROR)
     logging.debug(f'initalising child process #{idx}')
 
     asyncio.run(_child_main(worker_config, recv_msgs, send_msgs))
