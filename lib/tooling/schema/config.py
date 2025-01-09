@@ -10,6 +10,7 @@ ns_dependency_order: List[SchemaNamespace] = [
     'nsw_planning',
     'nsw_spatial',
     'nsw_vg',
+    'gnaf',
 ]
 
 schema_ns: Set[SchemaNamespace] = {
@@ -20,5 +21,6 @@ schema_ns: Set[SchemaNamespace] = {
     'nsw_planning',
     'nsw_spatial',
     'nsw_vg',
+    'gnaf',
 }
 

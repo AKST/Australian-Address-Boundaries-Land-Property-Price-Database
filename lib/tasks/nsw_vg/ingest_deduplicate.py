@@ -4,9 +4,7 @@ from typing import List
 from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
-from lib.tooling.schema.controller import SchemaController
-from lib.tooling.schema.discovery import SchemaDiscovery
-from lib.tooling.schema.type import Command
+from lib.tooling.schema import Command, SchemaController, SchemaDiscovery
 from lib.utility.format import fmt_time_elapsed
 
 from .config import NswVgTaskConfig

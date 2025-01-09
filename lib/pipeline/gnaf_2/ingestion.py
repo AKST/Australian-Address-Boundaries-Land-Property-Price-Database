@@ -12,8 +12,6 @@ async def ingest(config: Config, io: IoService):
     loop = asyncio.get_running_loop()
     scheduler = Scheduler(io)
     task_groups = await Scheduler(io).get_tasks(config)
-    from pprint import pprint
-    print(len(task_groups))
     with multiprocessing.Pool(config.workers) as pool:
         result = pool.starmap_async(worker, [
             (i, config.worker_config, grp)
@@ -39,6 +37,7 @@ def worker(id: int, config: WorkerConfig, tasks: List[WorkerTask]):
         for task in tasks:
             table_name, file = task.table_name, task.file_source
             with db.connect() as conn, conn.cursor() as cursor:
+                cursor.execute("SET session_replication_role = 'replica';")
                 with open(file, 'r') as f:
                     logger.info(f"Loading {os.path.basename(file)}")
                     reader = csv.reader(f, delimiter='|')
@@ -56,7 +55,9 @@ def worker(id: int, config: WorkerConfig, tasks: List[WorkerTask]):
                             logger.error(f"Error inserting batch {batch_index + 1} into {table_name}: {e}")
                             raise e
                     conn.commit()
+                cursor.execute("SET session_replication_role = 'origin';")
             logger.info(f"Loaded {os.path.basename(file)}")
+        logger.info(f"DONE")
     asyncio.run(main())
 
 def _get_batches(batch_size: int, reader) -> Iterator[List[str]]:

@@ -8,6 +8,7 @@ EntityKind = Literal['table', 'schema']
 SchemaNamespace = Literal[
     'abs',
     'meta',
+    'gnaf',
     'nsw_lrs',
     'nsw_planning',
     'nsw_spatial',
