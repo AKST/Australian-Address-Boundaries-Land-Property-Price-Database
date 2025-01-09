@@ -39,6 +39,10 @@ async def run_count_for_schemas(db_conf: DatabaseConfig, packages: List[SchemaNa
 def package_schemas(package: SchemaNamespace) -> List[str]:
     match package:
         case 'nsw_vg': return ['nsw_vg', 'nsw_vg_raw']
+        case 'nsw_spatial': return [
+            'nsw_spatial',
+            'nsw_spatial_lppt_raw',
+        ]
         case other: return [other]
 
 if __name__ == '__main__':
@@ -51,7 +55,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--packages", nargs='*', required=True)
+    parser.add_argument("--packages", nargs='*')
 
     args = parser.parse_args()
 
@@ -61,6 +65,6 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S')
 
     db_conf = INSTANCE_CFG[args.instance].database
-    packages = [s for s in schema_ns if s in args.packages]
+    packages = [s for s in schema_ns if s in args.packages] if args.packages else list(schema_ns)
     asyncio.run(run_count_for_schemas(db_conf, packages))
 
