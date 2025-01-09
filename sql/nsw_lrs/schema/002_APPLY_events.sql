@@ -30,19 +30,6 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description (
 
 ) PARTITION BY HASH (property_id);
 
-
-DO $$
-DECLARE
-  total INT := 8;
-BEGIN
-  FOR partition IN 0..(total - 1) LOOP
-    EXECUTE format(
-      'CREATE TABLE nsw_lrs.legal_description_p%s PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS %s, REMAINDER %s)',
-      partition, total, partition
-    );
-  END LOOP;
-END $$;
-
 CREATE INDEX legal_description_id_idx
     ON nsw_lrs.legal_description (legal_description_id);
 CREATE INDEX idx_property_id_legal_description
@@ -51,6 +38,16 @@ CREATE INDEX idx_normalised_property_id_legal_description
     ON nsw_lrs.legal_description(normalised_property_id);
 CREATE INDEX idx_effective_date_legal_description
     ON nsw_lrs.legal_description(effective_date DESC);
+
+CREATE TABLE nsw_lrs.legal_description_p0 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 0);
+CREATE TABLE nsw_lrs.legal_description_p1 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 1);
+CREATE TABLE nsw_lrs.legal_description_p2 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 2);
+CREATE TABLE nsw_lrs.legal_description_p3 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 3);
+CREATE TABLE nsw_lrs.legal_description_p4 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 4);
+CREATE TABLE nsw_lrs.legal_description_p5 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 5);
+CREATE TABLE nsw_lrs.legal_description_p6 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 6);
+CREATE TABLE nsw_lrs.legal_description_p7 PARTITION OF nsw_lrs.legal_description FOR VALUES WITH (MODULUS 8, REMAINDER 7);
+
 
 CREATE TABLE IF NOT EXISTS nsw_lrs.archived_legal_description (
   LIKE meta.event INCLUDING ALL,
