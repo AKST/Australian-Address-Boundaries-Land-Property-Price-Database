@@ -1,20 +1,35 @@
-from collections import defaultdict, deque
-import glob
-import os
-from threading import Lock
-from typing import List, Dict, Set
+from typing import List, Self, Tuple
 
-from .discovery import GnafPublicationTarget
-from .config import GnafConfig
+from lib.service.io import IoService
+from .config import Config, WorkerConfig, WorkerTask
 
+class Scheduler:
+    def __init__(self: Self, io: IoService):
+        self._io = io
 
-DepMap = Dict[str, Set[str]]
+    async def get_tasks(self: Self, cfg: Config) -> List[List[WorkerTask]]:
+        return [
+            [WorkerTask(fn, _get_table_name(fn)) for fn in file_group]
+            for file_group in await self._get_grouped_files(cfg)
+        ]
 
+    async def _get_grouped_files(self: Self, cfg: Config) -> List[List[str]]:
+        authority_files = await _get_authority_files(cfg, self._io)
+        standard_files = _get_standard_files(cfg)
+        return _group_by_size([
+            (await self._io.f_size(file), file)
+            for file in [*authority_files, *standard_files]
+        ], cfg.workers)
 
-def create_list_of_target_files(config: GnafConfig) -> Set[str]:
-    authority_files = glob.glob(f'{config.target.psv_dir}/Authority Code/*.psv')
-    standard_prefix = f'{config.target.psv_dir}/Standard'
-    standard_files = [
+async def _get_authority_files(cfg: Config, io: IoService) -> List[str]:
+    return [f async for f in io.grep_dir(
+        dir_name=f'{cfg.target.psv_dir}/Authority Code',
+        pattern='*.psv',
+    )]
+
+def _get_standard_files(cfg: Config) -> List[str]:
+    standard_prefix = f'{cfg.target.psv_dir}/Standard'
+    return [
         f'{standard_prefix}/{s}_{t}_psv.psv'
         for t in [
             'STATE', 'ADDRESS_SITE', 'MB_2016', 'MB_2021', 'LOCALITY',
@@ -25,125 +40,25 @@ def create_list_of_target_files(config: GnafConfig) -> Set[str]:
             'ADDRESS_MESH_BLOCK_2016', 'ADDRESS_MESH_BLOCK_2021',
             'PRIMARY_SECONDARY',
         ]
-        for s in config.states
+        for s in cfg.states
     ]
-    return { *authority_files, *standard_files }
 
+def _get_table_name(file: str) -> str:
+    import os
 
-class GnafDataIngestionScheduler:
-    """
-    You could actually remove 90% of the complexity here
-    if you just never added the foreign keys. Infact it
-    may even be worthwhile doing that.
+    file = os.path.splitext(os.path.basename(file))[0]
+    sidx = 15 if file.startswith('Authority_Code') else file.find('_')+1
+    return file[sidx:file.rfind('_')]
 
-    My only reason for not doing that is laziliness tbh,
-    when I first worked on this I never realised I could
-    have just done that (I was abit rusty on databases),
-    but I guess also because I wanted to make sure I was
-    populating the database correctly and the foreigns
-    helped me pick up when I stuffed up much earlier.
-    """
-    _lock: Lock
-    _queue: deque[str]
-    _all_files: Set[str]
-    _dependencies: DepMap
-    _dependencies_completed: Set[str]
+def _group_by_size(items: List[Tuple[int, str]], n: int) -> List[List[str]]:
+    sorted_items = sorted(items, key=lambda x: x[0], reverse=True)
 
-    def __init__(self, lock, queue, all_files, dependencies):
-        self._lock = lock
-        self._queue = queue
-        self._all_files = all_files
-        self._dependencies = dependencies
-        self._dependencies_completed = set()
+    groups: List[List[str]] = [[] for _ in range(n)]
+    group_sums = [0] * n  # total weight in each group
 
-    def iter(self):
-        while True:
-            with self._lock:
-                if not self._queue:
-                    break
-                file = self._queue.popleft()
+    for weight, name in sorted_items:
+        min_index = min(range(n), key=lambda i: group_sums[i])
+        groups[min_index].append(name)
+        group_sums[min_index] += weight
 
-            yield file
-
-            with self._lock:
-                self._dependencies_completed.add(file)
-
-                for d in self._dependencies:
-                    if file in self._dependencies[d]:
-                        self._dependencies[d].remove(file)
-
-                ready_files = [f for f in self._all_files if not self._dependencies[f]]
-
-                for f in ready_files:
-                    if f not in self._queue:
-                        self._queue.append(f)
-                        self._all_files.remove(f)
-
-    @staticmethod
-    def create(config: GnafConfig):
-        files = create_list_of_target_files(config)
-        queue: deque[str] = deque()
-        deps = { k: set(v) for k, v in create_dependency_graph(config).items() }
-        lock = Lock()
-        queue.extend((
-            f
-            for f in _get_ordered_files(deps, files)
-            if not deps[f]
-        ))
-
-        return GnafDataIngestionScheduler(lock, queue, files, deps)
-
-def create_dependency_graph(config: GnafConfig) -> Dict[str, Set[str]]:
-    standard_prefix = f'{config.target.psv_dir}/Standard'
-    authority_files = glob.glob(f'{config.target.psv_dir}/Authority Code/*.psv')
-
-    return { f: set() for f in authority_files } | {
-        f'{p}/{s}_{t}_psv.psv': { f'{p}/{s}_{d}_psv.psv' for d in ds } | set(authority_files)
-
-        for t, ds in ({
-            'STATE': [],
-            'ADDRESS_SITE': ['STATE'],
-            'MB_2016': [],
-            'MB_2021': [],
-            'LOCALITY': ['STATE'],
-            'LOCALITY_ALIAS': ['LOCALITY'],
-            'LOCALITY_NEIGHBOUR': ['LOCALITY'],
-            'LOCALITY_POINT': ['LOCALITY'],
-            'STREET_LOCALITY': ['LOCALITY'],
-            'STREET_LOCALITY_ALIAS': ['STREET_LOCALITY'],
-            'STREET_LOCALITY_POINT': ['STREET_LOCALITY'],
-            'ADDRESS_DETAIL': ['ADDRESS_SITE', 'STATE', 'LOCALITY', 'STREET_LOCALITY'],
-            'ADDRESS_SITE_GEOCODE': ['ADDRESS_SITE'],
-            'ADDRESS_ALIAS': ['ADDRESS_DETAIL'],
-            'ADDRESS_DEFAULT_GEOCODE': ['ADDRESS_DETAIL'],
-            'ADDRESS_FEATURE': ['ADDRESS_DETAIL'],
-            'ADDRESS_MESH_BLOCK_2016': ['ADDRESS_DETAIL', 'MB_2016'],
-            'ADDRESS_MESH_BLOCK_2021': ['ADDRESS_DETAIL', 'MB_2021'],
-            'PRIMARY_SECONDARY': ['ADDRESS_DETAIL'],
-        }).items()
-        for s in config.states
-        for p in [standard_prefix]
-    }
-
-
-def _get_ordered_files(dependencies: DepMap, all_files: Set[str]) -> List[str]:
-    file_sizes = { file: os.path.getsize(file) for file in all_files }
-    total_blocked_sizes = defaultdict(int)
-
-    def dfs(file: str, visited: Set[str]):
-        if file in visited:
-            return 0
-        visited.add(file)
-        total_size = file_sizes[file]
-        for dep in dependencies[file]:
-            total_size += dfs(dep, visited)
-        return total_size
-
-    for file in dependencies:
-        visited: Set[str] = set()
-        total_blocked_sizes[file] = dfs(file, visited)
-
-    # Sort files based on the total blocked sizes, with higher sizes first
-    return sorted(all_files, key=lambda f: total_blocked_sizes[f], reverse=True)
-
-
+    return groups

@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Optional, Self
 import os
 
-from lib.pipeline.gnaf.constants import data_gov_au_gnaf_information_page
 from lib.service.http import CacheHeader
 from lib.service.static_environment import Target
 
-from .config import GnafPublicationTarget
+from .config import PublicationTarget
+from .constants import data_gov_au_gnaf_information_page
 
 _sql_dir_path = 'G-NAF/Extras/GNAF_TableCreation_Scripts'
 
@@ -22,7 +22,7 @@ def _find_subdirectory(directory, subdirectory_name):
     return None
 
 @dataclass
-class GnafPublicationTargetImpl(GnafPublicationTarget):
+class GnafPublicationTargetImpl(PublicationTarget):
     _psv_dir: Optional[str] = field(default=None)
 
     @property
@@ -49,7 +49,7 @@ class GnafPublicationDiscovery:
     Fetches the latest GNAF publication from the data.gov.au
     information page.
     """
-    publication: Optional[GnafPublicationTarget] = None
+    publication: Optional[PublicationTarget] = None
 
     def __init__(self, information_page_url):
         self._information_page_url = information_page_url

@@ -1,4 +1,10 @@
-from lib.pipeline.gnaf_2 import GnafPublicationTarget
 import lib.pipeline.gnaf.constants as constants
-from .config import GnafConfig
+from .config import (
+    Config as GnafConfig,
+    GnafState,
+    WorkerConfig as GnafWorkerConfig,
+    PublicationTarget as GnafPublicationTarget,
+)
+from .discovery import GnafPublicationDiscovery
 from .ingestion import ingest
+

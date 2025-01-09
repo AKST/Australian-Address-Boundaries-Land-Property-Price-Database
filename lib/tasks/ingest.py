@@ -6,8 +6,7 @@ from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
 from lib.pipeline.abs import *
-from lib.pipeline.gnaf.config import GnafConfig, GnafState
-from lib.pipeline.gnaf.init_schema import init_target_schema
+from lib.pipeline.gnaf import GnafWorkerConfig, GnafConfig, GnafState
 from lib.pipeline.nsw_vg.config import *
 from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
 from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG
@@ -59,12 +58,6 @@ async def ingest_all(config: IngestConfig):
 
     if environment.gnaf.publication is None:
         raise TypeError('missing gnaf publication')
-
-    await init_target_schema(
-        environment.gnaf.publication,
-        io_service,
-        db_service,
-    )
 
     await update_schema(
         UpdateSchemaConfig(packages=ns_dependency_order, range=None, apply=True),
@@ -142,8 +135,18 @@ async def ingest_all(config: IngestConfig):
 
     if config.enable_gnaf:
         await ingest_gnaf(
-            GnafConfig(environment.gnaf.publication, config.gnaf_states),
+            GnafConfig(
+                target=environment.gnaf.publication,
+                states=config.gnaf_states,
+                workers=8,
+                worker_config=GnafWorkerConfig(
+                    db_config=instance_cfg.database,
+                    db_poolsize=8,
+                    batch_size=1000,
+                ),
+            ),
             db_service,
+            io_service,
         )
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)

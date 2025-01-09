@@ -1,11 +1,11 @@
 import logging
-from lib.pipeline import gnaf_2 as gnaf
+from lib.pipeline import gnaf
 from lib.service.database import DatabaseService
 from lib.service.io import IoService
 
 _logger = logging.getLogger(__name__)
 
-async def ingest(
+async def ingest_gnaf(
     cfg: gnaf.GnafConfig,
     db: DatabaseService,
     io: IoService,
@@ -70,6 +70,6 @@ if __name__ == '__main__':
             ),
         )
 
-        await ingest(config, db, io)
+        await ingest_gnaf(config, db, io)
 
     asyncio.run(main())

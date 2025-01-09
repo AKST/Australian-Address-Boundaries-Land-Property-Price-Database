@@ -1,61 +1,66 @@
-import csv
-from collections import defaultdict, deque
-import concurrent.futures
-import glob
-import logging
-import os
-from threading import Lock
-from typing import List, Dict, Set, Any
+import asyncio
+import multiprocessing
+from typing import Iterator, List
 
-from lib.service.database import DatabaseService
+from lib.service.io import IoService
+from .config import Config, WorkerConfig, WorkerTask
+from .scheduler import Scheduler
 
-from .config import GnafConfig
-from .discovery import GnafPublicationTarget
-from .scheduler import GnafDataIngestionScheduler
+_SCHEMA = 'gnaf'
 
-_schema = 'gnaf'
-_WORKER_COUNT: int = os.cpu_count() or 1
-_BATCH_SIZE: float = 64000 / _WORKER_COUNT # idk what I'm doing here tbh.
+async def ingest(config: Config, io: IoService):
+    loop = asyncio.get_running_loop()
+    scheduler = Scheduler(io)
+    task_groups = await Scheduler(io).get_tasks(config)
+    with multiprocessing.Pool(config.workers) as pool:
+        result = pool.starmap_async(worker, [
+            (i, config.worker_config, grp)
+            for i, grp in enumerate(task_groups)
+        ])
+        await loop.run_in_executor(None, result.get)
 
-_logger = logging.getLogger(__name__)
+def worker(id: int, config: WorkerConfig, tasks: List[WorkerTask]):
+    import asyncio
 
-def ingest(config: GnafConfig, db: DatabaseService):
-    scheduler = GnafDataIngestionScheduler.create(config)
+    async def main() -> None:
+        import csv
+        import logging
+        import os
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=_WORKER_COUNT) as executor:
-        futures = [executor.submit(worker, scheduler, db) for _ in range(_WORKER_COUNT)]
-        for future in concurrent.futures.as_completed(futures):
-            future.result()
+        from lib.service.database import DatabaseService
+        from lib.utility.logging import config_logging
+        db = DatabaseService.create(config.db_config, config.db_poolsize)
 
-def worker(schedule: GnafDataIngestionScheduler, db: DatabaseService):
-    for file in schedule.iter():
-        table_name = _get_table_name(file)
+        config_logging(worker=id, debug=False)
+        logger = logging.getLogger(__name__)
 
-        with db.connect() as conn, conn.cursor() as cursor:
-            with open(file, 'r') as f:
-                _logger.info(f"Populating from {os.path.basename(file)}")
-                reader = csv.reader(f, delimiter='|')
-                headers = next(reader)
-                insert_query = f"""
-                    INSERT INTO {_schema}.{table_name} ({', '.join(headers)})
-                    VALUES ({', '.join(['%s'] * len(headers))})
-                    ON CONFLICT DO NOTHING
-                """
+        for task in tasks:
+            table_name, file = task.table_name, task.file_source
+            with db.connect() as conn, conn.cursor() as cursor:
+                cursor.execute("SET session_replication_role = 'replica';")
+                with open(file, 'r') as f:
+                    logger.info(f"Loading {os.path.basename(file)}")
+                    reader = csv.reader(f, delimiter='|')
+                    headers = next(reader)
+                    insert_query = f"""
+                        INSERT INTO {_SCHEMA}.{table_name} ({', '.join(headers)})
+                        VALUES ({', '.join(['%s'] * len(headers))})
+                        ON CONFLICT DO NOTHING
+                    """
 
-                for batch_index, batch in enumerate(_get_batches(_BATCH_SIZE, reader)):
-                    try:
-                        cursor.executemany(insert_query, batch)
-                    except Exception as e:
-                        print(f"Error inserting batch {batch_index + 1} into {table_name}: {e}")
-                        raise e
-                conn.commit()
+                    for batch_index, batch in enumerate(_get_batches(config.batch_size, reader)):
+                        try:
+                            cursor.executemany(insert_query, batch)
+                        except Exception as e:
+                            logger.error(f"Error inserting batch {batch_index + 1} into {table_name}: {e}")
+                            raise e
+                    conn.commit()
+                cursor.execute("SET session_replication_role = 'origin';")
+            logger.info(f"Loaded {os.path.basename(file)}")
+        logger.info(f"DONE")
+    asyncio.run(main())
 
-def _get_table_name(file):
-    file = os.path.splitext(os.path.basename(file))[0]
-    sidx = 15 if file.startswith('Authority_Code') else file.find('_')+1
-    return file[sidx:file.rfind('_')]
-
-def _get_batches(batch_size, reader):
+def _get_batches(batch_size: int, reader) -> Iterator[List[str]]:
     batch = []
     for row in reader:
         row = [(None if v == "" else v) for v in (v.strip() for v in row)]

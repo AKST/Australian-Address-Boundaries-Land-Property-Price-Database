@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 
 from lib.pipeline.abs import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
-from lib.pipeline.gnaf_2 import GnafPublicationDiscovery
+from lib.pipeline.gnaf import GnafPublicationDiscovery
 from lib.pipeline.nsw_vg.defaults import THROTTLE_CONFIG
 from lib.pipeline.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
 from lib.service.io import IoService
