@@ -1,7 +1,11 @@
 from lib.service.static_environment.config import Target
 
 from .config import IngestionSource
-from .constants import ABS_STRUCTURES_SHAPEFILES, NON_ABS_STRUCTURES_SHAPEFILES
+from .constants import (
+    ABS_STRUCTURES_SHAPEFILES,
+    NON_ABS_STRUCTURES_SHAPEFILES,
+    INDIGENOUS_STRUCTURES_SHAPEFILES,
+)
 
 ABS_MAIN_STRUCTURES = IngestionSource(
     gpkg_file='ASGS_2021_MAIN_STRUCTURE_GDA2020.gpkg',
@@ -170,3 +174,43 @@ NON_ABS_MAIN_STRUCTURES = IngestionSource(
         },
     },
 )
+
+INDIGENOUS_STRUCTURES = IngestionSource(
+    gpkg_file='ASGS_Ed3_2021_Indigenous_Structure_GDA2020.gpkg',
+    static_file_target=Target(
+        token=None,
+        url=INDIGENOUS_STRUCTURES_SHAPEFILES,
+        web_dst='abs_indigenous_shps.zip',
+        zip_dst='abs_indigenous_shps',
+    ),
+    layer_to_table={
+        'ILOC_2021_AUST_GDA2020': 'indigenous_location',
+        'IARE_2021_AUST_GDA2020': 'indigenous_area',
+        'IREG_2021_AUST_GDA2020': 'indigenous_region',
+    },
+    database_column_names_for_dataframe_columns={
+        'ILOC_2021_AUST_GDA2020': {
+            'ILOC_CODE_2021': 'indigenous_loc_code',
+            'ILOC_NAME_2021': 'indigenous_loc_name',
+            'IARE_CODE_2021': 'indigenous_area_code',
+            'IREG_CODE_2021': 'indigenous_reg_code',
+            'STATE_CODE_2021': 'state_code',
+            "AREA_ALBERS_SQKM": "area_sqkm",
+            "geometry": "geometry",
+        },
+        'IARE_2021_AUST_GDA2020': {
+            'IARE_CODE_2021': 'indigenous_area_code',
+            'IARE_NAME_2021': 'indigenous_area_name',
+            'IREG_CODE_2021': 'indigenous_reg_code',
+            "AREA_ALBERS_SQKM": "area_sqkm",
+            "geometry": "geometry",
+        },
+        'IREG_2021_AUST_GDA2020': {
+            'IREG_CODE_2021': 'indigenous_reg_code',
+            'IREG_NAME_2021': 'indigenous_reg_name',
+            "AREA_ALBERS_SQKM": "area_sqkm",
+            "geometry": "geometry",
+        },
+    },
+)
+

@@ -67,7 +67,11 @@ async def ingest_all(config: IngestConfig):
 
     await ingest_abs(
         AbsIngestionConfig(
-            ingest_sources=[ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES],
+            ingest_sources=[
+                ABS_MAIN_STRUCTURES,
+                NON_ABS_MAIN_STRUCTURES,
+                INDIGENOUS_STRUCTURES,
+            ],
             worker_count=4,
             worker_config=AbsWorkerConfig(
                 db_config=db_service_config,

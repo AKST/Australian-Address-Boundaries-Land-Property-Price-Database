@@ -68,8 +68,13 @@ class StaticEnvironmentInitialiser:
             headers = { CacheHeader.DISABLED: 'True' }
             if target.token:
                 headers['Authorization'] = f'Basic {target.token}'
-            async with self._session.get(target.url, headers) as resp:
-                await self._io.f_write_chunks(w_out, resp.stream(CHUNKSIZE_16KB))
+            try:
+                async with self._session.get(target.url, headers) as resp:
+                    await self._io.f_write_chunks(w_out, resp.stream(CHUNKSIZE_16KB))
+            except:
+                if await self._io.is_file(w_out):
+                    await self._io.f_delete(w_out)
+                raise
 
         if z_out and not await self._io.is_dir(z_out):
             self._logger.info(f'Creating zip output dir "{z_out}"')

@@ -1,7 +1,11 @@
 import asyncio
 from dataclasses import dataclass
 
-from lib.pipeline.abs import ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES
+from lib.pipeline.abs.defaults import (
+    ABS_MAIN_STRUCTURES,
+    NON_ABS_MAIN_STRUCTURES,
+    INDIGENOUS_STRUCTURES,
+)
 from lib.pipeline.gnaf import GnafPublicationDiscovery
 from lib.pipeline.nsw_vg.defaults import THROTTLE_CONFIG
 from lib.pipeline.nsw_vg.discovery import WeeklySalePriceDiscovery, AnnualSalePriceDiscovery, LandValueDiscovery
@@ -43,6 +47,7 @@ async def initialise(io_service: IoService, session: AbstractClientSession) -> E
 
     initialiser.queue_target(ABS_MAIN_STRUCTURES.static_file_target)
     initialiser.queue_target(NON_ABS_MAIN_STRUCTURES.static_file_target)
+    initialiser.queue_target(INDIGENOUS_STRUCTURES.static_file_target)
 
     if gnaf_dis.publication:
         initialiser.queue_target(gnaf_dis.publication)

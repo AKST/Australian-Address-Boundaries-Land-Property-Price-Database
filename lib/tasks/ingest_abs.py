@@ -63,9 +63,6 @@ if __name__ == '__main__':
         format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    if args.instance < 1 or args.instance > 2:
-        raise ValueError('invalid instance')
-
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
@@ -79,7 +76,11 @@ if __name__ == '__main__':
 
     db_config = INSTANCE_CFG[args.instance].database
     config = AbsIngestionConfig(
-        ingest_sources=[ABS_MAIN_STRUCTURES, NON_ABS_MAIN_STRUCTURES],
+        ingest_sources=[
+            ABS_MAIN_STRUCTURES,
+            NON_ABS_MAIN_STRUCTURES,
+            INDIGENOUS_STRUCTURES,
+        ],
         worker_count=args.workers,
         worker_config=AbsWorkerConfig(
             db_config=db_config,
