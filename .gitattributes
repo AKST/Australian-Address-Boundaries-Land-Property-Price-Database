@@ -1,2 +1,5 @@
 *.ipynb binary
+
+sql/**/*.sql linguist-language=PLpgSQL
+
 notebooks/* linguist-vendored
