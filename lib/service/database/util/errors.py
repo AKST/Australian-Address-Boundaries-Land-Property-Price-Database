@@ -7,6 +7,8 @@ from psycopg.errors import (
     OperationalError,
 )
 
+from lib.utility.df import fmt_head
+
 def is_verbose_error(error: Error) -> bool:
     match error:
         case CancelledError():
@@ -40,8 +42,7 @@ def log_exception_info(logger: Logger, error: Error):
 
 def log_exception_info_df(df: pd.DataFrame, logger: Logger, error: Error):
     if is_verbose_error(error):
-        with pd.option_context('display.max_columns', None):
-            logger.error(str(df.head()))
+        logger.error(fmt_head(df))
         logger.error(df.info())
         logger.error(f"Columns: {df.columns}")
         logger.error(f"Rows: {len(df)}")

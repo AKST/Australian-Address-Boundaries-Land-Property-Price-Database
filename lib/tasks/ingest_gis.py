@@ -42,6 +42,7 @@ from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 class IngestGisRunConfig:
     db_workers: int
     skip_save: bool
+    dry_run: bool
     gis_params: List[DateRangeParam]
     exp_backoff_attempts: int
 
@@ -102,11 +103,19 @@ async def run(
             FeatureExpBackoff(cfg.exp_backoff_attempts),
             clock, session, http_file_cache)
         telemetry = GisPipelineTelemetry.create(clock)
+
+        if conf.dry_run:
+            api_workers, db_workers = 1, 1
+        else:
+            api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
+            db_workers = conf.db_workers
+
         ingestion = GisIngestion.create(
             GisIngestionConfig(
-                api_workers=http_limits_of(HOST_SEMAPHORE_CONFIG),
-                api_worker_backpressure=conf.db_workers * 4,
-                db_workers=conf.db_workers,
+                api_workers=api_workers,
+                api_worker_backpressure=db_workers * 4,
+                dry_run=conf.dry_run,
+                db_workers=db_workers,
                 chunk_size=None),
             feature_client,
             db,
@@ -128,9 +137,10 @@ async def run_in_console(
     db = DatabaseService.create(db_config, config.db_workers)
     clock = ClockService()
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
-    await controller.command(Command.Drop(ns='nsw_spatial'))
-    await controller.command(Command.Create(ns='nsw_spatial'))
-    await run(io, db, clock, cfg)
+    if not config.dry_run:
+        await controller.command(Command.Drop(ns='nsw_spatial'))
+        await controller.command(Command.Create(ns='nsw_spatial'))
+    await run(io, db, clock, config)
 
 if __name__ == '__main__':
     import asyncio
@@ -142,6 +152,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
+    parser.add_argument("--dry-run", action='store_true', required=False)
     parser.add_argument("--gis-range", type=str)
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--skip-save", action='store_true', required=False)
@@ -170,10 +181,11 @@ if __name__ == '__main__':
             case None:
                 params = []
         cfg = IngestGisRunConfig(
-            args.db_connections,
-            args.skip_save,
-            params,
-            args.exp_backoff_attempts,
+            db_workers=args.db_connections,
+            skip_save=args.skip_save,
+            dry_run=args.dry_run,
+            gis_params=params,
+            exp_backoff_attempts=args.exp_backoff_attempts,
         )
         asyncio.run(
             run_in_console(

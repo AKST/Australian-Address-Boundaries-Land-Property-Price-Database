@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from logging import getLogger
 from pprint import pformat
@@ -155,6 +156,8 @@ class FeatureServerClient:
                     self._logger.error(response)
                     raise GisNetworkError(response.status, response)
                 return await response.json()
+        except asyncio.CancelledError:
+            raise
         except:
             self._logger.error(f'failed on {url}')
             raise

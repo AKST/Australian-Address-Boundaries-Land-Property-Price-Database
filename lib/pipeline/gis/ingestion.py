@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from typing import Any, Dict, List, Self, Set, Tuple, Optional
 
 from lib.service.database import DatabaseService, PgClientException, log_exception_info_df
-from lib.utility.df import prepare_postgis_insert, FieldFormat
+from lib.utility.df import prepare_postgis_insert, FieldFormat, fmt_head
 
 from .config import (
     GisProjection,
@@ -25,6 +25,7 @@ from .telemetry import GisPipelineTelemetry
 class GisIngestionConfig:
     api_workers: int
     api_worker_backpressure: int
+    dry_run: bool
     db_workers: int
     chunk_size: Optional[int]
 
@@ -131,6 +132,11 @@ class GisIngestion:
                 pass
 
         df_copy, query = prepare_query(db_relation, proj, df)
+        if self.config.dry_run:
+            self._logger.info(fmt_head(df))
+            self.stop()
+            raise asyncio.CancelledError('dryrun')
+
         async with self._db.async_connect() as conn:
             async with conn.cursor() as cur:
                 slice, rows = [], df_copy.to_records(index=False).tolist()
