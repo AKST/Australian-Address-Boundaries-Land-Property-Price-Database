@@ -76,11 +76,8 @@ async def ingest_all(config: IngestConfig):
             worker_config=AbsWorkerConfig(
                 db_config=db_service_config,
                 db_connections=2,
-                log_config=AbsWorkerLogConfig(
-                    level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt=None,
-                ),
+                enable_logging=True,
+                enable_logging_debug=False,
             ),
         ),
         db_service,
@@ -162,6 +159,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.defaults import INSTANCE_CFG
+    from lib.utility.logging import config_vendor_logging, config_logging
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -169,12 +167,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.getLogger('sqlglot').setLevel(logging.ERROR)
-    logging.getLogger('psycopg.pool').setLevel(logging.ERROR)
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+    config_vendor_logging()
+    config_logging(worker=None, debug=args.debug)
 
     instance_cfg = INSTANCE_CFG[args.instance]
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)

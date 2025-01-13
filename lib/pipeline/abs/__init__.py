@@ -1,4 +1,4 @@
-from .config import AbsIngestionConfig, AbsWorkerConfig, AbsWorkerLogConfig
+from .config import AbsIngestionConfig, AbsWorkerConfig
 from .defaults import (
     ABS_MAIN_STRUCTURES,
     NON_ABS_MAIN_STRUCTURES,

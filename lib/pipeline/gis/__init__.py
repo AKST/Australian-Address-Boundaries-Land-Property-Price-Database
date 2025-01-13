@@ -16,6 +16,5 @@ from .config import (
     FeaturePageDescription,
     GisSchema,
     GisProjection,
-    SchemaFieldFormat,
     SchemaField,
 )

@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Self, Tuple, Iterator, Literal, Optiona
 
 from lib.service.database import DatabaseConfig
 from lib.service.static_environment.config import Target
+from lib.utility.df import FieldFormat
 
 @dataclass
 class AbsIngestionConfig:
@@ -22,14 +23,13 @@ class WorkerArgs:
 class AbsWorkerConfig:
     db_config: DatabaseConfig
     db_connections: int
-    log_config: Optional['AbsWorkerLogConfig']
+    enable_logging: bool
+    enable_logging_debug: bool
 
 @dataclass
-class AbsWorkerLogConfig:
-    level: int
-    format: str
-    datefmt: Optional[str]
-
+class FieldTransform:
+    column_name: str
+    column_type: FieldFormat
 
 @dataclass
 class IngestionSource:
@@ -46,7 +46,7 @@ class IngestionSource:
     These should be the database column names derived
     from dataframe column names.
     """
-    database_column_names_for_dataframe_columns: Dict[str, Dict[str, str]]
+    database_column_names_for_dataframe_columns: Dict[str, Dict[str, FieldTransform]]
 
     @property
     def gpkg_export_path(self: Self) -> str:

@@ -10,12 +10,12 @@ from shapely.geometry import shape
 from typing import Any, Dict, List, Self, Set, Tuple, Optional
 
 from lib.service.database import DatabaseService, PgClientException, log_exception_info_df
+from lib.utility.df import prepare_postgis_insert, FieldFormat
 
 from .config import (
     GisProjection,
     IngestionTaskDescriptor,
     FeaturePageDescription,
-    SchemaFieldFormat,
 )
 from .feature_server_client import FeatureServerClient
 from .telemetry import GisPipelineTelemetry
@@ -130,11 +130,11 @@ class GisIngestion:
             case db_relation:
                 pass
 
-        df_copy, query = prepare_query(proj, df)
+        df_copy, query = prepare_query(db_relation, proj, df)
         async with self._db.async_connect() as conn:
             async with conn.cursor() as cur:
                 slice, rows = [], df_copy.to_records(index=False).tolist()
-                cusor, size = 0, self.config.chunk_size or len(rows)
+                cursor, size = 0, self.config.chunk_size or len(rows)
                 try:
                     for cursor in range(0, len(rows), size):
                         slice = rows[cursor:cursor + size]
@@ -171,7 +171,7 @@ class GisIngestion:
         self._listeners -= 1
 
 _logger = getLogger(f'{__name__}.util')
-_Formats = Dict[str, SchemaFieldFormat]
+_Formats = Dict[str, FieldFormat]
 
 def create_placeholder(col: str, fmts: _Formats, crs: int) -> str:
     match format:
@@ -179,44 +179,24 @@ def create_placeholder(col: str, fmts: _Formats, crs: int) -> str:
             return f"ST_GeomFromText(%s, {crs})"
     return '%s'
 
-def prepare_query(p: GisProjection, df: gpd.GeoDataFrame) -> Tuple[gpd.GeoDataFrame, str]:
-    def apply_dt(x: Optional[int]) -> Optional[str]:
-        max_ms = 2147483647000
-        if x is None or x > max_ms or numpy.isnan(x):
-            return None
-        return datetime.fromtimestamp(x // 1000).strftime('%Y-%m-%d %H:%M:%S')
-
-    fmts: _Formats = { (f.rename or f.name): f.format for f in p.schema.fields if f.format }
-    fmts = { 'geometry': 'geometry', **fmts }
-
-    relation = p.schema.db_relation
-    placeholders = ", ".join(create_placeholder(c, fmts, p.epsg_crs) for c in df.columns)
-    columns = ", ".join(df.columns)
-    query = f"INSERT INTO {relation} ({columns}) VALUES ({placeholders})"
-
-    copy = df.copy()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        for k, fmt in fmts.items():
-            try:
-                match fmt:
-                    case 'geometry':
-                        copy[k] = copy[k].apply(lambda geom: geom if geom.is_valid else geom.buffer(0))
-                        copy[k] = copy[k].apply(lambda geom: geom.wkt if geom is not None else None)
-                    case 'timestamp_ms':
-                        max_ms = 2147483647000
-                        copy[k] = copy[k].apply(apply_dt)
-                    case 'text':
-                        copy[k] = copy[k].astype(object)
-                    case 'number':
-                        copy[k] = copy[k].astype(object)
-                        copy[[k]] = copy[[k]].where(pd.notnull(copy[[k]]), None)
-            except Exception as e:
-                with pd.option_context('display.max_columns', None):
-                    _logger.error(f"Failed to transform column '{k}' to '{fmt}'\n{p}\n{copy[k]}\n{copy.head()}\n{copy.info()}")
-                raise e
-
-    return copy, query
+def prepare_query(db_relation: str, p: GisProjection, df: gpd.GeoDataFrame) -> Tuple[gpd.GeoDataFrame, str]:
+    try:
+        return prepare_postgis_insert(df,
+            relation=db_relation,
+            epsg_crs=p.epsg_crs,
+            column_formats={
+                'geometry': 'geometry',
+                **({
+                    (f.rename or f.name): f.format
+                    for f in p.schema.fields if f.format
+                })
+            },
+            clone=True,
+        )
+    except:
+        from pprint import pformat
+        _logger.error(pformat(p))
+        raise
 
 def build_df(proj: GisProjection, page: List[Any]) -> gpd.GeoDataFrame:
     components: List[Tuple[Any, Dict[str, Any]]] = []

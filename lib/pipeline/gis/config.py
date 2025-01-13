@@ -3,16 +3,11 @@ from dataclasses import dataclass, field
 import geopandas as gpd
 from typing import Optional, Set, Any, Iterator, Literal, List, Tuple, Self
 
+from lib.utility.df import FieldFormat
+
 from .predicate import YearMonth, PredicateFunction
 
 FieldPriority = str | List[str | Tuple[str, int]]
-
-SchemaFieldFormat = Literal[
-    'geometry',
-    'timestamp_ms',
-    'number',
-    'text',
-]
 
 class IngestionTaskDescriptor:
     @dataclass(frozen=True)
@@ -42,7 +37,7 @@ class SchemaField:
     This is the field name once it's loaded into data.
     """
     rename: Optional[str] = field(default=None)
-    format: Optional[SchemaFieldFormat] = field(default=None)
+    format: Optional[FieldFormat] = field(default=None)
 
 @dataclass(frozen=True)
 class GisSchema:

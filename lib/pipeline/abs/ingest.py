@@ -6,9 +6,10 @@ from typing import List, Self, Type
 import pandas as pd
 
 from lib.service.database import DatabaseService, DatabaseConfig
+from lib.utility.df import prepare_postgis_insert
 
 from .config import AbsIngestionConfig, AbsWorkerConfig, WorkerArgs, IngestionSource
-from .constants import SCHEMA
+from .constants import SCHEMA, GDA2020_CRS
 
 
 def divide_list(lst, n):
@@ -62,46 +63,53 @@ class AbsIngestionWorker:
         self.root_dir = root_dir
 
     async def consume(self: Self, layer_name: str, source: IngestionSource) -> None:
-        column_renames = source.database_column_names_for_dataframe_columns[layer_name]
+        table_columns = source.database_column_names_for_dataframe_columns[layer_name]
+        column_renames = { k: c.column_name for k, c in table_columns.items() }
         table_name = source.layer_to_table[layer_name]
         file_name = f'{self.root_dir}/{source.gpkg_export_path}'
 
-        def run_in_thread():
-            self._logger.debug(f'consuming {layer_name}')
-            df = gpd.read_file(file_name, layer=layer_name)
-            df = df.rename(columns=column_renames)
-            df = df[list(column_renames.values())]
+        self._logger.debug(f'consuming {layer_name}')
+        df = gpd.read_file(file_name, layer=layer_name)
+        df = df.rename(columns=column_renames)
+        df = df[list(column_renames.values())]
 
-            if 'in_australia' in df:
-                df['in_australia'] = df['in_australia'] == 'AUS'
+        if 'in_australia' in df:
+            df['in_australia'] = df['in_australia'] == 'AUS'
 
-            self._logger.debug(f'writing {layer_name}')
-            df.to_postgis(table_name,
-                          self._db.engine(),
-                          schema='abs',
-                          if_exists='append',
-                          index=False)
-            return len(df)
+        df_copy, query = prepare_postgis_insert(df,
+            relation=f'{SCHEMA}.{table_name}',
+            epsg_crs=GDA2020_CRS,
+            column_formats={
+                c.column_name: c.column_type
+                for c in table_columns.values()
+            },
+        )
 
-        df_size = await asyncio.to_thread(run_in_thread)
+        self._logger.debug(f'writing {layer_name}')
+        async with self._db.async_connect() as conn:
+            async with conn.cursor() as cur:
+                slice, rows = [], df_copy.to_records(index=False).tolist()
+                offset, size = 0, len(rows)
+                for offset in range(0, len(rows), size):
+                    slice = rows[offset:offset + size]
+                    await cur.executemany(query, slice)
 
         async with self._db.async_connect() as conn:
             query = f"SELECT COUNT(*) FROM {SCHEMA}.{table_name}"
             cursor = await conn.execute(query)
             result = await cursor.fetchone()
-            self._logger.info(f"Populated {SCHEMA}.{table_name} with {result[0]}/{df_size} rows.")
+            self._logger.info(f"Populated {SCHEMA}.{table_name} with {result[0]}/{len(df)} rows.")
 
     @classmethod
     def run(cls: Type[Self], args: WorkerArgs) -> None:
         import logging
+        from lib.utility.logging import config_vendor_logging, config_logging
 
         worker_c = args.worker_config
 
-        if worker_c.log_config:
-            l_conf = worker_c.log_config
-            logging.basicConfig(level=l_conf.level,
-                                format=f'[{args.worker}]{l_conf.format}',
-                                datefmt=l_conf.datefmt)
+        config_vendor_logging()
+        if worker_c.enable_logging:
+            config_logging(args.worker, worker_c.enable_logging_debug)
 
         async def start():
             db = DatabaseService.create(worker_c.db_config, worker_c.db_connections)

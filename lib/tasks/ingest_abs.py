@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--workers", type=int, required=True)
     parser.add_argument("--worker-logs", action='store_true', default=False)
-    parser.add_argument("--worker-db-connections", type=int, default=1)
+    parser.add_argument("--worker-db-connections", type=int, default=8)
     parser.add_argument("--debug", action='store_true', default=False)
 
     args = parser.parse_args()
@@ -66,14 +66,6 @@ if __name__ == '__main__':
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
 
-    worker_log_config = None
-    if args.worker_logs:
-        worker_log_config = AbsWorkerLogConfig(
-            level=logging.DEBUG if args.debug else logging.INFO,
-            datefmt='%Y-%m-%d %H:%M:%S',
-            format=f'[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        )
-
     db_config = INSTANCE_CFG[args.instance].database
     config = AbsIngestionConfig(
         ingest_sources=[
@@ -85,7 +77,8 @@ if __name__ == '__main__':
         worker_config=AbsWorkerConfig(
             db_config=db_config,
             db_connections=args.worker_db_connections,
-            log_config=worker_log_config,
+            enable_logging=args.worker_logs,
+            enable_logging_debug=args.debug,
         ),
     )
 

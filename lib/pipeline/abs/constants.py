@@ -13,3 +13,4 @@ MB_2016_ACT = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270
 MB_2016_OTHER = 'https://www.abs.gov.au/AUSSTATS/subscriber.nsf/log?openagent&1270055001_mb_2016_ot_shape.zip&1270.0.55.001&Data%20Cubes&9001CEC5D0573AF4CA257FED0013C5F0&0&July%202016&12.07.2016&Latest'
 
 SCHEMA = 'abs'
+GDA2020_CRS = 7844
