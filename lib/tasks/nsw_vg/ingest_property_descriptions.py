@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from dataclasses import dataclass, field
 from multiprocessing import Process, Semaphore
 from multiprocessing.synchronize import Semaphore as SemaphoreT
@@ -8,6 +7,7 @@ from typing import Callable
 from lib.pipeline.nsw_vg.property_description import *
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.tasks.nsw_vg.config import NswVgTaskConfig
+from lib.utility.logging import config_vendor_logging, config_logging
 
 async def cli_main(config: NswVgTaskConfig.PropDescIngest) -> None:
     db_service = DatabaseService.create(config.db_config, config.workers)
@@ -26,11 +26,8 @@ async def ingest_property_description(
 
 def spawn_worker(config: WorkerProcessConfig, semaphore: SemaphoreT, worker_debug: bool, db_config: DatabaseConfig):
     async def worker_runtime(config: WorkerProcessConfig, semaphore: SemaphoreT, db_config: DatabaseConfig):
-        logging.basicConfig(
-            level=logging.DEBUG if worker_debug else logging.INFO,
-            format=f'[{config.worker_no}][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S')
-
+        config_vendor_logging()
+        config_logging(config.worker_no, worker_debug)
         db = DatabaseService.create(db_config, len(config.quantiles))
         worker = PropDescIngestionWorker(semaphore, db)
         await worker.ingest(config.quantiles)
@@ -49,10 +46,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+    config_vendor_logging()
+    config_logging(None, args.debug)
 
     asyncio.run(cli_main(
         NswVgTaskConfig.PropDescIngest(
@@ -62,5 +57,4 @@ if __name__ == '__main__':
             db_config=INSTANCE_CFG[args.instance].database,
         ),
     ))
-
 

@@ -119,8 +119,8 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
     3: InstanceCfg(
         nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.EachNthYear(4, include_first=True),
         nswvg_psi_min_pub_year=None,
-        gnaf_states=set(),
-        enable_gnaf=False,
+        gnaf_states={'NSW'},
+        enable_gnaf=True,
         database=DatabaseConfig(
             dbname='gnaf_db_3',
             user='postgres',
