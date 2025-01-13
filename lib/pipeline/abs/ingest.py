@@ -107,7 +107,7 @@ class AbsIngestionWorker:
 
         worker_c = args.worker_config
 
-        config_vendor_logging()
+        config_vendor_logging({'sqlglot', 'psycopg.pool'})
         if worker_c.enable_logging:
             config_logging(args.worker, worker_c.enable_logging_debug)
 

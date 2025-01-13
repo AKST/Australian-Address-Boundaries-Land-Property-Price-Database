@@ -152,7 +152,8 @@ class FileCacher:
             if state['version'] != CACHE_VERSION:
                 raise Exception("cache doesn't match version")
             self._state = state['files']
-        except:
+        except Exception as e:
+            self._logger.exception(e)
             self._logger.error("Failed to save cache state, possibly corrupted")
             raise
         return self

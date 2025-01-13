@@ -26,7 +26,7 @@ async def ingest_property_description(
 
 def spawn_worker(config: WorkerProcessConfig, semaphore: SemaphoreT, worker_debug: bool, db_config: DatabaseConfig):
     async def worker_runtime(config: WorkerProcessConfig, semaphore: SemaphoreT, db_config: DatabaseConfig):
-        config_vendor_logging()
+        config_vendor_logging({'sqlglot', 'psycopg.pool'})
         config_logging(config.worker_no, worker_debug)
         db = DatabaseService.create(db_config, len(config.quantiles))
         worker = PropDescIngestionWorker(semaphore, db)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    config_vendor_logging()
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
     config_logging(None, args.debug)
 
     asyncio.run(cli_main(

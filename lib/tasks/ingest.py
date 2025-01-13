@@ -167,7 +167,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    config_vendor_logging()
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
     config_logging(worker=None, debug=args.debug)
 
     instance_cfg = INSTANCE_CFG[args.instance]

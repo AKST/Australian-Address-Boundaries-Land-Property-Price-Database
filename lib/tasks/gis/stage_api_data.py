@@ -38,13 +38,7 @@ from lib.service.http import (
 from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
 
-@dataclass
-class IngestGisRunConfig:
-    db_workers: int
-    skip_save: bool
-    dry_run: bool
-    gis_params: List[DateRangeParam]
-    exp_backoff_attempts: int
+from .config import GisTaskConfig
 
 def http_limits_of(ss: List[HostSemaphoreConfig]) -> int:
     return reduce(lambda acc, it: acc + it.limit, ss, 0)
@@ -68,11 +62,11 @@ def _parse_date_range(s: Optional[str], clock: ClockService) -> Optional[DateRan
         case other:
             raise ValueError('unknown date format')
 
-async def run(
+async def stage_gis_api_data(
     io: IoService,
     db: DatabaseService,
     clock: ClockService,
-    conf: IngestGisRunConfig,
+    conf: GisTaskConfig.StageApiData,
 ) -> None:
     """
     The http client composes a cache layer and a throttling
@@ -131,7 +125,7 @@ async def run(
 async def run_in_console(
     open_file_limit: int,
     db_config: DatabaseConfig,
-    config: IngestGisRunConfig,
+    config: GisTaskConfig.StageApiData,
 ) -> None:
     io = IoService.create(open_file_limit)
     db = DatabaseService.create(db_config, config.db_workers)
@@ -140,7 +134,7 @@ async def run_in_console(
     if not config.dry_run:
         await controller.command(Command.Drop(ns='nsw_spatial'))
         await controller.command(Command.Create(ns='nsw_spatial'))
-    await run(io, db, clock, config)
+    await stage_gis_api_data(io, db, clock, config)
 
 if __name__ == '__main__':
     import asyncio
@@ -149,6 +143,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.defaults import INSTANCE_CFG
+    from lib.utility.logging import config_vendor_logging, config_logging
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -161,10 +156,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+    config_vendor_logging({'sqlglot', 'psycopg.pool'}, {'asyncio'})
+    config_logging(worker=None, debug=args.debug)
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(slim * 0.8) - (args.db_connections + http_limits_of(HOST_SEMAPHORE_CONFIG))
@@ -180,7 +173,7 @@ if __name__ == '__main__':
                 params = [other]
             case None:
                 params = []
-        cfg = IngestGisRunConfig(
+        cfg = GisTaskConfig.StageApiData(
             db_workers=args.db_connections,
             skip_save=args.skip_save,
             dry_run=args.dry_run,

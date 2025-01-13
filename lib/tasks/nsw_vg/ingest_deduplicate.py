@@ -114,6 +114,7 @@ if __name__ == '__main__':
     import argparse
 
     from lib.defaults import INSTANCE_CFG
+    from lib.utility.logging import config_vendor_logging, config_logging
 
     parser = argparse.ArgumentParser(description="Ingest NSW VG Data")
     parser.add_argument("--debug", action='store_true', default=False)
@@ -127,11 +128,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.getLogger('sqlglot').setLevel(logging.ERROR)
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[main][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
+    config_logging(worker=None, debug=args.debug)
 
     logging.debug(args)
     db_config = INSTANCE_CFG[args.instance].database
