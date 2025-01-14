@@ -17,6 +17,7 @@ from .config import (
     IngestionTaskDescriptor,
     FeaturePageDescription,
 )
+from .cache_cleaner import AbstractCacheCleaner
 from .feature_server_client import FeatureServerClient
 from .telemetry import GisPipelineTelemetry
 
@@ -48,12 +49,14 @@ class GisIngestion:
                  feature_server: FeatureServerClient,
                  db: DatabaseService,
                  telemetry: GisPipelineTelemetry,
+                 cache_cleaner: AbstractCacheCleaner,
                  save_queue: asyncio.Queue[IngestionTaskDescriptor.Save]):
         self.config = config
         self._db = db
         self._telemetry = telemetry
         self._bg_ts = set()
 
+        self._cache_cleaner = cache_cleaner
         self._feature_server = feature_server
         self._fetch_queue = asyncio.Queue()
         self._save_queue = save_queue
@@ -62,13 +65,14 @@ class GisIngestion:
     def create(config: GisIngestionConfig,
                feature_server: FeatureServerClient,
                db: DatabaseService,
-               telemetry: GisPipelineTelemetry):
+               telemetry: GisPipelineTelemetry,
+               cache_cleaner: AbstractCacheCleaner):
         # setting a max queue size here establishes some back
         # pressure to limit how much ends up getting queued
         save_queue = asyncio.Queue[IngestionTaskDescriptor.Save](
             maxsize=config.api_worker_backpressure)
         return GisIngestion(config, feature_server, db,
-                            telemetry, save_queue)
+                            telemetry, cache_cleaner, save_queue)
 
     def stop(self: Self):
         self._stopped = True
@@ -148,10 +152,10 @@ class GisIngestion:
                 except PgClientException as e:
                     self.stop()
                     log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
-                    await self._feature_server.forget_page_cache(proj, page_desc)
+                    await self._cache_cleaner.forget_page_cache(proj, page_desc)
                     raise e
                 except Exception as e:
-                    await self._feature_server.forget_page_cache(proj, page_desc)
+                    await self._cache_cleaner.forget_page_cache(proj, page_desc)
                     raise e
             await conn.commit()
         self._telemetry.record_save_end(t_desc, len(t_desc.df))

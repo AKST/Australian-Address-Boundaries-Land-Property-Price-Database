@@ -10,6 +10,7 @@ class GisTaskConfig:
         dry_run: bool
         gis_params: List[DateRangeParam]
         exp_backoff_attempts: int
+        disable_cache: bool
 
     @dataclass
     class Deduplication:

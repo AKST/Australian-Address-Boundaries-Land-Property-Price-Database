@@ -23,7 +23,7 @@ _field_priority: FieldPriority = ['id', ('assoc', 2), ('data', 2), ('meta', 2), 
 BACKOFF_CONFIG = BackoffConfig(
     RetryPreference(allowed=16),
     hosts={
-        SPATIAL_NSW_HOST: HostOverride(pause_other_requests_while_retrying=True),
+        SPATIAL_NSW_HOST: HostOverride(pause_other_requests_while_retrying=False),
         ENVIRONMENT_NSW_HOST: HostOverride(pause_other_requests_while_retrying=True),
     },
 )

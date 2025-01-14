@@ -48,6 +48,7 @@ class NswVgPsiWorkerConfig:
     db_batch_size: int
     db_config: DatabaseConfig
     ingestion_config: IngestionConfig
+    # remove
     log_config: Optional[NswVgPsiWorkerLogConfig]
 
 class ParentMessage:

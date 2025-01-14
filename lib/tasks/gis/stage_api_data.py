@@ -10,6 +10,9 @@ from typing import Any, List, Optional
 
 from lib.pipeline.gis import (
     BACKOFF_CONFIG,
+    AbstractCacheCleaner,
+    CacheCleaner,
+    DisabledCacheCleaner,
     FeaturePaginationSharderFactory,
     FeatureServerClient,
     FeatureExpBackoff,
@@ -84,18 +87,34 @@ async def stage_gis_api_data(
         active requests is set on a host basis.
     """
 
-    http_file_cache = HttpLocalCache.create(io, 'gis')
-    async with CachedClientSession.create(
-        session=ExpBackoffClientSession.create(
+    def get_session(cacher: Optional[HttpLocalCache]):
+        exp_boff_sesh = ExpBackoffClientSession.create(
             session=ThrottledClientSession.create(HOST_SEMAPHORE_CONFIG),
             config=BACKOFF_CONFIG,
-        ),
-        file_cache=http_file_cache,
-        io_service=io,
-    ) as session:
+        )
+
+        if cacher is None:
+            return exp_boff_sesh
+        else:
+            return CachedClientSession.create(
+                session=exp_boff_sesh,
+                file_cache=cacher,
+                io_service=io,
+            )
+
+    cache_cleaner: AbstractCacheCleaner
+
+    if conf.disable_cache:
+        http_file_cache = None
+        cache_cleaner = DisabledCacheCleaner()
+    else:
+        http_file_cache = HttpLocalCache.create(io, 'gis')
+        cache_cleaner = CacheCleaner(http_file_cache)
+
+    async with get_session(http_file_cache) as session:
         feature_client = FeatureServerClient(
             FeatureExpBackoff(cfg.exp_backoff_attempts),
-            clock, session, http_file_cache)
+            clock, session, cache_cleaner)
         telemetry = GisPipelineTelemetry.create(clock)
 
         if conf.dry_run:
@@ -113,7 +132,8 @@ async def stage_gis_api_data(
                 chunk_size=None),
             feature_client,
             db,
-            telemetry)
+            telemetry,
+            cache_cleaner)
         sharder_factory = FeaturePaginationSharderFactory(feature_client, telemetry)
         pipeline = GisPipeline(sharder_factory, ingestion)
 
@@ -153,11 +173,12 @@ if __name__ == '__main__':
     parser.add_argument("--skip-save", action='store_true', required=False)
     parser.add_argument("--db-connections", type=int, default=32)
     parser.add_argument("--exp-backoff-attempts", type=int, default=8)
+    parser.add_argument("--disable-cache", action='store_true', required=False)
 
     args = parser.parse_args()
 
     config_vendor_logging({'sqlglot', 'psycopg.pool'}, {'asyncio'})
-    config_logging(worker=None, debug=args.debug)
+    config_logging(worker=None, debug=args.debug, output_name='gis_stage')
 
     slim, hlim = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(slim * 0.8) - (args.db_connections + http_limits_of(HOST_SEMAPHORE_CONFIG))
@@ -179,6 +200,7 @@ if __name__ == '__main__':
             dry_run=args.dry_run,
             gis_params=params,
             exp_backoff_attempts=args.exp_backoff_attempts,
+            disable_cache=args.disable_cache
         )
         asyncio.run(
             run_in_console(

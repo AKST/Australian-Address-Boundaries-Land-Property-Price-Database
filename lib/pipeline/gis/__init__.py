@@ -12,6 +12,7 @@ from .ingestion import GisIngestion, GisIngestionConfig
 from .predicate import *
 from .pipeline import GisPipeline
 from .telemetry import GisPipelineTelemetry
+from .cache_cleaner import AbstractCacheCleaner, CacheCleaner, DisabledCacheCleaner
 from .config import (
     FeaturePageDescription,
     GisSchema,
