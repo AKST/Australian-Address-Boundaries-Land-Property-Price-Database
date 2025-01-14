@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS nsw_spatial_lppt_raw.lot_feature_layer (
   lot_feature_layer_row_id BIGSERIAL PRIMARY KEY,
   object_id BIGINT NOT NULL,
   lot_id_string TEXT NOT NULL,
-  controlling_authority_oid INT NOT NULL,
+  controlling_authority_oid INT,
   cad_id int NOT NULL,
   plan_oid int,
   plan_number int,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS nsw_spatial_lppt_raw.lot_feature_layer (
   end_date TIMESTAMP,
   last_update TIMESTAMP NOT NULL,
   shape_uuid TEXT NOT NULL,
-  change_type TEXT NOT NULL,
+  change_type TEXT,
   shape_length float,
   shape_area float,
   geometry GEOMETRY(MultiPolygon, 7844)

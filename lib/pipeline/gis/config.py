@@ -45,6 +45,7 @@ class GisSchema:
     id_field: str
     db_relation: Optional[str]
     result_limit: int
+    result_depth: int
     fields: List[SchemaField]
     shard_scheme: List[PredicateFunction]
     debug_field: str
@@ -64,7 +65,11 @@ class GisProjection:
     fields: FieldPriority
     epsg_crs: int
 
-    def get_fields(self) -> Iterator[SchemaField]:
+    def partition_key(self: Self) -> str:
+        fields = '-'.join(f'{f.name}' for f in self.get_fields())
+        return f'{self.id}-{self.epsg_crs}-[{fields}]'
+
+    def get_fields(self: Self) -> Iterator[SchemaField]:
         if isinstance(self.fields, str) and self.fields == '*':
             return (f for f in self.schema.fields)
 
@@ -88,12 +93,12 @@ class Bounds:
     ymax: float
     xmax: float
 
-    def area(self):
+    def area(self: Self):
         return self.x_range() * self.y_range()
 
-    def x_range(self):
+    def x_range(self: Self):
         return self.xmax - self.xmin
 
-    def y_range(self):
+    def y_range(self: Self):
         return self.ymax - self.ymin
 

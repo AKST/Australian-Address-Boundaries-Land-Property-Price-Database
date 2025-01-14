@@ -49,6 +49,7 @@ class RequestSharder:
                                params: Sequence[PredicateParam],
                                use_cache: bool) -> AsyncIterator[FeaturePageDescription]:
         limit = self._projection.schema.result_limit
+        depth = self._projection.schema.result_depth
         shard_f, *shard_fs = shard_functions
         shard_p, *shard_ps = params if params else [shard_f.default_param(where_clause)]
 
@@ -69,7 +70,7 @@ class RequestSharder:
                 _use_cache = use_cache and shard.can_cache()
                 if count == 0:
                     continue
-                elif count <= limit * 150:
+                elif count <= depth:
                     self._telemetry.init_clause(self._projection, query, count)
                     for offset in range(0, count, limit):
                         expected = min(limit, count - offset)

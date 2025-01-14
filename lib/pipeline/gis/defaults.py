@@ -43,6 +43,7 @@ SNSW_PROP_SCHEMA = GisSchema(
     ],
     id_field='RID',
     result_limit=100,
+    result_depth=15000,
     fields=[
         SchemaField('id', 'RID', 1, rename='rid'),
         SchemaField('meta', 'createdate', 1, rename='create_date', format='timestamp_ms'),
@@ -95,7 +96,8 @@ SNSW_LOT_SCHEMA = GisSchema(
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
     ],
     id_field='objectid',
-    result_limit=100,
+    result_limit=75,
+    result_depth=15000,
     fields=[
         SchemaField('id', 'objectid', 1, rename='object_id'),
         SchemaField('assoc', 'lotidstring', 1, rename='lot_id_string'),
@@ -108,7 +110,7 @@ SNSW_LOT_SCHEMA = GisSchema(
         SchemaField('meta', 'enddate', 1, rename='end_date', format='timestamp_ms'),
         SchemaField('meta', 'lastupdate', 1, rename='last_update', format='timestamp_ms'),
 
-        SchemaField('data', 'planoid', 1, rename='plan_oid', format='number'),
+        SchemaField('data', 'planoid', 2, rename='plan_oid', format='number'),
         SchemaField('data', 'plannumber', 1, rename='plan_number', format='number'),
         SchemaField('data', 'planlabel', 1, rename='plan_label'),
         SchemaField('data', 'itstitlestatus', 2, rename='its_title_status', format='number'),
@@ -118,14 +120,14 @@ SNSW_LOT_SCHEMA = GisSchema(
         SchemaField('data', 'classsubtype', 2, rename='class_subtype', format='number'),
         SchemaField('data', 'lotnumber', 1, rename='lot_number'),
         SchemaField('data', 'sectionnumber', 1, rename='section_number'),
-        SchemaField('data', 'planlotarea', 1, rename='plan_lot_area', format='number'),
-        SchemaField('data', 'planlotareaunits', 1, rename='plan_lot_area_units'),
+        SchemaField('data', 'planlotarea', 3, rename='plan_lot_area', format='number'),
+        SchemaField('data', 'planlotareaunits', 3, rename='plan_lot_area_units'),
 
         SchemaField('assoc', 'msoid', 3),
         SchemaField('assoc', 'centroidid', 3),
 
         SchemaField('meta', 'shapeuuid', 2, rename='shape_uuid'),
-        SchemaField('meta', 'changetype', 2, rename='change_type'),
+        SchemaField('meta', 'changetype', 3, rename='change_type'),
         SchemaField('meta', 'processstate', 3),
         SchemaField('data', 'urbanity', 3),
         SchemaField('geo', 'Shape__Length', 1, rename='shape_length'),
@@ -148,6 +150,7 @@ ENSW_DA_SCHEMA = GisSchema(
     ],
     id_field='PLANNING_PORTAL_APP_NUMBER',
     result_limit=100,
+    result_depth=15000,
     fields=[
         SchemaField('id', "PLANNING_PORTAL_APP_NUMBER", 1),
         SchemaField('id', "DA_NUMBER", 1),
@@ -238,6 +241,7 @@ ENSW_ZONE_SCHEMA = GisSchema(
     ],
     id_field='OBJECTID',
     result_limit=100,
+    result_depth=15000,
     fields=[
         SchemaField('data', "OBJECTID", 1),
         SchemaField('data', "EPI_NAME", 2),

@@ -49,11 +49,11 @@ class PartitionLock:
         self._partition_exclusive = {}
         self._partition_waiting = {}
 
-    def _can_access_entry(self: Self, partition_id: str) -> bool:
+    def _cannot_gain_access_entry(self: Self, partition_id: str) -> bool:
         return self._partition_exclusive.get(partition_id, False) \
             or self._partition_waiting.get(partition_id, 0) > 0
 
-    def _can_access_partition(self: Self, partition_id: str) -> bool:
+    def _cannot_access_partition(self: Self, partition_id: str) -> bool:
         return self._partition_entry_counts.get(partition_id, 0) > 0 \
             or self._partition_exclusive.get(partition_id, False)
 
@@ -63,7 +63,7 @@ class PartitionLock:
         is under whole-of-partition access.
         """
         async with self._condition:
-            while self._can_access_entry(partition_id):
+            while self._cannot_gain_access_entry(partition_id):
                 await self._condition.wait()
             _inc_key(self._partition_entry_counts, partition_id)
 
@@ -84,7 +84,7 @@ class PartitionLock:
         async with self._condition:
             _inc_key(self._partition_waiting, partition_id)
 
-            while self._can_access_partition(partition_id):
+            while self._cannot_access_partition(partition_id):
                 await self._condition.wait()
 
             self._partition_waiting[partition_id] -= 1

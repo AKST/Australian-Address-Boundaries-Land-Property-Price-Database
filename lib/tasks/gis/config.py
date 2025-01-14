@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 from lib.pipeline.gis import DateRangeParam
 
@@ -13,7 +13,11 @@ class GisTaskConfig:
 
     @dataclass
     class Deduplication:
-        pass
+        run_from: Optional[int]
+        run_till: Optional[int]
+        truncate: bool = field(default=False)
+        drop_raw: bool = field(default=False)
+        drop_dst_schema: bool = field(default=False)
 
     @dataclass
     class Ingestion:

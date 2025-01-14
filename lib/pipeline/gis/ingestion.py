@@ -194,7 +194,7 @@ def prepare_query(db_relation: str, p: GisProjection, df: gpd.GeoDataFrame) -> T
                 'geometry': 'geometry',
                 **({
                     (f.rename or f.name): f.format
-                    for f in p.schema.fields if f.format
+                    for f in p.get_fields() if f.format
                 })
             },
             clone=True,
