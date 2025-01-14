@@ -42,7 +42,7 @@ SNSW_PROP_SCHEMA = GisSchema(
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
     ],
     id_field='RID',
-    result_limit=90,
+    result_limit=100,
     result_depth=15000,
     fields=[
         SchemaField('id', 'RID', 1, rename='rid'),

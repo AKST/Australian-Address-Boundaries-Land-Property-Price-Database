@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Self
 from lib.service.clock import ClockService
 from lib.service.io import IoService
 from lib.service.uuid import UuidService
+from lib.utility.concurrent import PartitionLock
 from .constants import STATE_INIT, CACHE_VERSION
 from .expiry import CacheExpire
 from .headers import InstructionHeaders
@@ -48,11 +49,17 @@ class FileCacher:
         self._config_path = config_path
         self._state = state
         self._io = io
+        self._lock = PartitionLock()
         self._uuid = uuid
         self._clock = clock
         self._rc_factory = rc_factory
 
-    def read(self, url: str, fmt: str):
+    def read(self: Self, url: str, fmt: str):
+        """
+        No need to use partition lock, as this can syncronously
+        check if it should just stop.
+        """
+
         if self._state is None:
             raise ValueError('write occured while state was not initialised')
 
@@ -72,62 +79,67 @@ class FileCacher:
 
         return None, False
 
-    async def forget_by_clause(self, clauses: List[str]):
-        if self._state is None:
-            return
+    async def forget_by_clause(
+        self: Self,
+        clauses: List[str],
+        partition: str,
+    ):
+        async with self._lock.whole_partition_access(partition):
+            if self._state is None:
+                return
 
-        url_to_rm: List[str] = []
-        locations: List[str] = []
-        for url, value in self._state.items():
-            if any([c not in url for c in clauses]):
-                continue
+            url_to_rm: List[str] = []
+            locations: List[str] = []
+            for url, value in self._state.items():
+                if any([c not in url for c in clauses]):
+                    continue
 
-            for fmt in self.parse_state(self._state, url).values():
-                locations.append(fmt.location)
-            url_to_rm.append(url)
+                for fmt in self.parse_state(self._state, url).values():
+                    locations.append(fmt.location)
+                url_to_rm.append(url)
 
-        for url in url_to_rm:
-            del self._state[url]
-        else:
-            return
+            for url in url_to_rm:
+                del self._state[url]
+            else:
+                return
 
-        self._logger.info("Removed the following from cache: \n" \
-            + "\n - " + '\n - '.join(url_to_rm) \
-            + "\n\nNow deleteing from cache dir")
-        await self._save_cache_state()
-        for l in locations:
-            await self._io.f_delete(l)
+            self._logger.info("Removed the following from cache: \n" \
+                + "\n - " + '\n - '.join(url_to_rm) \
+                + "\n\nNow deleteing from cache dir")
+            await self._save_cache_state()
+            for l in locations:
+                await self._io.f_delete(l)
 
-    async def write(self: Self,
-                    url: str,
-                    meta: InstructionHeaders,
-                    data: str,
-                    attempt=0) -> Dict[str, 'RequestCache']:
-        if self._state is None:
-            raise ValueError('write occured while state was not initialised')
+    async def write(
+        self: Self,
+        url: str,
+        meta: InstructionHeaders,
+        data: str,
+    ) -> Dict[str, 'RequestCache']:
+        for attempt in range(0, 2):
+            async with self._lock.entry_access(meta.partition):
+                if self._state is None:
+                    raise ValueError('write occured while state was not initialised')
 
-        fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"
-        fpath = os.path.join(self._save_dir, fname)
-        await self._io.f_write(fpath, data)
+                fname = f"{meta.request_label}-{self._uuid.get_uuid4_hex()}.{meta.ext}"
+                fpath = os.path.join(self._save_dir, fname)
+                await self._io.f_write(fpath, data)
 
-        fmts = self._state.get(url, {})
+                fmts = self._state.get(url, {})
 
-        if meta.format in fmts:
-            cache = self._rc_factory.from_json(fmts[meta.format])
-            await self._io.f_delete(cache.location)
+                if meta.format in fmts:
+                    cache = self._rc_factory.from_json(fmts[meta.format])
+                    await self._io.f_delete(cache.location)
 
-        request_cache = self._rc_factory.create(meta.expiry, fname, self._clock.now())
-        fmts[meta.format] = request_cache.to_json()
-        self._state[url] = fmts
+                request_cache = self._rc_factory.create(meta.expiry, fname, self._clock.now())
+                fmts[meta.format] = request_cache.to_json()
+                self._state[url] = fmts
 
-        await self._save_cache_state()
+                await self._save_cache_state()
 
-        if url in self._state:
-            return self.parse_state(self._state, url)
-        elif attempt == 0:
-            return await self.write(url, meta, data, 1)
-        else:
-            raise ValueError('cache has entered weird state')
+                if url in self._state:
+                    return self.parse_state(self._state, url)
+        raise ValueError('cache has entered weird state')
 
     def parse_state(self: Self, state: Dict[Any, Any], key: str) -> Dict[str, 'RequestCache']:
         return {
