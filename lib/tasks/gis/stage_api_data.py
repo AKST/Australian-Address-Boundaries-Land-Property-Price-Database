@@ -20,6 +20,7 @@ from lib.pipeline.gis import (
     GisIngestionConfig,
     GisPipeline,
     GisPipelineTelemetry,
+    GisProjection,
     DateRangeParam,
     HOST_SEMAPHORE_CONFIG,
     ENSW_DA_PROJECTION,
@@ -111,21 +112,28 @@ async def stage_gis_api_data(
         http_file_cache = HttpLocalCache.create(io, 'gis')
         cache_cleaner = CacheCleaner(http_file_cache)
 
+    projections: List[GisProjection] = []
+
+    if 'snsw_lot' in conf.projections:
+        projections.append(SNSW_LOT_PROJECTION)
+    if 'snsw_prop' in conf.projections:
+        projections.append(SNSW_PROP_PROJECTION)
+
+    match conf.db_mode:
+        case 'write':
+            api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
+            db_workers = conf.db_workers
+        case 'skip':
+            api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
+            db_workers = 1
+        case 'print_head_then_quit':
+            api_workers, db_workers = 1, 1
+
     async with get_session(http_file_cache) as session:
         feature_client = FeatureServerClient(
             FeatureExpBackoff(cfg.exp_backoff_attempts),
             clock, session, cache_cleaner)
         telemetry = GisPipelineTelemetry.create(clock)
-
-        match conf.db_mode:
-            case 'write':
-                api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
-                db_workers = conf.db_workers
-            case 'skip':
-                api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
-                db_workers = 1
-            case 'print_head_then_quit':
-                api_workers, db_workers = 1, 1
 
         ingestion = GisIngestion.create(
             GisIngestionConfig(
@@ -142,8 +150,8 @@ async def stage_gis_api_data(
         pipeline = GisPipeline(sharder_factory, ingestion)
 
         await pipeline.start([
-            (SNSW_PROP_PROJECTION, conf.gis_params),
-            (SNSW_LOT_PROJECTION, conf.gis_params),
+            (p, conf.gis_params)
+            for p in projections
         ])
 
 async def run_in_console(
@@ -178,6 +186,7 @@ if __name__ == '__main__':
     parser.add_argument("--db-mode", choices=['write', 'print_head_then_quit', 'skip'], required=True)
     parser.add_argument("--exp-backoff-attempts", type=int, default=8)
     parser.add_argument("--disable-cache", action='store_true', required=False)
+    parser.add_argument('--projections', nargs='*', choices=GisTaskConfig.projection_kinds)
 
     args = parser.parse_args()
 
@@ -203,7 +212,8 @@ if __name__ == '__main__':
             db_mode=args.db_mode,
             gis_params=params,
             exp_backoff_attempts=args.exp_backoff_attempts,
-            disable_cache=args.disable_cache
+            disable_cache=args.disable_cache,
+            projections=args.projections or GisTaskConfig.projection_kinds,
         )
         asyncio.run(
             run_in_console(
