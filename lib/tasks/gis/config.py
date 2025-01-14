@@ -1,13 +1,12 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
-from lib.pipeline.gis import DateRangeParam
+from lib.pipeline.gis import DateRangeParam, GisWorkerDbMode
 
 class GisTaskConfig:
     @dataclass
     class StageApiData:
         db_workers: int
-        skip_save: bool
-        dry_run: bool
+        db_mode: GisWorkerDbMode
         gis_params: List[DateRangeParam]
         exp_backoff_attempts: int
         disable_cache: bool

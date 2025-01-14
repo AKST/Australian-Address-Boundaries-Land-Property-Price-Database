@@ -7,7 +7,7 @@ import pandas as pd
 import warnings
 from logging import getLogger
 from shapely.geometry import shape
-from typing import Any, Dict, List, Self, Set, Tuple, Optional
+from typing import Any, Dict, List, Literal, Self, Set, Tuple, Optional
 
 from lib.service.database import DatabaseService, PgClientException, log_exception_info_df
 from lib.utility.df import prepare_postgis_insert, FieldFormat, fmt_head
@@ -21,12 +21,13 @@ from .cache_cleaner import AbstractCacheCleaner
 from .feature_server_client import FeatureServerClient
 from .telemetry import GisPipelineTelemetry
 
+GisWorkerDbMode = Literal['write', 'print_head_then_quit', 'skip']
 
 @dataclass(frozen=True)
 class GisIngestionConfig:
     api_workers: int
     api_worker_backpressure: int
-    dry_run: bool
+    db_mode: GisWorkerDbMode
     db_workers: int
     chunk_size: Optional[int]
 
@@ -135,29 +136,32 @@ class GisIngestion:
             case db_relation:
                 pass
 
-        df_copy, query = prepare_query(db_relation, proj, df)
-        if self.config.dry_run:
-            self._logger.info(fmt_head(df))
-            self.stop()
-            raise asyncio.CancelledError('dryrun')
-
-        async with self._db.async_connect() as conn:
-            async with conn.cursor() as cur:
-                slice, rows = [], df_copy.to_records(index=False).tolist()
-                cursor, size = 0, self.config.chunk_size or len(rows)
-                try:
-                    for cursor in range(0, len(rows), size):
-                        slice = rows[cursor:cursor + size]
-                        await cur.executemany(query, slice)
-                except PgClientException as e:
-                    self.stop()
-                    log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
-                    await self._cache_cleaner.forget_page_cache(proj, page_desc)
-                    raise e
-                except Exception as e:
-                    await self._cache_cleaner.forget_page_cache(proj, page_desc)
-                    raise e
-            await conn.commit()
+        match self.config.db_mode:
+            case 'print_head_then_quit':
+                self._logger.info(fmt_head(df))
+                self.stop()
+                raise asyncio.CancelledError('dryrun')
+            case 'skip':
+                pass
+            case 'write':
+                df_copy, query = prepare_query(db_relation, proj, df)
+                async with self._db.async_connect() as conn:
+                    async with conn.cursor() as cur:
+                        slice, rows = [], df_copy.to_records(index=False).tolist()
+                        cursor, size = 0, self.config.chunk_size or len(rows)
+                        try:
+                            for cursor in range(0, len(rows), size):
+                                slice = rows[cursor:cursor + size]
+                                await cur.executemany(query, slice)
+                        except PgClientException as e:
+                            self.stop()
+                            log_exception_info_df(df_copy.iloc[cursor:cursor+size], self._logger, e)
+                            await self._cache_cleaner.forget_page_cache(proj, page_desc)
+                            raise e
+                        except Exception as e:
+                            await self._cache_cleaner.forget_page_cache(proj, page_desc)
+                            raise e
+                    await conn.commit()
         self._telemetry.record_save_end(t_desc, len(t_desc.df))
         t_desc.df.drop(t_desc.df.index, inplace=True)
 

@@ -117,17 +117,21 @@ async def stage_gis_api_data(
             clock, session, cache_cleaner)
         telemetry = GisPipelineTelemetry.create(clock)
 
-        if conf.dry_run:
-            api_workers, db_workers = 1, 1
-        else:
-            api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
-            db_workers = conf.db_workers
+        match conf.db_mode:
+            case 'write':
+                api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
+                db_workers = conf.db_workers
+            case 'skip':
+                api_workers = http_limits_of(HOST_SEMAPHORE_CONFIG)
+                db_workers = 1
+            case 'print_head_then_quit':
+                api_workers, db_workers = 1, 1
 
         ingestion = GisIngestion.create(
             GisIngestionConfig(
                 api_workers=api_workers,
                 api_worker_backpressure=db_workers * 4,
-                dry_run=conf.dry_run,
+                db_mode=conf.db_mode,
                 db_workers=db_workers,
                 chunk_size=None),
             feature_client,
@@ -151,9 +155,10 @@ async def run_in_console(
     db = DatabaseService.create(db_config, config.db_workers)
     clock = ClockService()
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
-    if not config.dry_run:
-        await controller.command(Command.Drop(ns='nsw_spatial'))
-        await controller.command(Command.Create(ns='nsw_spatial'))
+    match config.db_mode:
+        case 'write':
+            await controller.command(Command.Drop(ns='nsw_spatial'))
+            await controller.command(Command.Create(ns='nsw_spatial'))
     await stage_gis_api_data(io, db, clock, config)
 
 if __name__ == '__main__':
@@ -167,11 +172,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="db schema tool")
     parser.add_argument("--debug", action='store_true', default=False)
-    parser.add_argument("--dry-run", action='store_true', required=False)
     parser.add_argument("--gis-range", type=str)
     parser.add_argument("--instance", type=int, required=True)
-    parser.add_argument("--skip-save", action='store_true', required=False)
     parser.add_argument("--db-connections", type=int, default=32)
+    parser.add_argument("--db-mode", choices=['write', 'print_head_then_quit', 'skip'], required=True)
     parser.add_argument("--exp-backoff-attempts", type=int, default=8)
     parser.add_argument("--disable-cache", action='store_true', required=False)
 
@@ -196,8 +200,7 @@ if __name__ == '__main__':
                 params = []
         cfg = GisTaskConfig.StageApiData(
             db_workers=args.db_connections,
-            skip_save=args.skip_save,
-            dry_run=args.dry_run,
+            db_mode=args.db_mode,
             gis_params=params,
             exp_backoff_attempts=args.exp_backoff_attempts,
             disable_cache=args.disable_cache
