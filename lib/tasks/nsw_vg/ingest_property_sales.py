@@ -17,11 +17,13 @@ from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CON
 from lib.pipeline.nsw_vg.property_sales.orchestration import *
 from lib.service.clock import ClockService
 from lib.service.io import IoService
-from lib.service.database import DatabaseService
+from lib.service.database import DatabaseService, DatabaseConfig
 from lib.utility.sampling import Sampler, SamplingConfig
 
 from .config import NswVgTaskConfig
 from ..fetch_static_files import Environment
+
+ZIP_DIR = './_out_zip'
 
 async def ingest_property_sales_rows(
     environment: Environment,
@@ -142,3 +144,98 @@ async def _child_main(
         raise e
     finally:
         await db.close()
+
+
+
+async def _cli_main(
+    config: NswVgTaskConfig.PsiIngest,
+    db_config: DatabaseConfig,
+    file_limit: int,
+    truncate: bool
+) -> None:
+    from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
+    from ..fetch_static_files import get_session, initialise
+
+    clock = ClockService()
+    io = IoService.create(file_limit)
+    db = DatabaseService.create(db_config, 1)
+
+    async with get_session(io, 'psi') as session:
+        environment = await initialise(io, session)
+
+    if truncate:
+        controller = SchemaController(io, db, SchemaDiscovery.create(io))
+        await controller.command(Command.Truncate(
+            ns='nsw_vg',
+            range=range(3, 4),
+            cascade=True,
+        ))
+
+    await ingest_property_sales_rows(
+        environment,
+        clock,
+        io,
+        config,
+    )
+
+if __name__ == '__main__':
+    import argparse
+    import resource
+
+    from lib.defaults import INSTANCE_CFG
+    from lib.utility.logging import config_vendor_logging, config_logging
+
+    parser = argparse.ArgumentParser(description="Ingest NSW VG PSI")
+    parser.add_argument("--instance", type=int, required=True)
+    parser.add_argument("--debug", action='store_true', default=False)
+    parser.add_argument("--publish-min", type=int, default=None)
+    parser.add_argument("--publish-max", type=int, default=None)
+    parser.add_argument("--download-min", type=date.fromisoformat, default=None)
+    parser.add_argument("--download-max", type=date.fromisoformat, default=None)
+    parser.add_argument("--truncate-earlier", action='store_true', default=False)
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--worker-debug", type=int, default=False)
+    parser.add_argument("--worker-file-limit", type=int, default=None)
+    parser.add_argument("--worker-db-pool-size", type=int, default=None)
+    parser.add_argument("--worker-db-batch-size", type=int, default=50)
+    parser.add_argument("--worker-parser-chunk-size", type=int, default=8 * 2 ** 10)
+
+    args = parser.parse_args()
+    config_logging(worker=None, debug=args.debug)
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
+
+    file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+    file_limit = int(file_limit * 0.8)
+
+    instance_cfg = INSTANCE_CFG[args.instance]
+
+    config = NswVgTaskConfig.PsiIngest(
+        worker_count=args.workers,
+        worker_config=NswVgPsiWorkerConfig(
+            db_config=instance_cfg.database,
+            db_pool_size=args.worker_db_pool_size,
+            db_batch_size=args.worker_db_batch_size,
+            file_limit=args.worker_file_limit,
+            ingestion_config=NSW_VG_PS_INGESTION_CONFIG,
+            parser_chunk_size=args.worker_parser_chunk_size,
+            log_config=NswVgPsiWorkerLogConfig(
+                debug_logs=args.worker_debug,
+                datefmt='%Y-%m-%d %H:%M:%S',
+                format=f'[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s'
+            ),
+        ),
+        parent_config=NswVgPsiSupervisorConfig(
+            target_root_dir=ZIP_DIR,
+            publish_min=args.publish_min,
+            publish_max=args.publish_max,
+            download_min=args.download_min,
+            download_max=args.download_max,
+        ),
+    )
+
+    asyncio.run(_cli_main(
+        config,
+        instance_cfg.database,
+        file_limit,
+        args.truncate_earlier,
+    ))

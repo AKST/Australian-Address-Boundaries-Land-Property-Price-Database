@@ -58,6 +58,7 @@ if __name__ == '__main__':
     from lib.defaults import INSTANCE_CFG
     from lib.pipeline.nsw_vg.property_sales.ingestion import NSW_VG_PS_INGESTION_CONFIG, PropertySalesIngestion
     from lib.pipeline.nsw_vg.property_sales.orchestration import NswVgPsiSupervisorConfig, NswVgPsiWorkerConfig, NswVgPsiWorkerLogConfig
+    from lib.utility.logging import config_vendor_logging, config_logging
 
     parser = argparse.ArgumentParser(description="Ingest NSW VG Data")
     parser.add_argument("--instance", type=int, required=True)
@@ -99,11 +100,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.main_debug else logging.INFO,
-        format='[main][%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
-
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
+    config_logging(worker=None, debug=args.main_debug)
     logging.debug(args)
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
