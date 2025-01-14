@@ -140,6 +140,7 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_meta = InstructionHeaders(format='json',
                                           expiry=Never(),
                                           disabled=False,
+                                          partition='blah',
                                           request_label='fruitloop')
         request_data = '{"count":2012}'
         request_url = 'breakfast'
@@ -165,6 +166,7 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
         request_meta = InstructionHeaders(format='json',
                                           expiry=Never(),
                                           disabled=False,
+                                          partition='blah',
                                           request_label='fruitloop')
         request_data = '{"count":2012}'
         request_url = 'breakfast'
@@ -189,7 +191,4 @@ class FileCacherTestCase(IsolatedAsyncioTestCase):
             call(f'state_path', ANY)
         ])
         self.mock_io.f_delete.assert_called_once_with('cache_dir/old-file')
-
-
-
 

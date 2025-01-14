@@ -106,3 +106,17 @@ class PartitionLock:
     def whole_partition_access(self, partition_id: str) -> WholePartitionAccess:
         """Return a context manager for whole-of-partition access to a specific partition."""
         return WholePartitionAccess(self, partition_id)
+
+class VoidPartitionLock(PartitionLock):
+    async def acquire_entry_access(self: Self, partition_id: str):
+        pass
+
+    async def release_entry_access(self, partition_id: str):
+        pass
+
+    async def acquire_whole_partition_access(self, partition_id: str):
+        pass
+
+    async def release_whole_partition_access(self, partition_id: str):
+        pass
+

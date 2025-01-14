@@ -17,6 +17,7 @@ _never_instructions = InstructionHeaders(
     format='json',
     expiry=NeverExpire(),
     disabled=False,
+    partition='blah',
     request_label='context-test',
 )
 

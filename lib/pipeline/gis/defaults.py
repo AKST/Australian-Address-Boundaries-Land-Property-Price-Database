@@ -42,7 +42,7 @@ SNSW_PROP_SCHEMA = GisSchema(
         FloatPredicateFunction(field='Shape__Area', default_range=(0.0, _AREA_MAX)),
     ],
     id_field='RID',
-    result_limit=100,
+    result_limit=90,
     result_depth=15000,
     fields=[
         SchemaField('id', 'RID', 1, rename='rid'),
@@ -61,7 +61,7 @@ SNSW_PROP_SCHEMA = GisSchema(
 
         # No clue what this is
         SchemaField('data', 'propertytype', 2, rename='property_type'),
-        SchemaField('data', 'dissolveparcelcount', 3),
+        SchemaField('data', 'dissolveparcelcount', 2, rename='dissolve_parcel_count', format='number'),
         SchemaField('data', 'superlot', 1, rename='super_lot'),
         SchemaField('data', 'housenumber', 3, rename='house_number'),
         SchemaField('data', 'address', 1),
@@ -71,10 +71,10 @@ SNSW_PROP_SCHEMA = GisSchema(
         SchemaField('assoc', 'msoid', 3),
         SchemaField('assoc', 'centroidid', 3),
         SchemaField('meta', 'shapeuuid', 2, rename='shape_uuid'),
-        SchemaField('meta', 'changetype', 2, rename='change_type'),
+        SchemaField('meta', 'changetype', 3, rename='change_type'),
         SchemaField('meta', 'processstate', 3),
         SchemaField('data', 'urbanity', 3),
-        SchemaField('data', 'principaladdresstype', 2, rename='principle_address_type', format='number'),
+        SchemaField('data', 'principaladdresstype', 2, rename='principal_address_type', format='number'),
         SchemaField('assoc', 'addressstringoid', 1, rename='address_string_oid', format='number'),
         SchemaField('geo', 'Shape__Length', 1, rename='shape_length'),
         SchemaField('geo', 'Shape__Area', 1, rename='shape_area'),

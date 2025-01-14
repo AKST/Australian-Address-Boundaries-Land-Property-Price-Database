@@ -77,7 +77,10 @@ class FeatureServerClient:
                 {'where'} if forget_total_shard else {'where', 'resultOffset'},
             )
             try:
-                await self._http_file_cache.forget_by_clause(page_url_clauses)
+                await self._http_file_cache.forget_by_clause(
+                    clauses=page_url_clauses,
+                    partition=projection.partition_key(),
+                )
             except:
                 self._logger.error(page_url_clauses)
                 raise
@@ -102,6 +105,7 @@ class FeatureServerClient:
                 data = await self.get_json(
                     projection.schema.url,
                     params=url_params,
+                    partition=projection.partition_key(),
                     use_cache=feature_page.use_cache,
                     cache_name='page')
 
@@ -132,9 +136,13 @@ class FeatureServerClient:
                               projection: GisProjection,
                               where_clause: Optional[str],
                               use_cache: bool) -> int:
-        url = projection.schema.url
-        params = get_count_url_params(where_clause)
-        response = await self.get_json(url, params, use_cache=use_cache, cache_name='count')
+        response = await self.get_json(
+            projection.schema.url,
+            get_count_url_params(where_clause),
+            partition=projection.partition_key(),
+            use_cache=use_cache,
+            cache_name='count',
+        )
         count = response.get('count', 0)
         self._logger.debug(f'count for "{where_clause}" is {count}')
         return count
@@ -143,6 +151,7 @@ class FeatureServerClient:
                        feature_url: str,
                        params: Dict[str, Any],
                        use_cache: bool,
+                       partition: str,
                        cache_name=None):
         url = url_with_params(f'{feature_url}/query', params)
         try:
@@ -150,6 +159,7 @@ class FeatureServerClient:
                 CacheHeader.EXPIRE: 'never' if use_cache else 'delta:days:2',
                 CacheHeader.FORMAT: 'json',
                 CacheHeader.LABEL: cache_name,
+                CacheHeader.PARTITION: partition,
             }) as response:
                 if response.status != 200:
                     self._logger.error(f"Crashed at {url}")

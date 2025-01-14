@@ -34,16 +34,7 @@ from .headers import InstructionHeaders
 State = Dict[str, Dict[str, Dict[str, str]]]
 
 class FileCacher:
-    _logger = getLogger(f'{__name__}.FileCacher')
-
-    _io: IoService
-    _uuid: UuidService
-    _clock: ClockService
-    _rc_factory: 'RequestCacheFactory'
-
-    _state: State | None
-    _save_dir: str
-    _config_path: str
+    _logger = getLogger(__name__)
 
     def __init__(self,
                  save_dir: str,

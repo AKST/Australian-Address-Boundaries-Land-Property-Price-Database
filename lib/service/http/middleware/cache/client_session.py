@@ -6,9 +6,11 @@ from typing import (
     Any,
     AsyncIterator,
     AsyncGenerator,
+    Callable,
     Dict,
     Literal,
     Optional,
+    Self,
     Tuple,
 )
 
@@ -21,11 +23,16 @@ from .expiry import CacheExpire
 from .file_cache import FileCacher, RequestCache
 from .headers import InstructionHeaders, CacheHeader
 
+Factory = Callable[[str, Dict[str, str], InstructionHeaders], 'CachedGetResponse']
+
 class CachedClientSession(AbstractClientSession):
     _logger = getLogger(f'{__name__}.CachedClientSession')
     _session: AbstractClientSession
 
-    def __init__(self, session, cacher, create_get_request):
+    def __init__(self: Self,
+                 session: AbstractClientSession,
+                 cacher: FileCacher,
+                 create_get_request: Factory):
         self._session = session
         self._cache = cacher
         self._create_get_request = create_get_request
@@ -36,7 +43,7 @@ class CachedClientSession(AbstractClientSession):
                session: AbstractClientSession | None):
         session = session or ClientSession.create()
         logger = getLogger(f'{__name__}.CachedGet')
-        create_get_request = lambda url, headers, meta: CachedGetResponse(
+        create_get_request: Factory = lambda url, headers, meta: CachedGetResponse(
             _io=io_service,
             _config=(url, headers, meta),
             _logger=logger,
@@ -45,7 +52,7 @@ class CachedClientSession(AbstractClientSession):
         )
         return CachedClientSession(session, file_cache, create_get_request)
 
-    def get(self, url, headers=None):
+    def get(self: Self, url, headers=None):
         if not isinstance(url, str):
             raise TypeError(f'URL should be string, got {url}')
         host = url_host(url)
@@ -54,12 +61,12 @@ class CachedClientSession(AbstractClientSession):
             return self._session.get(url, headers=headers)
         return self._create_get_request(url, headers, meta)
 
-    async def __aenter__(self):
+    async def __aenter__(self: Self):
         await self._session.__aenter__()
         await self._cache.__aenter__()
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self: Self, exc_type, exc_value, traceback):
         await self._session.__aexit__(exc_type, exc_value, traceback)
         await self._cache.__aexit__(exc_type, exc_value, traceback)
         return False
@@ -85,10 +92,10 @@ class CachedGetResponse(AbstractGetResponse):
     _response: Any = field(default=None)
 
     @property
-    def status(self):
+    def status(self: Self):
         return self._status
 
-    async def __aenter__(self):
+    async def __aenter__(self: Self):
         url, headers, meta = self._config
 
         state, valid = self._cache.read(url, meta.format)
@@ -122,24 +129,24 @@ class CachedGetResponse(AbstractGetResponse):
         self._state = state
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(self: Self, exc_type, exc_value, traceback):
         if self._response:
             await self._response.__aexit__(exc_type, exc_value, traceback)
         return False
 
-    async def json(self):
+    async def json(self: Self):
         if 'json' not in self._state:
             raise ValueError('Incorrect cache hint')
 
         return json.loads(await self._io.f_read(self._state['json'].location))
 
-    async def stream(self, chunk_size: int):
+    async def stream(self: Self, chunk_size: int):
         _, _, instructions = self._config
         f_loc = self._state['json'].location[instructions.format]
         async for chunk in self._io.f_read_chunks(f_loc, chunk_size):
             yield chunk
 
-    async def text(self):
+    async def text(self: Self):
         if 'text' not in self._state:
             raise ValueError('Incorrect cache hint')
 

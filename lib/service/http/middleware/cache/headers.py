@@ -8,12 +8,14 @@ class CacheHeader:
     EXPIRE = 'X-Cache-Expire'
     DISABLED = 'X-Cache-Disabled'
     LABEL = 'X-Cache-Label'
+    PARTITION = 'X-Partition-Key'
 
 @dataclass
 class InstructionHeaders:
     format: str
     expiry: CacheExpire | None
     disabled: bool
+    partition: str
     request_label: Optional[str]
 
     @property
@@ -32,6 +34,7 @@ class InstructionHeaders:
         cache_disabled = headers.get(CacheHeader.DISABLED, 'False') == 'True'
         label = headers.get(CacheHeader.LABEL, None)
         label = f'{host}-{label if label else "?"}'
+        partition = headers.get(CacheHeader.PARTITION, host)
 
         if CacheHeader.FORMAT in headers:
             del headers[CacheHeader.FORMAT]
@@ -39,6 +42,8 @@ class InstructionHeaders:
             del headers[CacheHeader.EXPIRE]
         if CacheHeader.DISABLED in headers:
             del headers[CacheHeader.DISABLED]
+        if CacheHeader.PARTITION in headers:
+            del headers[CacheHeader.PARTITION]
         if CacheHeader.LABEL in headers:
             del headers[CacheHeader.LABEL]
 
@@ -46,6 +51,7 @@ class InstructionHeaders:
             format=cache_fmt,
             expiry=CacheExpire.parse_expire(cache_ttl),
             disabled=cache_disabled,
+            partition=partition,
             request_label=label,
         )
 
