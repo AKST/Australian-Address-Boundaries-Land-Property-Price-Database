@@ -131,7 +131,7 @@ async def stage_gis_api_data(
 
     async with get_session(http_file_cache) as session:
         feature_client = FeatureServerClient(
-            FeatureExpBackoff(cfg.exp_backoff_attempts),
+            FeatureExpBackoff(conf.exp_backoff_attempts),
             clock, session, cache_cleaner)
         telemetry = GisPipelineTelemetry.create(clock)
 
@@ -207,19 +207,19 @@ if __name__ == '__main__':
                 params = [other]
             case None:
                 params = []
-        cfg = GisTaskConfig.StageApiData(
-            db_workers=args.db_connections,
-            db_mode=args.db_mode,
-            gis_params=params,
-            exp_backoff_attempts=args.exp_backoff_attempts,
-            disable_cache=args.disable_cache,
-            projections=args.projections or GisTaskConfig.projection_kinds,
-        )
+
         asyncio.run(
             run_in_console(
                 open_file_limit=file_limit,
                 db_config=instance_cfg.database,
-                config=cfg,
+                config=GisTaskConfig.StageApiData(
+                    db_workers=args.db_connections,
+                    db_mode=args.db_mode,
+                    gis_params=params,
+                    exp_backoff_attempts=args.exp_backoff_attempts,
+                    disable_cache=args.disable_cache,
+                    projections=args.projections or GisTaskConfig.projection_kinds,
+                ),
             ),
         )
     except asyncio.CancelledError:

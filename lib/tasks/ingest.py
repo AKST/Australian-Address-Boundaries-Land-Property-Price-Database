@@ -6,6 +6,7 @@ from typing import Optional, Set
 
 import lib.pipeline.abs.config as abs_config
 from lib.pipeline.abs import *
+from lib.pipeline.gis import HOST_SEMAPHORE_CONFIG
 from lib.pipeline.gnaf import GnafWorkerConfig, GnafConfig, GnafState
 from lib.pipeline.nsw_vg.config import *
 from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
@@ -15,6 +16,7 @@ from lib.service.docker import DockerService, ImageConfig, ContainerConfig
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tasks.fetch_static_files import initialise, get_session
+from lib.tasks.gis import ingest_gis, GisTaskConfig, http_limits_of
 from lib.tasks.ingest_gnaf import ingest_gnaf
 from lib.tasks.ingest_abs import ingest_all as ingest_abs
 from lib.tasks.nsw_vg.config import NswVgTaskConfig
@@ -27,6 +29,7 @@ from lib.tooling.schema.config import ns_dependency_order
 class IngestConfig:
     io_file_limit: Optional[int]
     db_config: DatabaseConfig
+    db_connections: int
     gnaf_states: Set[GnafState]
     nswvg_psi_publish_min: Optional[int]
     nswvg_lv_depth: NswVgLvCsvDiscoveryMode.T
@@ -36,7 +39,7 @@ class IngestConfig:
     enable_gnaf: bool
 
 async def ingest_all(config: IngestConfig):
-    io_service = IoService.create(None)
+    io_service = IoService.create(config.io_file_limit)
 
     async with get_session(io_service, 'env') as session:
         environment = await initialise(io_service, session)
@@ -51,7 +54,7 @@ async def ingest_all(config: IngestConfig):
     container.prepare(config.db_config)
     container.start()
     db_service_config = config.db_config
-    db_service = DatabaseService.create(db_service_config, 32)
+    db_service = DatabaseService.create(db_service_config, config.db_connections)
 
     await db_service.wait_till_running()
     await db_service.open()
@@ -152,6 +155,27 @@ async def ingest_all(config: IngestConfig):
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)
 
+    await ingest_gis(
+        io_service,
+        db_service,
+        ClockService(),
+        GisTaskConfig.Ingestion(
+            deduplication=GisTaskConfig.Deduplication(
+                run_from=None,
+                run_till=None,
+                truncate=False,
+            ),
+            staging=GisTaskConfig.StageApiData(
+                db_workers=config.db_connections,
+                db_mode='write',
+                gis_params=[],
+                exp_backoff_attempts=8,
+                disable_cache=False,
+                projections=GisTaskConfig.projection_kinds,
+            ),
+        )
+    )
+
 
 if __name__ == '__main__':
     import asyncio
@@ -170,13 +194,15 @@ if __name__ == '__main__':
     config_vendor_logging({'sqlglot', 'psycopg.pool'})
     config_logging(worker=None, debug=args.debug)
 
+    DB_CONNECTIONS = 32
     instance_cfg = INSTANCE_CFG[args.instance]
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
-    file_limit = int(file_limit * 0.8)
+    file_limit = int(file_limit * 0.8) - (DB_CONNECTIONS + http_limits_of(HOST_SEMAPHORE_CONFIG))
 
     config = IngestConfig(
         io_file_limit=file_limit,
         db_config=instance_cfg.database,
+        db_connections=DB_CONNECTIONS,
         nswvg_psi_publish_min=instance_cfg.nswvg_psi_min_pub_year,
         nswvg_lv_depth=instance_cfg.nswvg_lv_discovery_mode,
         docker_volume=instance_cfg.docker_volume,
