@@ -21,9 +21,7 @@ class GisTaskConfig:
     class Deduplication:
         run_from: Optional[int]
         run_till: Optional[int]
-        truncate: bool = field(default=False)
-        drop_raw: bool = field(default=False)
-        drop_dst_schema: bool = field(default=False)
+        truncate: bool
 
     @dataclass
     class Ingestion:

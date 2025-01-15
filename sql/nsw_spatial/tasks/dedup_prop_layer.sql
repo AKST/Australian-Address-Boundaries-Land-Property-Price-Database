@@ -1,7 +1,7 @@
 WITH unique_properties AS (
   SELECT DISTINCT ON (property_id) property_id
    FROM nsw_spatial_lppt_raw.property_feature_layer
-   WHERE principle_address_type = 1
+   WHERE principal_address_type = 1
 )
 INSERT INTO nsw_lrs.property(property_id)
 SELECT property_id FROM unique_properties u

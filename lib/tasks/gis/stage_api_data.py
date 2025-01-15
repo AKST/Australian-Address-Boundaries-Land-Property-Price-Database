@@ -222,6 +222,8 @@ if __name__ == '__main__':
                 config=cfg,
             ),
         )
+    except asyncio.CancelledError:
+        pass
     except ExceptionGroup as eg:
         def is_cancelled_error(exc: BaseException) -> bool:
             return isinstance(exc, asyncio.CancelledError)

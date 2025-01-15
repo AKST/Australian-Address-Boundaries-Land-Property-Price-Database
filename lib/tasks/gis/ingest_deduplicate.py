@@ -5,6 +5,7 @@ from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tooling.schema import Command, SchemaController, SchemaDiscovery
+from lib.utility.format import fmt_time_elapsed
 
 from .config import GisTaskConfig
 
@@ -44,6 +45,20 @@ async def ingest_deduplication(
             Command.Truncate(ns='nsw_lrs', cascade=True, range=range(4, 5)),
         ])
 
+    async with (
+        db.async_connect() as conn,
+        conn.cursor() as cursor,
+    ):
+        start_time = clock.time()
+        for i, script_path in enumerate(scripts):
+            t = fmt_time_elapsed(start_time, clock.time(), format="hms")
+            pos = (cfg.run_from or 1) + i
+            _, short_name = script_path.split('tasks/')
+            logger.info(f'({t}) running [#{pos}] {short_name}')
+            await cursor.execute(await io.f_read(script_path))
+
+    logger.info('finished deduplicating')
+
 if __name__ == '__main__':
     import asyncio
     import argparse
@@ -56,6 +71,7 @@ if __name__ == '__main__':
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--run-from", type=int, default=1)
     parser.add_argument("--run-till", type=int, default=len(all_scripts))
+    parser.add_argument("--truncate", action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -66,4 +82,20 @@ if __name__ == '__main__':
     cli_conf = GisTaskConfig.Deduplication(
         run_from=args.run_from,
         run_till=args.run_till,
+        truncate=args.truncate,
     )
+
+    db_config = INSTANCE_CFG[args.instance].database
+
+    async def _cli_main() -> None:
+        clock = ClockService()
+        io = IoService.create(None)
+        db = DatabaseService.create(db_config, 1)
+        try:
+            await db.open()
+            await ingest_deduplication(db, io, clock, cli_conf)
+        finally:
+            await db.close()
+
+    asyncio.run(_cli_main())
+
