@@ -176,8 +176,6 @@ async def ingest_all(config: IngestConfig):
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)
 
-
-
 if __name__ == '__main__':
     import asyncio
     import argparse
