@@ -153,8 +153,6 @@ async def ingest_all(config: IngestConfig):
             io_service,
         )
 
-    await run_count_for_schemas(db_service_config, ns_dependency_order)
-
     await ingest_gis(
         io_service,
         db_service,
@@ -175,6 +173,9 @@ async def ingest_all(config: IngestConfig):
             ),
         )
     )
+
+    await run_count_for_schemas(db_service_config, ns_dependency_order)
+
 
 
 if __name__ == '__main__':
