@@ -13,10 +13,16 @@ _docker_image_name = 'gnaf_pg_gis_db'
 _docker_image_tag_1 = "20250106_11_39"
 _docker_image_tag_2 = "20250106_11_39"
 _docker_image_tag_3 = "20250106_11_39"
+_docker_volumn_1 = 'vol_gnaf_db'
+_docker_volumn_2 = 'vol_gnaf_db_test_1'
+_docker_volumn_3 = 'vol_gnaf_db_test_2'
 _docker_container_name_1 = 'gnaf_db_prod'
 _docker_container_name_2 = 'gnaf_db_test'
 _docker_container_name_3 = 'gnaf_db_test_2'
 _docker_project_label = 'gnaf_pg_gis_db_proj'
+_db_name_1 = 'gnaf_db'
+_db_name_2 = 'gnaf_db_2'
+_db_name_3 = 'gnaf_db_3'
 
 _VOLUME_MOUNT = {
     os.path.abspath('./config/postgresql/20241015_config.conf'): {
@@ -59,18 +65,18 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         gnaf_states=ALL_STATES,
         enable_gnaf=True,
         database=DatabaseConfig(
-            dbname='gnaf_db',
+            dbname=_db_name_1,
             user='postgres',
             host='localhost',
             port=5434,
             password='throwAwayPassword',
         ),
-        docker_volume='vol_gnaf_db',
+        docker_volume=_docker_volumn_1,
         docker_container=ContainerConfig(
             container_name=_docker_container_name_1,
             project_name=_docker_project_label,
             volumes=_create_mounted_dirs(
-                data_volume_name='vol_gnaf_db',
+                data_volume_name=_docker_volumn_1,
                 postgres_config='20241015_config',
             ),
             command=_COMMAND_ON_RUN,
@@ -90,18 +96,18 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         gnaf_states={'NSW'},
         enable_gnaf=True,
         database=DatabaseConfig(
-            dbname='gnaf_db_2',
+            dbname=_db_name_2,
             user='postgres',
             host='localhost',
             port=5433,
             password='throwAwayPassword2',
         ),
-        docker_volume='vol_gnaf_db_test_1',
+        docker_volume=_docker_volumn_2,
         docker_container=ContainerConfig(
             container_name=_docker_container_name_2,
             project_name=_docker_project_label,
             volumes=_create_mounted_dirs(
-                data_volume_name='vol_gnaf_db_test_1',
+                data_volume_name=_docker_volumn_2,
                 postgres_config='20241015_config',
                 # postgres_config='concurrent_config_20250104',
             ),
@@ -122,18 +128,18 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         gnaf_states={'NSW'},
         enable_gnaf=True,
         database=DatabaseConfig(
-            dbname='gnaf_db_3',
+            dbname=_db_name_3,
             user='postgres',
             host='localhost',
             port=5431,
             password='throwAwayPassword3',
         ),
-        docker_volume='vol_gnaf_db_test_2',
+        docker_volume=_docker_volumn_3,
         docker_container=ContainerConfig(
             container_name=_docker_container_name_3,
             project_name=_docker_project_label,
             volumes=_create_mounted_dirs(
-                data_volume_name='vol_gnaf_db_test_2',
+                data_volume_name=_docker_volumn_3,
                 postgres_config='20241015_config',
                 # postgres_config='concurrent_config_20250104',
             ),
