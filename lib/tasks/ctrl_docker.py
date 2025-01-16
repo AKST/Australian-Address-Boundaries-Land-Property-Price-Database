@@ -4,7 +4,7 @@ import logging
 from typing import Tuple
 
 from lib.service.docker.config import ImageConfig, ContainerConfig
-from lib.service.docker.service_2 import DockerService
+from lib.service.docker.service import DockerService
 from lib.service.database import DatabaseService, DatabaseConfig
 
 @dataclass

@@ -77,9 +77,6 @@ class IoService:
                 async for chunk in chunks:
                     await f.write(chunk)
 
-    def f_reader(self, file_path: str) -> '_ChunkReader':
-        return _ChunkReader(aiofiles.open(file_path, 'rb'))
-
     async def f_read_chunks(self,
                             file_path: str,
                             chunk_size=1024) -> AsyncGenerator[bytes, None]:
@@ -145,20 +142,6 @@ class TmpFile:
 
     async def __aexit__(self: Self, *args, **kwargs):
         await self.__aexit__(*args, **kwargs)
-
-@dataclass
-class _ChunkReader:
-    readable: Any
-
-    async def __aenter__(self: Self) -> Self:
-        await self.readable.__aenter__()
-        return self
-
-    async def __aexit__(self: Self, *args, **kwargs):
-        await self.readable.__aexit__(*args, **kwargs)
-
-    async def read(self, length: int) -> Optional[bytes]:
-        return await self.readable.read(length)
 
 def _sync_unzip(zipfile: str, unzip_to: str):
     with ZipFile(zipfile, 'r') as z:
