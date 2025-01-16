@@ -9,20 +9,20 @@ from .config import InstanceCfg
 
 ALL_STATES: Set[GnafState] = { 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'OT', 'ACT' }
 
-_docker_image_name = 'gnaf_pg_gis_db'
+_docker_image_name = 'au_land_pggis_db'
 _docker_image_tag_1 = "20250106_11_39"
 _docker_image_tag_2 = "20250106_11_39"
 _docker_image_tag_3 = "20250106_11_39"
-_docker_volumn_1 = 'vol_gnaf_db'
-_docker_volumn_2 = 'vol_gnaf_db_test_1'
-_docker_volumn_3 = 'vol_gnaf_db_test_2'
-_docker_container_name_1 = 'gnaf_db_prod'
-_docker_container_name_2 = 'gnaf_db_test'
-_docker_container_name_3 = 'gnaf_db_test_2'
-_docker_project_label = 'gnaf_pg_gis_db_proj'
-_db_name_1 = 'gnaf_db'
-_db_name_2 = 'gnaf_db_2'
-_db_name_3 = 'gnaf_db_3'
+_docker_volumn_1 = 'vol_au_land_db'
+_docker_volumn_2 = 'vol_au_land_db_test_1'
+_docker_volumn_3 = 'vol_au_land_db_test_2'
+_docker_container_name_1 = 'au_land_db_prod'
+_docker_container_name_2 = 'au_land_db_test'
+_docker_container_name_3 = 'au_land_db_test_2'
+_docker_project_label = 'au_land_pggis_db_proj'
+_db_name_1 = 'au_land_db'
+_db_name_2 = 'au_land_db_2'
+_db_name_3 = 'au_land_db_3'
 
 _VOLUME_MOUNT = {
     os.path.abspath('./config/postgresql/20241015_config.conf'): {
