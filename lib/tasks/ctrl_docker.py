@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import logging
 from typing import Tuple
 
-from lib.service.docker import DockerService, ImageConfig, ContainerConfig
+from lib.service.docker.config import ImageConfig, ContainerConfig
+from lib.service.docker.service_2 import DockerService
 from lib.service.database import DatabaseService, DatabaseConfig
 
 @dataclass
@@ -32,23 +33,23 @@ async def run_controller(instruction: DockerCtrlInstruction, db: DatabaseService
         case DockerRestart(container=c_conf, image=i_conf):
             image = docker.create_image(i_conf)
             container = docker.create_container(image, c_conf)
-            container.stop()
-            container.start()
+            await container.stop()
+            await container.start()
             if instruction.wait_for_database:
                 await db.wait_till_running()
         case DockerStart(container=c_conf, image=i_conf):
             if instruction.reinitialise_image:
-                docker.create_image(i_conf).nuke()
+                await docker.create_image(i_conf).nuke()
 
             image = docker.create_image(i_conf)
-            image.prepare()
+            await image.prepare()
 
             container = docker.create_container(image, c_conf)
             if not instruction.reinitialise_container:
-                container.clean()
+               await container.clean()
 
-            container.prepare(db.config)
-            container.start()
+            await container.prepare(db.config)
+            await container.start()
 
             if instruction.wait_for_database:
                 await db.wait_till_running()
@@ -56,13 +57,13 @@ async def run_controller(instruction: DockerCtrlInstruction, db: DatabaseService
             image = docker.create_image(i_conf)
             container = docker.create_container(image, c_conf)
 
-            container.stop(throw_if_not_found=instruction.throw_if_not_found)
+            await container.stop(throw_if_not_found=instruction.throw_if_not_found)
 
             if instruction.drop_container:
-                container.clean()
+                await container.clean()
 
             if instruction.drop_image:
-                image.nuke()
+                await image.nuke()
         case other:
             raise TypeError(f'Not implemented {other}')
 
@@ -86,6 +87,9 @@ if __name__ == '__main__':
     start_parser.add_argument('--nuke-container', action='store_true', default=False)
     start_parser.add_argument('--wait-for-database', action='store_true', default=False)
 
+    start_parser = subparsers.add_parser('restart')
+    start_parser.add_argument('--wait-for-database', action='store_true', default=False)
+
     stop_parser = subparsers.add_parser('stop')
     stop_parser.add_argument('--nuke-image', action='store_true', default=False)
     stop_parser.add_argument('--nuke-container', action='store_true', default=False)
@@ -102,9 +106,9 @@ if __name__ == '__main__':
     instance_cfg = INSTANCE_CFG[args.instance]
 
     async def main(instruction: DockerCtrlInstruction):
-        docker = DockerService.create()
-        db = DatabaseService.create(instance_cfg.database, 1)
-        await run_controller(instruction, db, docker)
+        async with DockerService.create() as docker:
+            db = DatabaseService.create(instance_cfg.database, 1)
+            await run_controller(instruction, db, docker)
 
     match args.command:
         case 'start':
@@ -122,5 +126,11 @@ if __name__ == '__main__':
                 drop_image=args.nuke_image,
                 drop_container=args.nuke_container,
                 throw_if_not_found=args.throw_if_not_found
+            )))
+        case 'restart':
+            asyncio.run(main(DockerRestart(
+                image=instance_cfg.docker_image,
+                container=instance_cfg.docker_container,
+                wait_for_database=args.wait_for_database,
             )))
 

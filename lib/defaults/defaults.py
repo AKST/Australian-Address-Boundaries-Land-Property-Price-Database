@@ -24,19 +24,14 @@ _db_name_1 = 'au_land_db'
 _db_name_2 = 'au_land_db_2'
 _db_name_3 = 'au_land_db_3'
 
-_VOLUME_MOUNT = {
-    os.path.abspath('./config/postgresql/20241015_config.conf'): {
-        'bind': '/etc/postgresql/postgresql.conf',
-        'mode': 'rw',
-    }
-}
+Mb_256 = 256_000_000
 
 _COMMAND_ON_RUN = ['-c', 'config_file=/etc/postgresql/postgresql.conf']
 
 def _create_mounted_dirs(
     data_volume_name: str,
     postgres_config: str = '20241015_config',
-) -> Dict[str, Any]:
+) -> VolumeConfig:
     return {
         data_volume_name: {
             'bind': '/var/lib/postgresql/data',
@@ -80,7 +75,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
                 postgres_config='20241015_config',
             ),
             command=_COMMAND_ON_RUN,
-            shared_memory='256mb',
+            shared_memory=Mb_256,
             cpu_count=None,
             memory_limit=None,
         ),
@@ -112,7 +107,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
                 # postgres_config='concurrent_config_20250104',
             ),
             command=_COMMAND_ON_RUN,
-            shared_memory='256mb',
+            shared_memory=Mb_256,
             cpu_count=None,
             memory_limit=None,
         ),
@@ -144,7 +139,7 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
                 # postgres_config='concurrent_config_20250104',
             ),
             command=_COMMAND_ON_RUN,
-            shared_memory='256mb',
+            shared_memory=Mb_256,
             cpu_count=8,
             memory_limit="4g",
         ),
