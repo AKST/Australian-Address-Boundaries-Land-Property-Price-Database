@@ -107,3 +107,8 @@ CREATE TABLE IF NOT EXISTS abs.dzn (
     FOREIGN KEY (state_code) REFERENCES abs.state(state_code)
 );
 
+CREATE INDEX idx_geometry_abs_lga_2021 ON abs.lga_2021 USING GIST (geometry);
+CREATE INDEX idx_geometry_abs_lga_2022 ON abs.lga_2022 USING GIST (geometry);
+CREATE INDEX idx_geometry_abs_lga_2023 ON abs.lga_2023 USING GIST (geometry);
+CREATE INDEX idx_geometry_abs_lga_2024 ON abs.lga_2024 USING GIST (geometry);
+
