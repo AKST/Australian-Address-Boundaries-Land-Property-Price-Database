@@ -44,15 +44,17 @@ async def ingest_all(config: IngestConfig):
     async with get_session(io_service, 'env') as session:
         environment = await initialise(io_service, session)
 
-    docker_service = DockerService.create()
-    docker_service.resert_volume(config.docker_volume)
-    image = docker_service.create_image(config.docker_image_config)
-    image.prepare()
+    async with DockerService.create() as docker_service:
+        await docker_service.reset_volume(config.docker_volume)
 
-    container = docker_service.create_container(image, config.docker_container_config)
-    container.clean()
-    container.prepare(config.db_config)
-    container.start()
+        image = docker_service.create_image(config.docker_image_config)
+        await image.prepare()
+
+        container = docker_service.create_container(image, config.docker_container_config)
+        await container.clean()
+        await container.prepare(config.db_config)
+        await container.start()
+
     db_service_config = config.db_config
     db_service = DatabaseService.create(db_service_config, config.db_connections)
 

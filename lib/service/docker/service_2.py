@@ -45,7 +45,7 @@ class DockerService:
 
         try:
             volume = await self.docker.volumes.get(volume_name)
-            volume.delete()
+            await volume.delete()
         except DockerError:
             pass
 
