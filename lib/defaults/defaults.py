@@ -118,8 +118,8 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
         ),
     ),
     3: InstanceCfg(
-        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.EachNthYear(4, include_first=True),
-        nswvg_psi_min_pub_year=None,
+        nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
+        nswvg_psi_min_pub_year=2024,
         gnaf_states={'NSW'},
         enable_gnaf=True,
         database=DatabaseConfig(
