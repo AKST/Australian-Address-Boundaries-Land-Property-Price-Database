@@ -4,7 +4,9 @@ import asyncio
 from lib.pipeline.abs import *
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
+from lib.tasks.schema.count import run_count_for_schemas
 from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
+from lib.tooling.schema.config import ns_dependency_order
 
 _OUTDIR = './_out_zip'
 
@@ -26,19 +28,22 @@ async def ingest_all(config: AbsIngestionConfig,
         await conn.execute(clean_dzn_sql)
     await controller.command(Command.AddForeignKeys(ns='abs'))
 
-async def _main(config: AbsIngestionConfig,
-                db_conf: DatabaseConfig,
-                file_limit: int) -> None:
-        db = DatabaseService.create(db_conf, 32)
-        io = IoService.create(file_limit)
+async def _main(
+    config: AbsIngestionConfig,
+    db_conf: DatabaseConfig,
+    file_limit: int,
+) -> None:
+    db = DatabaseService.create(db_conf, 4)
+    io = IoService.create(file_limit)
 
-        async with get_session(io, 'env-abs-cli') as session:
-            await initialise(io, session)
-        try:
-            await db.open()
-            await ingest_all(config, db, io)
-        finally:
-            await db.close()
+    async with get_session(io, 'env-abs-cli') as session:
+        await initialise(io, session)
+    try:
+        await db.open()
+        await ingest_all(config, db, io)
+    finally:
+        await db.close()
+    await run_count_for_schemas(db_conf, ['abs'])
 
 if __name__ == '__main__':
     import argparse
@@ -46,6 +51,7 @@ if __name__ == '__main__':
     import resource
 
     from lib.defaults import INSTANCE_CFG
+    from lib.utility.logging import config_vendor_logging, config_logging
 
     from .fetch_static_files import get_session, initialise
 
@@ -58,10 +64,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='[%(asctime)s.%(msecs)03d][%(levelname)s][%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+    config_vendor_logging({'sqlglot', 'psycopg.pool'})
+    config_logging(worker=None, debug=args.debug)
 
     file_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
     file_limit = int(file_limit * 0.8)
