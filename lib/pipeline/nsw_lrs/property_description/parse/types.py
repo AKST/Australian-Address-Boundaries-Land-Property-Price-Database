@@ -6,7 +6,7 @@ class ParseItem:
     pass
 
 @dataclass
-class LandParcel(ParseItem):
+class Folio(ParseItem):
     id: str
     part: bool = field(default=False)
 

@@ -5,11 +5,12 @@ from logging import getLogger
 from multiprocessing import Process
 from multiprocessing.synchronize import Semaphore as MpSemaphore
 import time
-from typing import Dict, List, Optional, Self, Callable
+from typing import Dict, List, Optional, Self, Callable, Tuple
 import uuid
 
 from lib.service.database import DatabaseService
 from lib.pipeline.nsw_lrs.property_description.parse import parse_property_description_data
+from lib.pipeline.nsw_lrs.property_description import PropertyDescription
 
 @dataclass
 class QuantileRange:
@@ -161,52 +162,66 @@ class PropDescIngestionWorker:
             self._logger.error(e)
             raise e
 
-        rows = [
+        rows: List[Tuple[str, PropertyDescription, str, str, str, str]] = [
             (r[0], *parse_property_description_data(r[1]), r[2], r[3], r[4])
             for r in await cursor.fetchall()
         ]
 
-        remains = [
+        remains: List[Tuple[str, str]] = [
             (remains, legal_description_id)
             for _, _, remains, legal_description_id, _, _ in rows
             if remains
         ]
-        row_data = [
+        row_data: List[Tuple[str, PropertyDescription, str, str]]  = [
             (source, property_desc, property, effective_date)
             for source, property_desc, _, _, property, effective_date in rows
         ]
 
         try:
             await cursor.executemany("""
-                INSERT INTO nsw_lrs.parcel (
-                    parcel_id,
-                    parcel_plan,
-                    parcel_section,
-                    parcel_lot)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (parcel_id) DO NOTHING;
+                INSERT INTO nsw_lrs.base_parcel (base_parcel_id, base_parcel_kind)
+                VALUES (nsw_lrs.get_base_parcel_id(%s),
+                        nsw_lrs.get_base_parcel_kind(%s))
+                ON CONFLICT (base_parcel_id) DO NOTHING;
             """, [
-                (parcel.id, parcel.plan, parcel.section, parcel.lot)
+                (folio.id, folio.id)
                 for source, property_desc, property, effective_date in row_data
-                for parcel in property_desc.parcels.all
+                for folio in property_desc.folios.all
             ])
             await conn.commit()
 
             await cursor.executemany("""
-                INSERT INTO nsw_lrs.property_parcel_assoc(
+                INSERT INTO nsw_lrs.folio (
+                    folio_id,
+                    folio_plan,
+                    folio_section,
+                    folio_lot,
+                    base_parcel_id)
+                VALUES (%s, %s, %s, %s, nsw_lrs.get_base_parcel_id(%s))
+                ON CONFLICT (folio_id) DO NOTHING;
+            """, [
+                (folio.id, folio.plan, folio.section, folio.lot, folio.id)
+                for source, property_desc, property, effective_date in row_data
+                for folio in property_desc.folios.all
+            ])
+            await conn.commit()
+
+            await cursor.executemany("""
+                INSERT INTO nsw_lrs.property_folio(
                     source_id,
                     effective_date,
                     property_id,
-                    parcel_id,
+                    folio_id,
+                    base_parcel_id,
                     partial)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, nsw_lrs.get_base_parcel_id(%s), %s)
                 ON CONFLICT DO NOTHING
             """, [
-                (source, effective_date, property, parcel_id, partial)
+                (source, effective_date, property, folio_id, folio_id, partial)
                 for source, property_desc, property, effective_date in row_data
-                for parcel_id, partial in [
-                    *((p.id, True) for p in property_desc.parcels.partial),
-                    *((p.id, False) for p in property_desc.parcels.complete),
+                for folio_id, partial in [
+                    *((p.id, True) for p in property_desc.folios.partial),
+                    *((p.id, False) for p in property_desc.folios.complete),
                 ]
             ])
             if remains:

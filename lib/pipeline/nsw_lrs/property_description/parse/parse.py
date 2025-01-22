@@ -71,9 +71,9 @@ def parse_property_description_data(desc: str) -> Tuple[data.PropertyDescription
     try:
         for item in items:
             match item:
-                case t.LandParcel(parcel_id, partial):
-                    parcel = parse_parcel_data(parcel_id)
-                    builder.add_parcel(parcel, partial)
+                case t.Folio(folio_id, partial):
+                    folio = parse_parcel_data(folio_id)
+                    builder.add_folio(folio, partial)
                 case t.EnclosurePermit(id):
                     builder.add_permit('enclosure', id)
 

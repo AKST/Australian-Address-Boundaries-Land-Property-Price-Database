@@ -1,7 +1,7 @@
 from typing import Generator, List, Optional, Self, Set, Tuple
 import re
 
-from .types import LandParcel
+from .types import Folio
 from .. import data
 
 VALID_PARCEL_ID_CHARS = re.compile(r'^[a-zA-Z0-9/]+$')
@@ -46,7 +46,7 @@ def _valid_parcel_lot(chunk: str) -> bool:
 def _valid_parcel_trailing_lot(chunk: str) -> bool:
     return chunk.endswith(',') and _valid_parcel_lot(chunk[:-1])
 
-def parse_parcel_data(parcel_id: str) -> data.LandParcel:
+def parse_parcel_data(parcel_id: str) -> data.Folio:
     match parcel_id.count('/'):
         case 1:
             clean_id = parcel_id
@@ -67,17 +67,17 @@ def parse_parcel_data(parcel_id: str) -> data.LandParcel:
             raise ValueError(f'invalid section, {parcel_id}')
 
         case [lot, '', plan]:
-            return data.LandParcel(clean_id, lot, None, plan)
+            return data.Folio(clean_id, lot, None, plan)
 
         case [lot, sec, plan]:
-            return data.LandParcel(clean_id, lot, sec, plan)
+            return data.Folio(clean_id, lot, sec, plan)
 
     raise ValueError(f'invalid parcel, {parcel_id}')
 
 class ParcelsParser:
     _stop = False
     _desc: str
-    _seen: Set[LandParcel]
+    _seen: Set[Folio]
     _read_from = 0
 
     def __init__(self: Self, desc: str) -> None:
@@ -92,20 +92,20 @@ class ParcelsParser:
     def remains(self: Self) -> str:
         return self._desc[self._read_from:]
 
-    def read_parcels(self: Self) -> Generator[LandParcel, None, None]:
+    def read_parcels(self: Self) -> Generator[Folio, None, None]:
         chunk = None
 
         while self.running:
             chunk = self._read_chunk(skip=0)
 
             if _valid_parcel(chunk):
-                yield LandParcel(id=chunk, part=False)
+                yield Folio(id=chunk, part=False)
                 self._move_cursor(1)
                 continue
 
             next_chunk = self._read_chunk(skip=1)
             if 'PT' == chunk and _valid_parcel(next_chunk):
-                yield LandParcel(id=next_chunk, part=True)
+                yield Folio(id=next_chunk, part=True)
                 self._move_cursor(2)
                 continue
 
@@ -115,7 +115,7 @@ class ParcelsParser:
             match self._read_compressed():
                 case (plan, lots):
                     yield from (
-                        LandParcel(id=f'{lot}{plan}', part=part)
+                        Folio(id=f'{lot}{plan}', part=part)
                         for part, lot in lots
                     )
                 case None:

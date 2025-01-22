@@ -1,18 +1,18 @@
 from typing import Self, List, Literal
 
-from .data import LandParcel, PropertyLandParcels, PropertyDescription, Permits
+from .data import Folio, PropertyFolios, PropertyDescription, Permits
 
 PermitKind = Literal['enclosure']
 
 class PropertyDescriptionBuilder:
     def __init__(self: Self) -> None:
         self.permits = Permits(enclosure_permits=[])
-        self.complete_parcels: List[LandParcel] = []
-        self.partial_parcels: List[LandParcel] = []
+        self.complete_folios: List[Folio] = []
+        self.partial_folios: List[Folio] = []
 
-    def add_parcel(self: Self, parcel: LandParcel, partial: bool) -> None:
-        dest = self.partial_parcels if partial else self.complete_parcels
-        dest.append(parcel)
+    def add_folio(self: Self, folio: Folio, partial: bool) -> None:
+        dest = self.partial_folios if partial else self.complete_folios
+        dest.append(folio)
 
     def add_permit(self: Self, kind: PermitKind, id: str) -> None:
         match kind:
@@ -25,9 +25,9 @@ class PropertyDescriptionBuilder:
         return PropertyDescription(
             free_text=full_text,
             permits=self.permits,
-            parcels=PropertyLandParcels(
-                complete=self.complete_parcels,
-                partial=self.partial_parcels,
+            folios=PropertyFolios(
+                complete=self.complete_folios,
+                partial=self.partial_folios,
             ),
         )
 
