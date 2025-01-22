@@ -40,3 +40,36 @@ CREATE TABLE IF NOT EXISTS nsw_lrs.legal_description_remains (
   -- FOREIGN KEY (legal_description_id)
   --     REFERENCES nsw_lrs.legal_description(legal_description_id)
 );
+
+--
+-- ## Utiltity Function for ingestion
+--
+
+CREATE FUNCTION nsw_lrs.get_base_parcel_id(input_text TEXT) RETURNS TEXT AS $$
+DECLARE
+  plan_part TEXT;
+BEGIN
+  input_text := REGEXP_REPLACE(input_text, '//+', '/');
+  plan_part := REGEXP_REPLACE(input_text, '.*?([^/]+)$', '\1');
+
+  IF plan_part ~ '^SP\d+$' THEN
+    RETURN plan_part;
+  END IF;
+
+  plan_part := REGEXP_REPLACE(plan_part, '^DP', '');
+  RETURN REGEXP_REPLACE(input_text, '[^/]+$', plan_part);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
+
+CREATE FUNCTION nsw_lrs.get_base_parcel_kind(input_text TEXT) RETURNS nsw_lrs.base_parcel_kind AS $$
+DECLARE
+  plan_part TEXT := substring(REGEXP_REPLACE(input_text, '/+', '/', 'g') FROM '([^/]+)$');
+BEGIN
+  RETURN CASE
+    WHEN plan_part ~ '^SP\d+$' THEN 'strata_plan'
+    ELSE 'deposit_lot'
+  END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
+
+

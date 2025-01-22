@@ -28,6 +28,13 @@ def test_expr_as_op(snapshot, sql: str):
     operations = sql_as_operations(sql)
     snapshot.assert_match(pformat(operations, width=150), 'schema')
 
+def test_function():
+    sql = \
+        "CREATE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql"
+    schema = sql_as_operations(sql)
+    create_function = next(o for o in schema.operations)
+    assert create_function.schema_name == 'a'
+    assert create_function.type_name == 'c'
 
 def test_schema_for_parition():
     sql = \

@@ -170,11 +170,19 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
             return Stmt.CreateFunction(expr, s_name, t_name)
         case sql_expr.Command(this="CREATE", expression=e):
             match re.findall(f'\w+', e.lower()):
+                case ['function', *_]:
+                    match = re.search(r"FUNCTION\s+(?:(\w+)\.)?(\w+)\s*\(", e, re.IGNORECASE)
+                    if not match:
+                        raise TypeError(f'unknown {repr(e)}')
+                    s_name = match.group(1) if match.group(1) else None
+                    t_name = match.group(2)
+                    return Stmt.CreateFunction(expr, s_name, t_name)
                 case ['type', s_name, t_name, 'as', *_]:
                     return Stmt.CreateType(expr, s_name, t_name)
                 case ['type', t_name, 'as', *_]:
                     return Stmt.CreateType(expr, None, t_name)
                 case other:
+                    print(repr(e))
                     raise TypeError(f'unknown command {repr(other)}')
         case sql_expr.Command(this="DO", expression=e):
             return Stmt.OpaqueDoBlock(expr)

@@ -1,9 +1,10 @@
 import asyncio
 import psycopg
 from psycopg_pool import AsyncConnectionPool
+from sqlalchemy import create_engine
 import time
 from typing import Self, Optional
-from sqlalchemy import create_engine
+import warnings
 
 from .config import DatabaseConfig
 
@@ -23,11 +24,13 @@ class DatabaseService:
     @staticmethod
     def create(config: DatabaseConfig,
                pool_size: int) -> 'DatabaseService':
-        print(config.connection_str)
-        pool = AsyncConnectionPool(
-            config.connection_str,
-            min_size=pool_size,
-        )
+        # The logging here assumes I'm creating
+        # the pool outside the async runloop
+        with warnings.catch_warnings():
+            pool = AsyncConnectionPool(
+                config.connection_str,
+                min_size=pool_size,
+            )
         return DatabaseService(pool, pool_size, config)
 
     async def open(self):
