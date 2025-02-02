@@ -8,6 +8,12 @@ from lib.service.docker.config import *
 
 @dataclass
 class InstanceCfg:
+    """
+    This exists to configure the tasks for different.
+    Read more on instances here:
+
+    https://github.com/AKST/Aus-Land-Data-ETL/wiki/Docs:-Instances,-or-the-%60%E2%80%90%E2%80%90instance%60-flag-for-CLI-commands
+    """
     database: DatabaseConfig
     docker_volume: str
     docker_container: ContainerConfig

@@ -111,6 +111,7 @@ if __name__ == '__main__':
     load_land_values = None
     if args.load_land_values:
         load_land_values = NswVgTaskConfig.LandValue.Main(
+            land_value_source='byo',
             discovery_mode=instance_cfg.nswvg_lv_discovery_mode,
             truncate_raw_earlier=args.lv_truncate_earlier,
             child_n=args.lv_workers,

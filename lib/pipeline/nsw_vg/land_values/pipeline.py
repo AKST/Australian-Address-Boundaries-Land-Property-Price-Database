@@ -6,7 +6,7 @@ import queue
 from typing import List, Self
 
 from .config import NswVgLvChildMsg, NswVgLvParentMsg
-from .discovery import CsvDiscovery
+from .discovery import CsvAbstractDiscovery
 from .telemetry import NswVgLvTelemetry
 
 class NswVgLvPipeline:
@@ -17,7 +17,7 @@ class NswVgLvPipeline:
     def __init__(self: Self,
                  recv_queue: MpQueue,
                  telemetry: NswVgLvTelemetry,
-                 discovery: CsvDiscovery):
+                 discovery: CsvAbstractDiscovery):
         self._recv_q = recv_queue
         self._discovery = discovery
         self._telemetry = telemetry

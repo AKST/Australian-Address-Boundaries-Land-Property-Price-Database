@@ -7,7 +7,9 @@ from .config import (
 )
 from .discovery import (
     Config as NswVgLvCsvDiscoveryConfig,
-    CsvDiscovery as NswVgLvCsvDiscovery,
+    CsvAbstractDiscovery as NswVgLvAbstractCsvDiscovery,
+    ByoCsvDiscovery as NswVgLvByoCsvDiscovery,
+    RemoteCsvDiscovery as NswVgLvWebCsvDiscovery,
 )
 
 from .ingest import (

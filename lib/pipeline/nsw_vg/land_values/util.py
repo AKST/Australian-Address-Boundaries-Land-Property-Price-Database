@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Union, TypeVar
 
 from ..discovery import NswVgTarget
-from .config import DiscoveryMode
+from .config import DiscoveryMode, ByoLandValue
 
-def select_targets(mode: DiscoveryMode.T, all_targets: List[NswVgTarget]) -> List[NswVgTarget]:
+_T = TypeVar('_T', bound=Union[NswVgTarget, ByoLandValue])
+
+def select_targets(mode: DiscoveryMode.T, all_targets: List[_T]) -> List[_T]:
     if not all_targets:
         return all_targets
 

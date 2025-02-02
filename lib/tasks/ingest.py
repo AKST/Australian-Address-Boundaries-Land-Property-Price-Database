@@ -97,6 +97,7 @@ async def ingest_all(config: IngestConfig):
         io_service,
         NswVgTaskConfig.Ingestion(
             load_raw_land_values=NswVgTaskConfig.LandValue.Main(
+                land_value_source='byo',
                 discovery_mode=config.nswvg_lv_depth,
                 truncate_raw_earlier=False,
                 child_n=8,

@@ -5,9 +5,12 @@ from multiprocessing import Process, Queue as MpQueue
 import resource
 
 from lib.pipeline.nsw_vg.discovery import NswVgPublicationDiscovery
+from lib.pipeline.nsw_vg.land_values.defaults import byo_land_values
 from lib.pipeline.nsw_vg.land_values import (
     NswVgLvCoordinatorClient,
-    NswVgLvCsvDiscovery,
+    NswVgLvAbstractCsvDiscovery,
+    NswVgLvWebCsvDiscovery,
+    NswVgLvByoCsvDiscovery,
     NswVgLvCsvDiscoveryConfig,
     NswVgLvCsvDiscoveryMode,
     NswVgLvIngestion,
@@ -56,20 +59,26 @@ async def ingest_land_values(cfg: NswVgTaskConfig.LandValue.Main,
     recv_q: MpQueue = MpQueue()
     telemetry = NswVgLvTelemetry.create(clock)
 
-    pipeline = NswVgLvPipeline(
-        recv_q,
-        telemetry,
-        NswVgLvCsvDiscovery(
-            NswVgLvCsvDiscoveryConfig(
-                cfg.discovery_mode,
-                _ZIPDIR,
-            ),
-            io,
-            telemetry,
-            NswVgPublicationDiscovery(session),
-            static_env,
-        ),
-    )
+    discovery_cfg = NswVgLvCsvDiscoveryConfig(cfg.discovery_mode, _ZIPDIR)
+    discovery: NswVgLvAbstractCsvDiscovery
+    match cfg.land_value_source:
+        case 'web':
+            discovery = NswVgLvWebCsvDiscovery(
+                discovery_cfg,
+                io,
+                telemetry,
+                NswVgPublicationDiscovery(session),
+                static_env,
+            )
+        case 'byo':
+            discovery = NswVgLvByoCsvDiscovery(
+                discovery_cfg,
+                io,
+                telemetry,
+                byo_land_values,
+            )
+
+    pipeline = NswVgLvPipeline(recv_q, telemetry, discovery)
 
     for id in range(0, cfg.child_n):
         send_q: MpQueue = MpQueue()
@@ -115,6 +124,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="nsw vg lv ingestion")
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--debug-worker", action='store_true', default=False)
+    parser.add_argument('--land-value-src', choices=['byo', 'web'], default='byo')
     parser.add_argument('--discovery-mode', choices=['each-year', 'all', 'latest'], default=None)
     parser.add_argument("--instance", type=int, required=True)
     parser.add_argument("--workers", type=int, required=True)
@@ -137,6 +147,7 @@ if __name__ == '__main__':
         mode = INSTANCE_CFG[args.instance].nswvg_lv_discovery_mode
 
     cfg = NswVgTaskConfig.LandValue.Main(
+        land_value_source=args.land_value_src,
         discovery_mode=mode,
         truncate_raw_earlier=args.truncate_raw_earlier,
         child_n=args.workers,

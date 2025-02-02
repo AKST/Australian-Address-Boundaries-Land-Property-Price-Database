@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Literal
 from lib.pipeline.nsw_vg.config import *
 from lib.pipeline.nsw_vg.land_values import NswVgLvCsvDiscoveryMode
 from lib.service.database import DatabaseConfig
@@ -42,6 +42,7 @@ class NswVgTaskConfig:
         class Main:
             truncate_raw_earlier: bool
             discovery_mode: NswVgLvCsvDiscoveryMode.T
+            land_value_source: Literal['byo', 'web']
             child_cfg: 'NswVgTaskConfig.LandValue.Child'
             child_n: int
 

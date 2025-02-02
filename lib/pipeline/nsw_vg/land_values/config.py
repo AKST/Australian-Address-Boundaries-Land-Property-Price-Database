@@ -1,4 +1,5 @@
 from abc import ABC
+from datetime import datetime
 from dataclasses import dataclass, fields, field
 from typing import (
     Dict,
@@ -11,10 +12,15 @@ from typing import (
     Union,
 )
 
-from lib.pipeline.nsw_vg.raw_data.rows import *
+import lib.pipeline.nsw_vg.raw_data.rows as util
 from lib.pipeline.nsw_vg.raw_data.zoning import ZoningKind
 
 from ..discovery import NswVgTarget
+
+@dataclass
+class ByoLandValue:
+    src_dst: str | None
+    datetime: datetime
 
 class DiscoveryMode:
     class T(ABC): pass
@@ -44,7 +50,6 @@ class DiscoveryMode:
             case other:
                 raise ValueError(f'unknown lv discovery mode {t}')
 
-
 class NswVgLvTaskDesc:
     class Base:
         pass
@@ -53,7 +58,7 @@ class NswVgLvTaskDesc:
     class Parse(Base):
         file: str
         size: int
-        target: NswVgTarget = field(repr=False)
+        target: Union[ByoLandValue, NswVgTarget] = field(repr=False)
 
     @dataclass(frozen=True)
     class Load(Base):
@@ -141,39 +146,39 @@ class RawLandValueRow:
                  file_path: str,
                  source_date: datetime) -> 'RawLandValueRow':
         return RawLandValueRow(
-            district_code=read_int(row, 'DISTRICT CODE', 'district_code'),
+            district_code=util.read_int(row, 'DISTRICT CODE', 'district_code'),
             district_name=row['DISTRICT NAME'] or None,
-            property_id=read_int(row, 'PROPERTY ID', 'property_id'),
-            property_type=read_str(row, 'PROPERTY TYPE', 'property_type'),
+            property_id=util.read_int(row, 'PROPERTY ID', 'property_id'),
+            property_type=util.read_str(row, 'PROPERTY TYPE', 'property_type'),
             property_name=row['PROPERTY NAME'] or None,
             unit_number=row['UNIT NUMBER'] or None,
             house_number=row['HOUSE NUMBER'] or None,
             street_name=row['STREET NAME'] or None,
-            suburb_name=read_str(row, 'SUBURB NAME', 'suburb_name'),
-            postcode=read_postcode(row, 'POSTCODE', 'postcode'),
+            suburb_name=util.read_str(row, 'SUBURB NAME', 'suburb_name'),
+            postcode=util.read_postcode(row, 'POSTCODE', 'postcode'),
             property_description=row['PROPERTY DESCRIPTION'] or None,
-            zone_code=StrCheck(max_len=4).read_optional(row, 'ZONE CODE', 'zone_code'),
-            zone_standard=read_zone_std(row, 'ZONE CODE', 'zone_standard'),
-            area=read_optional_float(row, 'AREA', 'area'),
-            area_type=read_area_type(row, 'AREA TYPE', 'area_type'),
-            land_value_1=read_optional_float(row, 'LAND VALUE 1', 'land_value_1'),
-            base_date_1=read_optional_date_pre_2002(row, 'BASE DATE 1', 'base_date_1'),
+            zone_code=util.StrCheck(max_len=4).read_optional(row, 'ZONE CODE', 'zone_code'),
+            zone_standard=util.read_zone_std(row, 'ZONE CODE', 'zone_standard'),
+            area=util.read_optional_float(row, 'AREA', 'area'),
+            area_type=util.read_area_type(row, 'AREA TYPE', 'area_type'),
+            land_value_1=util.read_optional_float(row, 'LAND VALUE 1', 'land_value_1'),
+            base_date_1=util.read_optional_date_pre_2002(row, 'BASE DATE 1', 'base_date_1'),
             authority_1=row['AUTHORITY 1'] or None,
             basis_1=row['BASIS 1'] or None,
-            land_value_2=read_optional_float(row, 'LAND VALUE 2', 'land_value_2'),
-            base_date_2=read_optional_date_pre_2002(row, 'BASE DATE 2', 'base_date_2'),
+            land_value_2=util.read_optional_float(row, 'LAND VALUE 2', 'land_value_2'),
+            base_date_2=util.read_optional_date_pre_2002(row, 'BASE DATE 2', 'base_date_2'),
             authority_2=row['AUTHORITY 2'] or None,
             basis_2=row['BASIS 2'] or None,
-            land_value_3=read_optional_float(row, 'LAND VALUE 3', 'land_value_3'),
-            base_date_3=read_optional_date_pre_2002(row, 'BASE DATE 3', 'base_date_3'),
+            land_value_3=util.read_optional_float(row, 'LAND VALUE 3', 'land_value_3'),
+            base_date_3=util.read_optional_date_pre_2002(row, 'BASE DATE 3', 'base_date_3'),
             authority_3=row['AUTHORITY 3'] or None,
             basis_3=row['BASIS 3'] or None,
-            land_value_4=read_optional_float(row, 'LAND VALUE 4', 'land_value_4'),
-            base_date_4=read_optional_date_pre_2002(row, 'BASE DATE 4', 'base_date_4'),
+            land_value_4=util.read_optional_float(row, 'LAND VALUE 4', 'land_value_4'),
+            base_date_4=util.read_optional_date_pre_2002(row, 'BASE DATE 4', 'base_date_4'),
             authority_4=row['AUTHORITY 4'] or None,
             basis_4=row['BASIS 4'] or None,
-            land_value_5=read_optional_float(row, 'LAND VALUE 5', 'land_value_5'),
-            base_date_5=read_optional_date_pre_2002(row, 'BASE DATE 5', 'base_date_5'),
+            land_value_5=util.read_optional_float(row, 'LAND VALUE 5', 'land_value_5'),
+            base_date_5=util.read_optional_date_pre_2002(row, 'BASE DATE 5', 'base_date_5'),
             authority_5=row['AUTHORITY 5'] or None,
             basis_5=row['BASIS 5'] or None,
             source_file_name=file_path,
