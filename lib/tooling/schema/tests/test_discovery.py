@@ -23,22 +23,18 @@ from ..discovery import sql_as_operations
     "CREATE TABLE c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
     "CREATE TABLE a.c PARTITION OF b.a FOR VALUES WITH (MODULUS 8, REMAINDER 0)",
     "DO $$ DECLARE total INT := 1; FOR i in 0..total LOOP\n EXECUTE 'select 1';\nEND LOOP; END $$;",
+    "CREATE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql",
 ])
 def test_expr_as_op(snapshot, sql: str):
     operations = sql_as_operations(sql)
     snapshot.assert_match(pformat(operations, width=150), 'schema')
 
-def test_create_function():
-    sql = \
-        "CREATE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql"
-    schema = sql_as_operations(sql)
-    create_function = next(o for o in schema.operations)
-    assert create_function.schema_name == 'a'
-    assert create_function.type_name == 'c'
-
-def test_create_or_replace_function():
-    sql = \
-        "CREATE OR REPLACE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql"
+@pytest.mark.parametrize("sql", [
+    "CREATE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql",
+    "CREATE OR REPLACE FUNCTION a.c(input TEXT) RETURNS TEXT $$ BEGIN RETURN ''; END; $$ LANGUAGE plpgsql",
+])
+def test_create_function_name_and_namespace(sql):
     schema = sql_as_operations(sql)
     create_function = next(o for o in schema.operations)
     assert create_function.schema_name == 'a'
