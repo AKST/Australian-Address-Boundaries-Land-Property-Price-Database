@@ -66,3 +66,9 @@ SELECT DISTINCT ON (property_id, strata_lot_number)
   LEFT JOIN nsw_gnb.street USING (street_id, locality_id)
   LEFT JOIN nsw_gnb.locality USING (locality_id);
 
+CREATE OR REPLACE FUNCTION nsw_gnb.addr_str(a nsw_gnb.full_property_address) RETURNS TEXT
+LANGUAGE SQL IMMUTABLE PARALLEL SAFE AS $$
+  SELECT (a.street_number || ' ' || a.street_name || ' ' || a.locality_name || ' ' || a.postcode);
+$$;
+
+

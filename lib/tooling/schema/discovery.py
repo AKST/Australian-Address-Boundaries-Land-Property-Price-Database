@@ -143,6 +143,14 @@ def get_prop(expr, Type):
     es = expr.args['properties'].expressions
     return next((e for e in es if isinstance(e, Type)))
 
+def create_function(expr: Expression, command_e: str) -> Stmt.Op:
+    match = re.search(r"FUNCTION\s+(?:(\w+)\.)?(\w+)\s*\(", command_e, re.IGNORECASE)
+    if not match:
+        raise TypeError(f'unknown {repr(e)}')
+    s_name = match.group(1) if match.group(1) else None
+    t_name = match.group(2)
+    return Stmt.CreateFunction(expr, s_name, t_name)
+
 def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
     match expr:
         case sql_expr.Create(kind="SCHEMA", this=schema_def):
@@ -171,12 +179,9 @@ def expr_as_op(expr: Expression) -> Optional[Stmt.Op]:
         case sql_expr.Command(this="CREATE", expression=e):
             match re.findall(f'\w+', e.lower()):
                 case ['function', *_]:
-                    match = re.search(r"FUNCTION\s+(?:(\w+)\.)?(\w+)\s*\(", e, re.IGNORECASE)
-                    if not match:
-                        raise TypeError(f'unknown {repr(e)}')
-                    s_name = match.group(1) if match.group(1) else None
-                    t_name = match.group(2)
-                    return Stmt.CreateFunction(expr, s_name, t_name)
+                    return create_function(expr, e)
+                case ['or', 'replace', 'function', *_]:
+                    return create_function(expr, e)
                 case ['type', s_name, t_name, 'as', *_]:
                     return Stmt.CreateType(expr, s_name, t_name)
                 case ['type', t_name, 'as', *_]:
