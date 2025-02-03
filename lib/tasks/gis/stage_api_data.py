@@ -40,7 +40,7 @@ from lib.service.http import (
     ThrottledClientSession,
 )
 from lib.service.http.middleware.exp_backoff import BackoffConfig, RetryPreference
-from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
+from lib.tooling.schema import SchemaController, SchemaDiscovery, SchemaCommand
 
 from .config import GisTaskConfig
 
@@ -165,8 +165,8 @@ async def run_in_console(
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     match config.db_mode:
         case 'write':
-            await controller.command(Command.Drop(ns='nsw_spatial'))
-            await controller.command(Command.Create(ns='nsw_spatial'))
+            await controller.command(SchemaCommand.Drop(ns='nsw_spatial'))
+            await controller.command(SchemaCommand.Create(ns='nsw_spatial'))
     await stage_gis_api_data(io, db, clock, config)
 
 if __name__ == '__main__':

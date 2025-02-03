@@ -5,7 +5,7 @@ from lib.pipeline.abs import *
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tasks.schema.count import run_count_for_schemas
-from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
+from lib.tooling.schema import SchemaController, SchemaDiscovery, SchemaCommand
 from lib.tooling.schema.config import ns_dependency_order
 
 _OUTDIR = './_out_zip'
@@ -20,13 +20,13 @@ async def ingest_all(config: AbsIngestionConfig,
     abs_ingestion = AbsIngestionSupervisor(db, _OUTDIR)
 
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
-    await controller.command(Command.Drop(ns='abs'))
-    await controller.command(Command.Create(ns='abs', omit_foreign_keys=True))
+    await controller.command(SchemaCommand.Drop(ns='abs'))
+    await controller.command(SchemaCommand.Create(ns='abs', omit_foreign_keys=True))
     await abs_ingestion.ingest(config)
     async with db.async_connect() as conn:
         clean_dzn_sql = await io.f_read('./sql/abs/tasks/clean_dzn_post_ingestion.sql')
         await conn.execute(clean_dzn_sql)
-    await controller.command(Command.AddForeignKeys(ns='abs'))
+    await controller.command(SchemaCommand.AddForeignKeys(ns='abs'))
 
 async def _main(
     config: AbsIngestionConfig,

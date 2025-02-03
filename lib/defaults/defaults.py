@@ -62,7 +62,11 @@ def _create_mounted_dirs(
 # more confindential manner.
 
 INSTANCE_CFG: Dict[int, InstanceCfg] = {
+    #
+    # This is the main publication
+    #
     1: InstanceCfg(
+        clean_staging_data=True,
         nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.EachNthYear(4, include_first=True),
         nswvg_psi_min_pub_year=None,
         gnaf_states=ALL_STATES,
@@ -93,7 +97,11 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
             dockerfile_path="./config/dockerfiles/postgres_2"
         ),
     ),
+    #
+    # This mostly existing for testing
+    #
     2: InstanceCfg(
+        clean_staging_data=False,
         nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         nswvg_psi_min_pub_year=2024,
         gnaf_states={'NSW'},
@@ -125,7 +133,12 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
             dockerfile_path="./config/dockerfiles/postgres_2"
         ),
     ),
+    #
+    # This mostly existing for testing much like 2, but allows
+    # for multi tasking while 2 is doing something.
+    #
     3: InstanceCfg(
+        clean_staging_data=False,
         nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         nswvg_psi_min_pub_year=2024,
         gnaf_states={'NSW'},
@@ -157,7 +170,11 @@ INSTANCE_CFG: Dict[int, InstanceCfg] = {
             dockerfile_path="./config/dockerfiles/postgres_16"
         ),
     ),
+    #
+    # This mostly exists for testing backup functionality
+    #
     4: InstanceCfg(
+        clean_staging_data=False,
         nswvg_lv_discovery_mode=NswVgLvCsvDiscoveryMode.Latest(),
         nswvg_psi_min_pub_year=2024,
         gnaf_states={'NSW'},

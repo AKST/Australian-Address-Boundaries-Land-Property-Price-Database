@@ -25,7 +25,7 @@ from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.http import AbstractClientSession
 from lib.service.static_environment import StaticEnvironmentInitialiser
 from lib.tasks.fetch_static_files import get_session
-from lib.tooling.schema import SchemaController, SchemaDiscovery, Command
+from lib.tooling.schema import SchemaController, SchemaDiscovery, SchemaCommand
 
 from .config import NswVgTaskConfig
 
@@ -51,7 +51,7 @@ async def ingest_land_values(cfg: NswVgTaskConfig.LandValue.Main,
     controller = SchemaController(io, db, SchemaDiscovery.create(io))
     if cfg.truncate_raw_earlier:
         logger.info('dropping earlier raw data')
-        await controller.command(Command.Truncate(
+        await controller.command(SchemaCommand.Truncate(
             ns='nsw_vg',
             range=range(2, 3),
             cascade=True,

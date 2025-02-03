@@ -5,10 +5,9 @@ from sys import maxsize
 
 from lib.service.database import DatabaseService
 from lib.service.io import IoService
-from lib.tooling.schema.controller import SchemaController
-from lib.tooling.schema.discovery import SchemaDiscovery
+from lib.tooling.schema import SchemaController, SchemaDiscovery, SchemaCommand
 from lib.tooling.schema.config import ns_dependency_order, schema_ns
-from lib.tooling.schema.type import *
+from lib.tooling.schema.type import SchemaNamespace
 
 _logger = logging.getLogger(f'{__name__}.initialise_db_schema')
 
@@ -49,7 +48,7 @@ async def update_schema(
     for ns in drop_list:
         try:
             r = get_range(ns)
-            await controller.command(Command.Drop(ns=ns, range=r, cascade=True))
+            await controller.command(SchemaCommand.Drop(ns=ns, range=r, cascade=True))
         except Exception as e:
             logging.error(f'failed on dropping {ns}')
             raise e
@@ -57,9 +56,9 @@ async def update_schema(
     for ns in create_list:
         try:
             r = get_range(ns)
-            command = Command.Create(ns=ns, range=r)
+            command = SchemaCommand.Create(ns=ns, range=r)
             allowed_schemas = {'nsw_lrs', 'nsw_gnb'}
-            await controller.command(Command.Create(ns=ns, range=r))
+            await controller.command(SchemaCommand.Create(ns=ns, range=r))
         except Exception as e:
             logging.error(f'failed on creating {ns}')
             raise e

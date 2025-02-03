@@ -4,7 +4,7 @@ from typing import List
 from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
-from lib.tooling.schema import Command, SchemaController, SchemaDiscovery
+from lib.tooling.schema import SchemaCommand, SchemaController, SchemaDiscovery
 from lib.utility.format import fmt_time_elapsed
 
 from .config import NswVgTaskConfig
@@ -54,31 +54,31 @@ async def ingest_deduplicate(
     discovery = SchemaDiscovery.create(io)
     controller = SchemaController(io, db, discovery)
 
-    async def run_commands(commands: List[Command.BaseCommand]):
+    async def run_commands(commands: List[SchemaCommand.BaseCommand]):
         for c in commands:
             await controller.command(c)
 
     if config.truncate:
         await run_commands([
-            Command.Truncate(ns='nsw_vg', cascade=True, range=range(4, 5)),
-            Command.Truncate(ns='nsw_gnb', cascade=True),
-            Command.Truncate(ns='nsw_lrs', cascade=True),
-            Command.Truncate(ns='nsw_planning', cascade=True),
-            Command.Truncate(ns='meta', cascade=True),
+            SchemaCommand.Truncate(ns='nsw_vg', cascade=True, range=range(4, 5)),
+            SchemaCommand.Truncate(ns='nsw_gnb', cascade=True),
+            SchemaCommand.Truncate(ns='nsw_lrs', cascade=True),
+            SchemaCommand.Truncate(ns='nsw_planning', cascade=True),
+            SchemaCommand.Truncate(ns='meta', cascade=True),
         ])
 
     if config.drop_dst_schema:
         await run_commands([
-            Command.Drop(ns='nsw_vg', range=range(4, 6)),
-            Command.Drop(ns='nsw_gnb'),
-            Command.Drop(ns='nsw_lrs'),
-            Command.Drop(ns='nsw_planning'),
-            Command.Drop(ns='meta'),
-            Command.Create(ns='meta'),
-            Command.Create(ns='nsw_planning'),
-            Command.Create(ns='nsw_lrs'),
-            Command.Create(ns='nsw_gnb'),
-            Command.Create(ns='nsw_vg', range=range(4, 6)),
+            SchemaCommand.Drop(ns='nsw_vg', range=range(4, 6)),
+            SchemaCommand.Drop(ns='nsw_gnb'),
+            SchemaCommand.Drop(ns='nsw_lrs'),
+            SchemaCommand.Drop(ns='nsw_planning'),
+            SchemaCommand.Drop(ns='meta'),
+            SchemaCommand.Create(ns='meta'),
+            SchemaCommand.Create(ns='nsw_planning'),
+            SchemaCommand.Create(ns='nsw_lrs'),
+            SchemaCommand.Create(ns='nsw_gnb'),
+            SchemaCommand.Create(ns='nsw_vg', range=range(4, 6)),
         ])
 
 
@@ -97,11 +97,11 @@ async def ingest_deduplicate(
     logger.info('finished deduplicating')
 
     await run_commands([
-        Command.ReIndex(ns='nsw_vg', allowed={'table'}),
-        Command.ReIndex(ns='nsw_gnb', allowed={'table'}),
-        Command.ReIndex(ns='nsw_lrs', allowed={'table'}),
-        Command.ReIndex(ns='nsw_planning', allowed={'table'}),
-        Command.ReIndex(ns='meta', allowed={'table'}),
+        SchemaCommand.ReIndex(ns='nsw_vg', allowed={'table'}),
+        SchemaCommand.ReIndex(ns='nsw_gnb', allowed={'table'}),
+        SchemaCommand.ReIndex(ns='nsw_lrs', allowed={'table'}),
+        SchemaCommand.ReIndex(ns='nsw_planning', allowed={'table'}),
+        SchemaCommand.ReIndex(ns='meta', allowed={'table'}),
     ])
 
     logger.info('finished reindexing')

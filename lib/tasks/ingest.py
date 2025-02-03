@@ -23,7 +23,9 @@ from lib.tasks.nsw_vg.config import NswVgTaskConfig
 from lib.tasks.nsw_vg.ingest import ingest_nswvg
 from lib.tasks.schema.count import run_count_for_schemas
 from lib.tasks.schema.update import update_schema, UpdateSchemaConfig
+from lib.tasks.schema.clean_staging import clean_staging_data
 from lib.tooling.schema.config import ns_dependency_order
+from lib.utility.format import fmt_time_elapsed
 
 @dataclass
 class IngestConfig:
@@ -37,9 +39,15 @@ class IngestConfig:
     docker_image_config: ImageConfig
     docker_container_config: ContainerConfig
     enable_gnaf: bool
+    enable_clean_staging_data: bool
+
+_logger = logging.getLogger(__name__)
 
 async def ingest_all(config: IngestConfig):
+    clock = ClockService()
     io_service = IoService.create(config.io_file_limit)
+
+    t_start = clock.time()
 
     async with get_session(io_service, 'env') as session:
         environment = await initialise(io_service, session)
@@ -92,7 +100,7 @@ async def ingest_all(config: IngestConfig):
 
     await ingest_nswvg(
         environment,
-        ClockService(),
+        clock,
         db_service,
         io_service,
         NswVgTaskConfig.Ingestion(
@@ -159,7 +167,7 @@ async def ingest_all(config: IngestConfig):
     await ingest_gis(
         io_service,
         db_service,
-        ClockService(),
+        clock,
         GisTaskConfig.Ingestion(
             deduplication=GisTaskConfig.Deduplication(
                 run_from=None,
@@ -178,6 +186,14 @@ async def ingest_all(config: IngestConfig):
     )
 
     await run_count_for_schemas(db_service_config, ns_dependency_order)
+
+    if config.enable_clean_staging_data:
+        await clean_staging_data(db_service, io_service)
+    else:
+        _logger.info('staging data not cleaned')
+
+    _logger.info(f"({fmt_time_elapsed(t_start, clock.time(), format="hms")}) Done")
+    _logger.debug(repr(config))
 
 if __name__ == '__main__':
     import asyncio
@@ -212,6 +228,7 @@ if __name__ == '__main__':
         docker_container_config=instance_cfg.docker_container,
         gnaf_states=instance_cfg.gnaf_states,
         enable_gnaf=instance_cfg.enable_gnaf,
+        enable_clean_staging_data=instance_cfg.clean_staging_data,
     )
 
     asyncio.run(ingest_all(config))

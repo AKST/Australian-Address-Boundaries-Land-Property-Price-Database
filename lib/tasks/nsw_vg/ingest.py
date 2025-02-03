@@ -6,7 +6,6 @@ from lib.service.clock import ClockService
 from lib.service.database import DatabaseService, DatabaseConfig
 from lib.service.io import IoService
 from lib.tasks.fetch_static_files import get_session
-from lib.tooling.schema.type import Command
 
 from ..fetch_static_files import Environment, get_session, initialise
 from .config import NswVgTaskConfig
